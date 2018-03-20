@@ -1,20 +1,26 @@
 
 library(LOLA)
+library(simpleCache)
+library(data.table)
+library(GenomicRanges)
 
 # 
-
+source(paste0(Sys.getenv("CODE"), "PCARegionAnalysis/R/PRA.R"))
 
 # load LOLA database
-lolaPath = system.file("extdata", "hg19", package="LOLA")
+lolaPath = paste0(Sys.getenv("REGIONS"), "LOLACore/hg38/")
+#lolaPath = system.file("extdata", "hg19", package="LOLA")
 regionSetDB = loadRegionDB(lolaPath)
 
-GRList
+GRList = GRangesList(regionSetDB$regionGRL[1])
 
 
 # prepare DNA methylation data
 setCacheDir(paste0(Sys.getenv("PROCESSED"), "brca_PCA/RCache/"))
 simpleCache("combinedBRCAMethyl_noXY")
-pca = prcomp(combinedBRCAMethyl_noXY[["methylProp"]], center = TRUE)
+simpleCache("allMPCA", {
+    prcomp(t(combinedBRCAMethyl_noXY[["methylProp"]]), center = TRUE)
+}, recreate = TRUE, reload = TRUE)
 coordinates = combinedBRCAMethyl_noXY[["coordinates"]]
 pcWeights = as.data.table(pca$rotation)
 

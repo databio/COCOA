@@ -8,13 +8,13 @@
 #' @param regionSet A genomic ranges object with regions corresponding
 #' to the same biological annotation.
 
-aggregateLoadings(loadingMat, coordinateDT, regionSet, 
+aggregateLoadings <- function(loadingMat, coordinateDT, regionSet, 
                   PCsToAnnotate = c("PC1", "PC2")) {
     # extreme positive or negative values both give important information
     loadingMat = abs(loadingMat) 
     
     # reformat into data.table with chromosome location and weight
-    loadingDT = data.table(coordinateDT, loadingMat[, PCsToAnnotate])
+    loadingDT = data.table(coordinateDT, loadingMat[, PCsToAnnotate, with=FALSE])
     # naming does not work if only using one PC so add this line for that case
     setnames(loadingDT, c("chr", "start", PCsToAnnotate)) 
     
@@ -28,7 +28,7 @@ aggregateLoadings(loadingMat, coordinateDT, regionSet,
     
     # do the actual aggregation
     loadAgMain = RGenomeUtils::BSAggregate(BSDT = loadingDT, regionsGRL = GRangesList(regionSet),
-                jCommand = aggrCommand,
+                jExpr = aggrCommand,
                 byRegionGroup = TRUE,
                 splitFactor = NULL)
     
@@ -37,17 +37,17 @@ aggregateLoadings(loadingMat, coordinateDT, regionSet,
     set.seed(100) # will this cause the user problems if they independently have set
     # ...the seed for other functions?
     loadAgPerm = list()
-    for (i in 1:1000) {
+    for (i in 1:100) {
         permInd = sample(1:nrow(loadingDT), replace = FALSE)
         # reformat into data.table with chromosome location and weight
-        loadingDT = data.table(coordinateDT[permInd, ], loadingMat[, PCsToAnnotate])
+        loadingDT = data.table(coordinateDT[permInd, ], loadingMat[, PCsToAnnotate, with=FALSE])
         
         # naming does not work if only using one PC so add this line for that case
         setnames(loadingDT, c("chr", "start", PCsToAnnotate)) 
         
         loadAgPerm[[i]] = RGenomeUtils::BSAggregate(BSDT = loadingDT, 
                                                     regionsGRL = GRangesList(regionSet),
-                                                    jCommand = aggrCommand,
+                                                    jExpr = aggrCommand,
                                                     byRegionGroup = TRUE,
                                                     splitFactor = NULL)
         
@@ -71,14 +71,14 @@ aggregateLoadings(loadingMat, coordinateDT, regionSet,
 #' 
 #' For parallel processing, region sets are split up between the cores
 
-pcRegionSetEnrichment(loadingMat, coordinateDT, GRList, 
+pcRegionSetEnrichment <- function(loadingMat, coordinateDT, GRList, 
                   PCsToAnnotate = c("PC1", "PC2")) {
  
     # apply over the list of region sets
-    resultsList = lapplyAlias(GRList, 
+    resultsList = MIRA:::lapplyAlias(GRList, 
                               function(x) aggregateLoadings(loadingMat=loadingMat, 
                                                             coordinateDT=coordinateDT, 
-                                                            GRList=x, 
+                                                            regionSet=x, 
                                                             PCsToAnnotate = PCsToAnnotate))
     resultsDT = do.call(rbind, resultsList) 
     row.names(resultsDT) = row.names(GRList)
