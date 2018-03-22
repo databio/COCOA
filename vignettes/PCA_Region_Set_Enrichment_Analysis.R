@@ -3,9 +3,36 @@ library(LOLA)
 library(simpleCache)
 library(data.table)
 library(GenomicRanges)
+library(caret)
 
 # 
+Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "brca_PCA/analysis/plots/"))
 source(paste0(Sys.getenv("CODE"), "PCARegionAnalysis/R/PRA.R"))
+patientMetadata = fread(paste0(Sys.getenv("CODE"), 
+                               "PCARegionAnalysis/metadata/brca_metadata.csv"))
+
+
+
+# DNA methylation data
+setCacheDir(paste0(Sys.getenv("PROCESSED"), "brca_PCA/RCache/"))
+simpleCache("combinedBRCAMethyl_noXY")
+brcaMList = combinedBRCAMethyl_noXY
+
+# reading in the metadata, will be used to split data 
+# into training and test set with balanced ER and PGR status
+#restrict patients included in this analysis
+patientMetadata = patientMetadata[patientMetadata$subject_ID %in% 
+                                      colnames(brcaMList[["methylProp"]]), ]
+# keep same proportion of patients with ER_status and PGR_status in training 
+# and test sets
+dataSplit = createDataPartition(y=factor(paste0(patientMetadata$ER_status,"_", patientMetadata$PGR_status)),
+                                p = .5, list=FALSE)
+trainingIDs = patientMetadata[dataSplit, subject_ID]
+testIDs = patientMetadata[-dataSplit, subject_ID]
+trainingMData = brcaMList[["methylProp"]][, 
+                colnames(brcaMList[["methylProp"]]) %in% trainingIDs] 
+testMData = brcaMList[["methylProp"]][, 
+                colnames(brcaMList[["methylProp"]]) %in% testIDs]
 
 # load LOLA database
 lolaPath = paste0(Sys.getenv("REGIONS"), "LOLACore/hg38/")
@@ -13,22 +40,51 @@ lolaPath = paste0(Sys.getenv("REGIONS"), "LOLACore/hg38/")
 regionSetDB = loadRegionDB(lolaPath)
 
 GRList = GRangesList(regionSetDB$regionGRL[1])
+# adding ER Chipseq dataset
+# erSet = fread()
+GRList = c(GRangesList(erSet), GRList)
 
 
-# prepare DNA methylation data
-setCacheDir(paste0(Sys.getenv("PROCESSED"), "brca_PCA/RCache/"))
-simpleCache("combinedBRCAMethyl_noXY")
+# do the PCA
 simpleCache("allMPCA", {
-    prcomp(t(combinedBRCAMethyl_noXY[["methylProp"]]), center = TRUE)
+    prcomp(t(trainingMData), center = TRUE)
 }, recreate = TRUE, reload = TRUE)
-coordinates = combinedBRCAMethyl_noXY[["coordinates"]]
-pcWeights = as.data.table(pca$rotation)
-
-
+mIQR = apply(trainingMData, 1, IQR)
+simpleCache("top10MPCA", {
+    prcomp(t(trainingMData[mIQR >= quantile(mIQR, 0.9), ]), center = TRUE)
+})
+coordinates = brcaMList[["coordinates"]]
+top10Coord = coordinates[mIQR >= quantile(mIQR, 0.9), ]
+top10PCWeights = as.data.table(top10MPCA$rotation)
+# top10TSNE = Rtsne(X = top10MPCA$x[, 1:50], pca = FALSE, max_iter=5000,
+#                   perplexity = 30)
+# plot(top10TSNE$Y)
 # run PC region set enrichment analysis
-pcRegionSetEnrichment(loadingMat=pcWeights, coordinateDT = coordinates, 
+rsEnrichment = pcRegionSetEnrichment(loadingMat=top10PCWeights, coordinateDT = top10Coord, 
                       GRList, 
-                      PCsToAnnotate = c("PC1", "PC2"))
+                      PCsToAnnotate = c("PC1", "PC2", "PC3", "PC4", "PC5"))
+
+
+# check whether is enrichment is specific to this region set by
+# seeing if loading values have a spike in the center of these region sets
+# compared to surrounding genome 
+GRList = lapply(GRList, resize, width = 10000, fix="center")
+pcProf = pcEnrichmentProfile(loadingMat = top10PCWeights, coordinateDT = top10Coord,
+                    GRList=GRList, PCsToAnnotate = c("PC1", "PC2", "PC3", "PC4"),
+                    binNum = 21)
+pcP = pcProf[[39]]
+plot(pcP$PC1, type="l")
+plot(pcP$PC2, type="l")
+plot(pcP$PC3, type="l")
+plot(pcP$PC4, type="l")
+a
+
+# initResults = list(rsEnrichment, rsEnrichment2, pcProf, ret[c(46:72, 623:634)])
+# save(initResults, file=paste0(Sys.getenv("PROCESSED"), "brca_PCA/", "initialPRAresults.RData"))
+
+
+
+
 
 
 
@@ -36,6 +92,11 @@ pcRegionSetEnrichment(loadingMat=pcWeights, coordinateDT = coordinates,
 # PCs that are enriched for ATACseq from a certain cell type should be 
 # able to separate that cell type from the others
 # visualize
+
+
+
+
+######################################################################################
 
 
 # could also do the analysis for hormone receptors in breast cancer:
