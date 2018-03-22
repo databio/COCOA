@@ -4,13 +4,15 @@ library(simpleCache)
 library(data.table)
 library(GenomicRanges)
 library(caret)
+library(RGenomeUtils)
+
 
 # 
 Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "brca_PCA/analysis/plots/"))
 source(paste0(Sys.getenv("CODE"), "PCARegionAnalysis/R/PRA.R"))
 patientMetadata = fread(paste0(Sys.getenv("CODE"), 
                                "PCARegionAnalysis/metadata/brca_metadata.csv"))
-
+set.seed(1234)
 
 
 # DNA methylation data
@@ -38,17 +40,23 @@ testMData = brcaMList[["methylProp"]][,
 lolaPath = paste0(Sys.getenv("REGIONS"), "LOLACore/hg38/")
 #lolaPath = system.file("extdata", "hg19", package="LOLA")
 regionSetDB = loadRegionDB(lolaPath)
+loRegionAnno = regionSetDB$regionAnno
+a549Ind = grep("a549", loRegionAnno$cellType, ignore.case = TRUE)
+mcf7Ind = grep("mcf-7", loRegionAnno$cellType, ignore.case = TRUE)
 
-GRList = GRangesList(regionSetDB$regionGRL[1])
+GRList = GRangesList(regionSetDB$regionGRL[c(a549Ind, mcf7Ind)])
 # adding ER Chipseq dataset
-# erSet = fread()
-GRList = c(GRangesList(erSet), GRList)
+erSet = fread(paste0(Sys.getenv("CODE"), "PCARegionAnalysis/inst/extdata/",
+                     "GSM2305313_MCF7_E2_peaks_hg38.bed"))
+setnames(erSet, c("V1", "V2", "V3"), c("chr", "start", "end"))
+GRList = c(GRangesList(MIRA:::dtToGr(erSet)), GRList)
 
 
 # do the PCA
 simpleCache("allMPCA", {
     prcomp(t(trainingMData), center = TRUE)
 }, recreate = TRUE, reload = TRUE)
+allMPCAWeights = as.data.table(allMPCA$rotation)
 mIQR = apply(trainingMData, 1, IQR)
 simpleCache("top10MPCA", {
     prcomp(t(trainingMData[mIQR >= quantile(mIQR, 0.9), ]), center = TRUE)
@@ -69,15 +77,44 @@ rsEnrichment = pcRegionSetEnrichment(loadingMat=top10PCWeights, coordinateDT = t
 # seeing if loading values have a spike in the center of these region sets
 # compared to surrounding genome 
 GRList = lapply(GRList, resize, width = 10000, fix="center")
-pcProf = pcEnrichmentProfile(loadingMat = top10PCWeights, coordinateDT = top10Coord,
-                    GRList=GRList, PCsToAnnotate = c("PC1", "PC2", "PC3", "PC4"),
+
+pcProf = pcEnrichmentProfile(loadingMat = allMPCAWeights, coordinateDT = coordinates,
+                             GRList=GRList, PCsToAnnotate = c("PC1", "PC2", "PC3", "PC4", "PC5"),
+                             binNum = 21)
+pcP = pcProf
+# plot(pcP$PC1, type="l")
+# plot(pcP$PC2, type="l")
+# plot(pcP$PC3, type="l")
+# plot(pcP$PC4, type="l")
+# plot(pcP$PC5, type="l")
+
+rsNames = c("Estrogen_Receptor", loRegionAnno$filename[c(a549Ind, mcf7Ind)])
+
+grDevices::pdf(paste0(Sys.getenv("PLOTS"), "allMPCProfiles.pdf"))
+for (i in 1:length(pcProf)) {
+    plot(pcP[[i]]$PC1, type="l") + title(rsNames[i])
+    plot(pcP[[i]]$PC2, type="l") + title(rsNames[i])
+    plot(pcP[[i]]$PC3, type="l") + title(rsNames[i])
+    plot(pcP[[i]]$PC4, type="l") + title(rsNames[i])
+    plot(pcP[[i]]$PC5, type="l") + title(rsNames[i])
+}
+dev.off()
+
+
+# top 10% mofst variable
+pcProf10 = pcEnrichmentProfile(loadingMat = top10PCWeights, coordinateDT = top10Coord,
+                    GRList=GRList, PCsToAnnotate = c("PC1", "PC2", "PC3", "PC4", "PC5"),
                     binNum = 21)
-pcP = pcProf[[39]]
-plot(pcP$PC1, type="l")
-plot(pcP$PC2, type="l")
-plot(pcP$PC3, type="l")
-plot(pcP$PC4, type="l")
-a
+pcP = pcProf10
+grDevices::pdf(paste0(Sys.getenv("PLOTS"), "top10MPCProfiles.pdf"))
+for (i in 1:length(pcProf)) {
+    plot(pcP[[i]]$PC1, type="l") + title(rsNames[i])
+    plot(pcP[[i]]$PC2, type="l") + title(rsNames[i])
+    plot(pcP[[i]]$PC3, type="l") + title(rsNames[i])
+    plot(pcP[[i]]$PC4, type="l") + title(rsNames[i])
+    plot(pcP[[i]]$PC5, type="l") + title(rsNames[i])
+}
+dev.off()
 
 # initResults = list(rsEnrichment, rsEnrichment2, pcProf, ret[c(46:72, 623:634)])
 # save(initResults, file=paste0(Sys.getenv("PROCESSED"), "brca_PCA/", "initialPRAresults.RData"))
