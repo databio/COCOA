@@ -22,3 +22,14 @@ write.table(x=pc1KeepCoords, file = "PC1.bed", quote = FALSE, sep = "\t",row.nam
 pc2KeepCoords = coordinates[pc1 >= quantile(pc1, probs = 0.75), ]
 pc2KeepCoords[, end := start]
 write.table(x=pc1KeepCoords, file = "PC1.bed", quote = FALSE, sep = "\t",row.names = FALSE, col.names = FALSE)
+
+
+
+# correlate MIRA scores with principal component values for relevant components
+# if there is a peak for estrogen receptor for PC1, correlate PC1 values
+# with MIRA values for that same region set
+
+
+
+# correlate expression of transcription factors with principal component values
+# eg. if estrogent r

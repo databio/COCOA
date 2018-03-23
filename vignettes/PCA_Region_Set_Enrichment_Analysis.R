@@ -43,7 +43,7 @@ regionSetDB = loadRegionDB(lolaPath)
 loRegionAnno = regionSetDB$regionAnno
 a549Ind = grep("a549", loRegionAnno$cellType, ignore.case = TRUE)
 mcf7Ind = grep("mcf-7", loRegionAnno$cellType, ignore.case = TRUE)
-
+k562Ind = grep("k562", loRegionAnno$cellType,  ignore.case = TRUE)
 GRList = GRangesList(regionSetDB$regionGRL[c(a549Ind, mcf7Ind)])
 # adding ER Chipseq dataset
 erSet = fread(paste0(Sys.getenv("CODE"), "PCARegionAnalysis/inst/extdata/",
@@ -55,7 +55,7 @@ GRList = c(GRangesList(MIRA:::dtToGr(erSet)), GRList)
 # do the PCA
 simpleCache("allMPCA", {
     prcomp(t(trainingMData), center = TRUE)
-}, recreate = TRUE, reload = TRUE)
+})
 allMPCAWeights = as.data.table(allMPCA$rotation)
 mIQR = apply(trainingMData, 1, IQR)
 simpleCache("top10MPCA", {
@@ -70,8 +70,11 @@ top10PCWeights = as.data.table(top10MPCA$rotation)
 # run PC region set enrichment analysis
 rsEnrichment = pcRegionSetEnrichment(loadingMat=top10PCWeights, coordinateDT = top10Coord, 
                       GRList, 
-                      PCsToAnnotate = c("PC1", "PC2", "PC3", "PC4", "PC5"))
+                      PCsToAnnotate = c("PC1", "PC2", "PC3", "PC4", "PC5"), permute=FALSE)
+rsNames = c("Estrogen_Receptor", loRegionAnno$filename[c(a549Ind, mcf7Ind)])
 
+rsEnrichment[, rsNames:= rsNames]
+View(rsEnrichment[order(PC1,decreasing = TRUE)])
 
 # check whether is enrichment is specific to this region set by
 # seeing if loading values have a spike in the center of these region sets
@@ -90,7 +93,7 @@ pcP = pcProf
 
 rsNames = c("Estrogen_Receptor", loRegionAnno$filename[c(a549Ind, mcf7Ind)])
 
-grDevices::pdf(paste0(Sys.getenv("PLOTS"), "allMPCProfiles.pdf"))
+grDevices::pdf(paste0(Sys.getenv("PLOTS"), "allMPCProfilesDNase300.pdf"))
 for (i in 1:length(pcProf)) {
     plot(pcP[[i]]$PC1, type="l") + title(rsNames[i])
     plot(pcP[[i]]$PC2, type="l") + title(rsNames[i])
@@ -151,3 +154,7 @@ PGRInd = grep(pattern = "ENSG00000082175", x = myExprDT[, "Gene"],
 hist(as.numeric(myExprDT[PGRInd, 2:ncol(myExprDT)]),
      breaks = seq(0,400,1))
 sum(as.numeric(myExprDT[PGRInd, 2:ncol(myExprDT)]) < 2) / (ncol(myExprDT)-1)
+
+
+# References
+# https://www.ncbi.nlm.nih.gov/pubmed/17616709/: ER transcriptional network
