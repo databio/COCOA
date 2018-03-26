@@ -41,10 +41,12 @@ lolaPath = paste0(Sys.getenv("REGIONS"), "LOLACore/hg38/")
 #lolaPath = system.file("extdata", "hg19", package="LOLA")
 regionSetDB = loadRegionDB(lolaPath)
 loRegionAnno = regionSetDB$regionAnno
-a549Ind = grep("a549", loRegionAnno$cellType, ignore.case = TRUE)
-mcf7Ind = grep("mcf-7", loRegionAnno$cellType, ignore.case = TRUE)
-k562Ind = grep("k562", loRegionAnno$cellType,  ignore.case = TRUE)
-GRList = GRangesList(regionSetDB$regionGRL[c(a549Ind, mcf7Ind)])
+# a549Ind = grep("a549", loRegionAnno$cellType, ignore.case = TRUE)
+sheff_dnaseInd = grep("sheffield_dnase", loRegionAnno$collection, ignore.case = TRUE)
+# mcf7Ind = grep("mcf-7", loRegionAnno$cellType, ignore.case = TRUE)
+# k562Ind = grep("k562", loRegionAnno$cellType,  ignore.case = TRUE)
+# GRList = GRangesList(regionSetDB$regionGRL[c(a549Ind, mcf7Ind)])
+GRList = GRangesList(regionSetDB$regionGRL[-sheff_dnaseInd])
 # adding ER Chipseq dataset
 erSet = fread(paste0(Sys.getenv("CODE"), "PCARegionAnalysis/inst/extdata/",
                      "GSM2305313_MCF7_E2_peaks_hg38.bed"))
@@ -68,11 +70,11 @@ top10PCWeights = as.data.table(top10MPCA$rotation)
 #                   perplexity = 30)
 # plot(top10TSNE$Y)
 # run PC region set enrichment analysis
-rsEnrichment = pcRegionSetEnrichment(loadingMat=top10PCWeights, coordinateDT = top10Coord, 
+rsEnrichment = pcRegionSetEnrichment(loadingMat=allMPCAWeights, coordinateDT = coordinates, 
                       GRList, 
                       PCsToAnnotate = c("PC1", "PC2", "PC3", "PC4", "PC5"), permute=FALSE)
-rsNames = c("Estrogen_Receptor", loRegionAnno$filename[c(a549Ind, mcf7Ind)])
-
+# rsNames = c("Estrogen_Receptor", loRegionAnno$filename[c(a549Ind, mcf7Ind)])
+rsNames = c("Estrogen_Receptor", loRegionAnno$filename[-sheff_dnaseInd])
 rsEnrichment[, rsNames:= rsNames]
 View(rsEnrichment[order(PC1,decreasing = TRUE)])
 
