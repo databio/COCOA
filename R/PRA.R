@@ -1,5 +1,6 @@
 # package to annotate PCA components of DNA methylation data
 # based on region set enrichment
+library(RGenomeUtils)
 
 #' Function to aggregate PCA loading weights over a given region set
 #' and then get p value for each PC based on a permutation
@@ -35,38 +36,53 @@ aggregateLoadings <- function(loadingMat, coordinateDT, regionSet,
     
     
     if (permute) {
-        # permutation test?
-        # shuffle chromosomal coordinate labels and rerun 1000? times
-        set.seed(100) # will this cause the user problems if they independently have set
-        # ...the seed for other functions?
-        loadAgPerm = list()
-        for (i in 1:100) {
-            permInd = sample(1:nrow(loadingDT), replace = FALSE)
-            # reformat into data.table with chromosome location and weight
-            loadingDT = data.table(coordinateDT[permInd, ], loadingMat[, PCsToAnnotate, with=FALSE])
+        # if no cytosines from loadings overlapped with regionSet, no need for
+        # permutations
+        if (is.null(loadAgMain)) {
+            results = as.data.table(t(rep(NA, length(PCsToAnnotate))))
+            setnames(results, PCsToAnnotate)
+            return(results)
+        } else {
+            # permutation test?
+            # shuffle chromosomal coordinate labels and rerun 1000? times
+            set.seed(100) # will this cause the user problems if they independently have set
+            # ...the seed for other functions?
+            loadAgPerm = list()
+            for (i in 1:100) {
+                permInd = sample(1:nrow(loadingDT), replace = FALSE)
+                # reformat into data.table with chromosome location and weight
+                loadingDT = data.table(coordinateDT[permInd, ], loadingMat[, PCsToAnnotate, with=FALSE])
+                
+                # naming does not work if only using one PC so add this line for that case
+                setnames(loadingDT, c("chr", "start", PCsToAnnotate)) 
+                
+                loadAgPerm[[i]] = RGenomeUtils::BSAggregate(BSDT = loadingDT, 
+                                                            regionsGRL = GRangesList(regionSet),
+                                                            jExpr = aggrCommand,
+                                                            byRegionGroup = TRUE,
+                                                            splitFactor = NULL)
+                
+            }
+            loadAgPerm = rbindlist(loadAgPerm)
             
-            # naming does not work if only using one PC so add this line for that case
-            setnames(loadingDT, c("chr", "start", PCsToAnnotate)) 
+            testCDF = lapply(X = loadAgPerm[, .SD, .SDcols = PCsToAnnotate], ecdf)
+            pVals = mapply(function(x, y) y(x), loadAgMain[, .SD, .SDcols = PCsToAnnotate],
+                           testCDF)
+            pVals2 = (0.5 - abs(pVals - 0.5)) * 2 # two sided?    
             
-            loadAgPerm[[i]] = RGenomeUtils::BSAggregate(BSDT = loadingDT, 
-                                                        regionsGRL = GRangesList(regionSet),
-                                                        jExpr = aggrCommand,
-                                                        byRegionGroup = TRUE,
-                                                        splitFactor = NULL)
-            
+            # UPDATE to return p value from permutation test?
+            return(pVals2)
+            #return(loadAgMain[, PCsToAnnotate])
         }
-        loadAgPerm = rbindlist(loadAgPerm)
-        
-        testCDF = lapply(X = loadAgPerm[, .SD, .SDcols = PCsToAnnotate], ecdf)
-        pVals = mapply(function(x, y) y(x), loadAgMain[, .SD, .SDcols = PCsToAnnotate],
-                       testCDF)
-        pVals2 = (0.5 - abs(pVals - 0.5)) * 2 # two sided?    
-        
-        # UPDATE to return p value from permutation test?
-        return(pVals2)
-        #return(loadAgMain[, PCsToAnnotate])
     } else {
-        return(loadAgMain[, .SD, .SDcols = PCsToAnnotate])
+        # if no cytosines from loadings were included in regionSet, result is NA
+        if (is.null(loadAgMain)) {
+            results = as.data.table(t(rep(NA, length(PCsToAnnotate))))
+            setnames(results, PCsToAnnotate)
+        } else {
+            results = loadAgMain[, .SD, .SDcols = PCsToAnnotate]
+        }
+        return(results)
     }
 }
 
@@ -176,3 +192,173 @@ BSBinAggregate = function(BSDT, rangeDT, binCount, minReads = 500,
 }
 
 
+# modification of BSAggregate to just return mean per region
+# averageByRegion(BSDT = BSDT, regionsGRL, jCommand = MIRA:::buildJ(cols = "methylProp", "mean"))
+averageByRegion <- function(BSDT, regionsGRL, excludeGR = NULL, 
+                        regionsGRL.length = NULL, splitFactor = NULL, 
+                        keepCols = NULL, sumCols = NULL, jCommand = NULL, 
+                        byRegionGroup = FALSE, keep.na = FALSE, hasCoverage = TRUE) {
+    
+    # Assert that regionsGRL is a GRL.
+    # If regionsGRL is given as a GRanges, we convert to GRL
+    if (is(regionsGRL, "GRanges")) {
+        regionsGRL <- GRangesList(regionsGRL);
+    } else if (!is(regionsGRL, "GRangesList")) {
+        stop("regionsGRL is not a GRanges or GRangesList object");
+    }
+    
+    # make sure methylProp column is present
+    if (!("methylProp" %in% colnames(BSDT))) {
+        stop("BSDT must have a methylProp column.")
+    }
+    
+    if (! is.null(excludeGR)) {
+        BSDT <- BSFilter(BSDT, minReads = 0, excludeGR)
+    }
+    
+    bsgr <- MIRA:::BSdtToGRanges(list(BSDT));
+    
+    colModes <- sapply(BSDT, mode);
+    if (is.null(sumCols)) {
+        sumCols <- setdiff(colnames(BSDT), c("chr", "start", "end", 
+                                             "strand", splitFactor, keepCols))
+        # Restrict to numeric columns.      
+        sumCols <- intersect(sumCols, 
+                             names(colModes[which(colModes == "numeric")]))
+        
+    }
+    # It's required to do a findoverlaps on each region individually, 
+    # Not on a GRL, because of the way overlaps with GRLs work. So, 
+    # we must convert the GRL to a GR, but we must keep track of which
+    # regions came from which group.
+    regionsGR <- unlist(regionsGRL)
+    
+    if (is.null(regionsGRL.length)) {
+        if (length(regionsGRL) > 100) {
+            message(cleanws("BSAggregate: Calculating sizes. You can speed this
+                            up by supplying a regionsGRL.length vector..."),
+                    appendLF = FALSE)
+        }
+        regionsGRL.length <- sapply(regionsGRL, length)
+        # message("Done counting regionsGRL lengths.");
+    }
+    
+    # Build a table to keep track of which regions belong to which group
+    region2group <- data.table(
+        regionID = seq_along(regionsGR), 
+        chr = as.vector(seqnames(regionsGR)), 
+        start = as.vector(start(regionsGR)), 
+        end = as.vector(end(regionsGR)), 
+        withinGroupID = as.vector(unlist(sapply(regionsGRL.length, seq))), 
+        regionGroupID = rep(seq_along(regionsGRL), regionsGRL.length))
+    setkey(region2group, regionID)
+    
+    
+    # message("Finding overlaps...");
+    fo <- findOverlaps(bsgr[[1]], regionsGR)
+    
+    setkey(BSDT, chr, start)
+    # Gut check:
+    # stopifnot(all(elementMetadata(bsgr[[1]])$coverage == BSDT$coverage))
+    
+    # message("Setting regionIDs...");
+    BSDT <- BSDT[queryHits(fo), ] # restrict the table to CpGs in any region.
+    
+    if (NROW(BSDT) < 1) {
+        warning("No BSDT sites in the given region list. 
+                Please expand your regionsGRL")
+        return(NULL)
+    }
+    
+    # record which region they overlapped, corresponds to withinGroupID
+    BSDT[, regionID := subjectHits(fo)]
+    # if (!keep.na) {
+    # BSDT <- BSDT[queryHits(fo), ]
+    #}
+    
+    if (is.null(jCommand)) {
+        cols <- c(sumCols, keepCols)
+        funcs <- c(rep("sum", length(sumCols)), rep("unique", length(keepCols)))
+        jCommand <- buildJ(cols, funcs)
+    }
+    # message("jCommand: ", jCommand)
+    
+    # Build the by string
+    if (is.null(splitFactor)) {
+        byString <- paste0("list(regionID)");
+    } else {
+        byString <- paste0("list(", paste("regionID", paste0(splitFactor, ""), 
+                                          collapse = ",", sep = ","), ")")
+    }
+    
+    # Now actually do the aggregate:
+    # message("Combining...");
+    # for MIRA: average methylProp and sum coverage within each instance of 
+    # each bin (ie average methylProp's in bin1 of first region, average 
+    # methylProp's in bin1 of second region etc. for all bins and all regions
+    # separately)
+    bsCombined <- BSDT[, eval(parse(text = jCommand)), 
+                       by = eval(parse(text = byString))]
+    setkey(bsCombined, regionID)
+    setkey(region2group, regionID)
+    
+    avPerRegion = merge(bsCombined, region2group)
+    avPerRegion[, c("regionID", "withinGroupID", "regionGroupID") := NULL]
+    return(avPerRegion)
+    
+    # Now aggregate across groups.
+    # I do this in 2 steps to avoid assigning regions to groups, 
+    # which takes awhile. I think this preserves memory and is faster.
+    
+    # # Define aggregation column. aggregate by region or by region group?
+    # if (byRegionGroup) {
+    #     # must set allow = TRUE here in case there are multiple IDs (splitCol)
+    #     # adds regionGroupID column from region2group to bsCombined
+    #     bsCombined[region2group, regionGroupID := regionGroupID, allow = TRUE]
+    #     if (! is.null(splitFactor)) { 
+    #         byStringGroup <- paste0("list(", 
+    #                                 paste("regionGroupID", 
+    #                                       paste0(splitFactor, collapse = ","), 
+    #                                       sep = ","), 
+    #                                 ")")
+    #     } else {
+    #         byStringGroup <- "list(regionGroupID)"
+    #     }
+    #     
+    #     
+    #     # actual aggregation operation
+    #     # for normal MIRA use: averaging methylProp's and summing
+    #     # coverage for all bins with the same number (ie all
+    #     # bin1's together, all bin2's together, etc.)
+    #     # NOTE: 2nd use of the jCommand so if the first jCommand use changed
+    #     # column names that are required by the jCommand 
+    #     # then this 2nd jCommand use will cause an error
+    #     bsCombined <- bsCombined[, eval(parse(text = jCommand)), 
+    #                              by = eval(parse(text = byStringGroup))]
+    #     
+    #     # if any strand information was not given, averaging the profiles 
+    #     # about the center to account for unknown strand orientation, 
+    #     # also averaging coverage about center
+    #     # ie if any "*" are present then average
+    #     if ("*" %in% unique(as.character(strand(regionsGR)))) {
+    #         bsCombined[, methylProp := (methylProp + rev(methylProp)) / 2]
+    #         if (hasCoverage) {
+    #             bsCombined[, coverage := (coverage + rev(coverage)) / 2]
+    #         }
+    #     }
+    #     
+    #     # changing "regionGroupID" name to "bin" which is less confusing
+    #     # for normal MIRA use cases
+    #     setnames(bsCombined, old = "regionGroupID", new = "bin")
+    #     return(bsCombined[]);
+    # } else {
+    #     warning(cleanws("Using byRegionGroup = FALSE may 
+    #          result in missing functionalities such as symmetrical averaging"))
+    #     e <- region2group[bsCombined, ]
+    #     setkey(e, regionID);
+    #     return(e);
+    # }
+    # # WARNING: There are now 2^2 ways to aggregate, sum vs mean
+    # # at each level: across regions, then across region sets. THis
+    # # doesn't give you a choice at this point. 
+}
