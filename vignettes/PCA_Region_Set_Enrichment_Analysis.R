@@ -5,11 +5,14 @@ library(data.table)
 library(GenomicRanges)
 library(caret)
 library(RGenomeUtils)
+library(gridExtra) #marrangeGrob for colorClusterPlots()
+# some of the environmental variables from aml/.../00-init.R will need to be reset
+source(paste0(Sys.getenv("CODE"), "aml_e3999/src/00-init.R" ))
+source(paste0(Sys.getenv("CODE"), "PCARegionAnalysis/R/PRA.R"))
 
 
 # 
 Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "brca_PCA/analysis/plots/"))
-source(paste0(Sys.getenv("CODE"), "PCARegionAnalysis/R/PRA.R"))
 patientMetadata = fread(paste0(Sys.getenv("CODE"), 
                                "PCARegionAnalysis/metadata/brca_metadata.csv"))
 set.seed(1234)
@@ -36,6 +39,8 @@ trainingMData = brcaMList[["methylProp"]][,
 testMData = brcaMList[["methylProp"]][, 
                 colnames(brcaMList[["methylProp"]]) %in% testIDs]
 
+###########################################################
+
 # load LOLA database
 lolaPath = paste0(Sys.getenv("REGIONS"), "LOLACore/hg38/")
 #lolaPath = system.file("extdata", "hg19", package="LOLA")
@@ -53,11 +58,12 @@ erSet = fread(paste0(Sys.getenv("CODE"), "PCARegionAnalysis/inst/extdata/",
 setnames(erSet, c("V1", "V2", "V3"), c("chr", "start", "end"))
 GRList = c(GRangesList(MIRA:::dtToGr(erSet)), GRList)
 
-
+########################################################3333
 # do the PCA
 simpleCache("allMPCA", {
     prcomp(t(trainingMData), center = TRUE)
 })
+# plot(allMPCA$x[,c("PC1", "PC3")])
 allMPCAWeights = as.data.table(allMPCA$rotation)
 mIQR = apply(trainingMData, 1, IQR)
 simpleCache("top10MPCA", {
@@ -136,11 +142,76 @@ dev.off()
 # visualize
 
 
+######################################################
+# visualizing PCA
+
+# shorten metadata for visualization
+patientMetadata$menopause_status = sub(pattern = "Pre (<6 months since LMP AND no prior bilateral ovariectomy AND not on estrogen replacement)", 
+            "Pre", x = patientMetadata$menopause_status, fixed = TRUE)
+patientMetadata$menopause_status = sub(pattern = "Post (prior bilateral ovariectomy OR >12 mo since LMP with no prior hysterectomy)", 
+                                       "Post", x = patientMetadata$menopause_status, fixed = TRUE)
+patientMetadata$menopause_status = sub(pattern = "Indeterminate (neither Pre or Postmenopausal)", 
+                                       "Indeterminate", x = patientMetadata$menopause_status, fixed = TRUE)
+patientMetadata$menopause_status = sub(pattern = "Peri (6-12 months since last menstrual period)", 
+                                       "Peri", x = patientMetadata$menopause_status, fixed = TRUE)
+patientMetadata$race = sub(pattern = "BLACK OR AFRICAN AMERICAN", 
+                                       "BLACK", x = patientMetadata$race, fixed = TRUE)
+patientMetadata$race = sub(pattern = "AMERICAN INDIAN OR ALASKA NATIVE", 
+                           "NATIVE AM. OR ALASKAN", x = patientMetadata$race, fixed = TRUE)
+
+# add annotation information
+pcaWithAnno = cbind(as.data.table(allMPCA$x), patientMetadata[dataSplit, ])
+
+colorByCols = colnames(patientMetadata)[!(colnames(patientMetadata) %in% "subject_ID")]
+for (i in 2:6) {
+    multiColorPCAPlots = colorClusterPlots(pcaWithAnno, 
+                                             plotCols = c("PC1", paste0("PC", i)), 
+                                             colorByCols=colorByCols)
+    ggplot2::ggsave(filename=paste0(Sys.getenv("PLOTS"), paste0("multiColorPCAPlots1", i), 
+                                    ".pdf"), plot = multiColorPCAPlots, device = "pdf",
+                    limitsize=FALSE)
+}
+for (i in c(2, 4:6)) {
+    multiColorPCAPlots = colorClusterPlots(pcaWithAnno, 
+                                           plotCols = c("PC3", paste0("PC", i)), 
+                                           colorByCols=colorByCols)
+    ggplot2::ggsave(filename=paste0(Sys.getenv("PLOTS"), paste0("multiColorPCAPlots3", i), 
+                                    ".pdf"), plot = multiColorPCAPlots, device = "pdf",
+                    limitsize=FALSE)
+}
+
+
 
 
 ######################################################################################
+# analysis of whether certain subsets of region sets are the variable ones
+
+erSet = GRangesList(MIRA:::dtToGr(erSet))
+genomeLoadings = cbind(coordinates, as.data.table(allMPCA$rotation))
+regionAv = averageByRegion(BSDT = genomeLoadings[, .(chr, start, PC1, PC2, PC3, PC4)], regionsGRL = erSet, 
+                jCommand = MIRA:::buildJ(c("PC1", "PC2", "PC3", "PC4"), "mean"),
+                hasCoverage = FALSE)
+regionAv = lapply(GRList[1:1000], function(x) averageByRegion(loadingMat = allMPCA$rotation, coordinateDT= coordinates, GRList = x, 
+                                           PCsToAnnotate = c("PC1", "PC2", "PC3", "PC4", "PC5", "PC6")))
+names(regionAv) <- c("Estrogen_Receptor", loRegionAnno$filename[-sheff_dnaseInd])[1:1000]
+grep(pattern = "A549P300", names(regionAv))
+# two region sets that show small peaks in the middle of dips
+# these have some regions that have very high loadings which probably drive that
+hist(regionAv$wgEncodeAwgTfbsHaibA549P300V0422111Etoh02UniPk.narrowPeak$PC5)
+hist(regionAv$wgEncodeAwgTfbsHaibA549Tcf12V0422111Etoh02UniPk.narrowPeak$PC2)
+# a region set with a strong peak, has a long tail but very robust
+hist(regionAv$`Human_MCF-7_GATA3_No-treatment_White.bed`$PC6)
+# are the high regions in one PC the same as the high regions in another PC?
+View(regionAv$`Human_MCF-7_GATA3_No-treatment_White.bed`[order(PC6, decreasing = TRUE), ])
+plot(regionAv$`Human_MCF-7_GATA3_No-treatment_White.bed`[, .(PC1, PC3)])
+plot(regionAv$`Human_MCF-7_GATA3_No-treatment_White.bed`[, .(PC1, PC4)])
+plot(regionAv$`Human_MCF-7_GATA3_No-treatment_White.bed`[, .(PC3, PC4)])
+cor(x = regionAv$`Human_MCF-7_GATA3_No-treatment_White.bed`[ PC1 > .002, PC1],
+    y = regionAv$`Human_MCF-7_GATA3_No-treatment_White.bed`[ PC1 > .002, PC3])
 
 
+
+##################################################################################
 # could also do the analysis for hormone receptors in breast cancer:
 # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4754852/
 load("allBRCAexpression.RData")

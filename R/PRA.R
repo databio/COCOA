@@ -194,10 +194,22 @@ BSBinAggregate = function(BSDT, rangeDT, binCount, minReads = 500,
 
 # modification of BSAggregate to just return mean per region
 # averageByRegion(BSDT = BSDT, regionsGRL, jCommand = MIRA:::buildJ(cols = "methylProp", "mean"))
-averageByRegion <- function(BSDT, regionsGRL, excludeGR = NULL, 
-                        regionsGRL.length = NULL, splitFactor = NULL, 
-                        keepCols = NULL, sumCols = NULL, jCommand = NULL, 
-                        byRegionGroup = FALSE, keep.na = FALSE, hasCoverage = TRUE) {
+averageByRegion <- function(loadingMat, coordinateDT, GRList, PCsToAnnotate = c("PC1", "PC2")) {
+    
+    # old parameters
+    excludeGR = NULL
+    splitFactor = NULL
+    regionsGRL.length = NULL
+    keep.na = FALSE
+    keepCols = NULL
+    sumCols = NULL
+    byRegionGroup = FALSE
+    
+    # reformating parameters and assigning new names
+    regionsGRL = GRList
+    loadingDT = as.data.table(abs(loadingMat))
+    BSDT = cbind(coordinateDT, loadingDT[, .SD, .SDcols = PCsToAnnotate])
+    jCommand = MIRA:::buildJ(PCsToAnnotate, rep("mean", length(PCsToAnnotate)))
     
     # Assert that regionsGRL is a GRL.
     # If regionsGRL is given as a GRanges, we convert to GRL
@@ -205,11 +217,6 @@ averageByRegion <- function(BSDT, regionsGRL, excludeGR = NULL,
         regionsGRL <- GRangesList(regionsGRL);
     } else if (!is(regionsGRL, "GRangesList")) {
         stop("regionsGRL is not a GRanges or GRangesList object");
-    }
-    
-    # make sure methylProp column is present
-    if (!("methylProp" %in% colnames(BSDT))) {
-        stop("BSDT must have a methylProp column.")
     }
     
     if (! is.null(excludeGR)) {
