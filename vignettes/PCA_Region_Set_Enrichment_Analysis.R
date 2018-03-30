@@ -12,6 +12,7 @@ source(paste0(Sys.getenv("CODE"), "PCARegionAnalysis/R/PRA.R"))
 
 
 # 
+setwd(paste0(Sys.getenv("PROCESSED"), "brca_PCA/analysis/"))
 Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "brca_PCA/analysis/plots/"))
 patientMetadata = fread(paste0(Sys.getenv("CODE"), 
                                "PCARegionAnalysis/metadata/brca_metadata.csv"))
@@ -57,6 +58,7 @@ erSet = fread(paste0(Sys.getenv("CODE"), "PCARegionAnalysis/inst/extdata/",
                      "GSM2305313_MCF7_E2_peaks_hg38.bed"))
 setnames(erSet, c("V1", "V2", "V3"), c("chr", "start", "end"))
 GRList = c(GRangesList(MIRA:::dtToGr(erSet)), GRList)
+names(GRList) = c("GSM2305313_MCF7_E2_peaks_hg38.bed", loRegionAnno$filename[-sheff_dnaseInd])
 
 ########################################################3333
 # do the PCA
@@ -186,14 +188,17 @@ for (i in c(2, 4:6)) {
 ######################################################################################
 # analysis of whether certain subsets of region sets are the variable ones
 
-erSet = GRangesList(MIRA:::dtToGr(erSet))
-genomeLoadings = cbind(coordinates, as.data.table(allMPCA$rotation))
-regionAv = averageByRegion(BSDT = genomeLoadings[, .(chr, start, PC1, PC2, PC3, PC4)], regionsGRL = erSet, 
-                jCommand = MIRA:::buildJ(c("PC1", "PC2", "PC3", "PC4"), "mean"),
-                hasCoverage = FALSE)
-regionAv = lapply(GRList[1:1000], function(x) averageByRegion(loadingMat = allMPCA$rotation, coordinateDT= coordinates, GRList = x, 
-                                           PCsToAnnotate = c("PC1", "PC2", "PC3", "PC4", "PC5", "PC6")))
-names(regionAv) <- c("Estrogen_Receptor", loRegionAnno$filename[-sheff_dnaseInd])[1:1000]
+# erSet = GRangesList(MIRA:::dtToGr(erSet))
+# genomeLoadings = cbind(coordinates, as.data.table(allMPCA$rotation))
+# regionAv = averageByRegion(BSDT = genomeLoadings[, .(chr, start, PC1, PC2, PC3, PC4)], regionsGRL = erSet, 
+#                 jCommand = MIRA:::buildJ(c("PC1", "PC2", "PC3", "PC4"), "mean"),
+#                 hasCoverage = FALSE)
+simpleCache("regionAv101", {
+    regionAv = lapply(GRList[1:100], function(x) averageByRegion(loadingMat = allMPCA$rotation, coordinateDT= coordinates, GRList = x, 
+                                                                  PCsToAnnotate = c("PC1", "PC2", "PC3", "PC4", "PC5", "PC6")))
+    names(regionAv) <- names(GRList)[1:100]
+    regionAv
+})
 grep(pattern = "A549P300", names(regionAv))
 # two region sets that show small peaks in the middle of dips
 # these have some regions that have very high loadings which probably drive that
@@ -209,7 +214,17 @@ plot(regionAv$`Human_MCF-7_GATA3_No-treatment_White.bed`[, .(PC3, PC4)])
 cor(x = regionAv$`Human_MCF-7_GATA3_No-treatment_White.bed`[ PC1 > .002, PC1],
     y = regionAv$`Human_MCF-7_GATA3_No-treatment_White.bed`[ PC1 > .002, PC3])
 
-
+# LOLA analysis of regions that are high in one PC compared to another for 
+# Human_MCF−7_ESR1_E2−45min_Brown.bed which had good peaks for PC1, 3, 4, 5
+plot(regionAv$`Human_MCF-7_ESR1_E2-45min_Brown.bed`[, .(PC1, PC3)])
+esr1 = regionAv$`Human_MCF-7_ESR1_E2-45min_Brown.bed`
+pc1Reg = esr1[PC1 > 0.001, .(chr, start, end)]
+pc2Reg = esr1[PC2 > 0.001, .(chr, start, end)]
+pc3Reg = esr1[PC3 > 0.001, .(chr, start, end)]
+RGenomeUtils::writeBed(esr1[, .(chr, start, end)], filename = "esr1_all.bed")
+RGenomeUtils::writeBed(pc1Reg, filename = "esr1_PC1.bed")
+RGenomeUtils::writeBed(pc2Reg, filename = "esr1_PC2.bed")
+RGenomeUtils::writeBed(pc3Reg, filename = "esr1_PC3.bed")
 
 ##################################################################################
 # could also do the analysis for hormone receptors in breast cancer:

@@ -369,3 +369,15 @@ averageByRegion <- function(loadingMat, coordinateDT, GRList, PCsToAnnotate = c(
     # # at each level: across regions, then across region sets. THis
     # # doesn't give you a choice at this point. 
 }
+
+
+#' different scoring metrics
+#' remniscent of LOLA: 
+#' support (number of regions, for us regions that have at least 1 cytosine and can be scored)
+#' mean loading value (or could do ratio of peak to surrounding regions)
+#' signal to noise ratio, how big is peak compared to noise of surrounding area
+#' with SNR, even a small peak could have a high SNR
+
+
+
+
