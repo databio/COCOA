@@ -225,7 +225,16 @@ RGenomeUtils::writeBed(esr1[, .(chr, start, end)], filename = "esr1_all.bed")
 RGenomeUtils::writeBed(pc1Reg, filename = "esr1_PC1.bed")
 RGenomeUtils::writeBed(pc2Reg, filename = "esr1_PC2.bed")
 RGenomeUtils::writeBed(pc3Reg, filename = "esr1_PC3.bed")
-
+fos = regionAv$`Human_MCF-7_c-Fos_E2-45min-3hr_Liu.bed`
+pc1Reg = fos[PC1 > 0.001, .(chr, start, end)]
+pc2Reg = fos[PC2 > 0.001, .(chr, start, end)]
+pc3Reg = fos[PC3 > 0.001, .(chr, start, end)]
+RGenomeUtils::writeBed(fos[, .(chr, start, end)], filename = "fos_all.bed")
+RGenomeUtils::writeBed(pc1Reg, filename = "fos_PC1.bed")
+RGenomeUtils::writeBed(pc2Reg, filename = "fos_PC2.bed")
+RGenomeUtils::writeBed(pc3Reg, filename = "fos_PC3.bed")
+# findOverlaps(dtToGr(pc1RegEsr), dtToGr(pc1RegFos))
+    
 ##################################################################################
 # could also do the analysis for hormone receptors in breast cancer:
 # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4754852/
