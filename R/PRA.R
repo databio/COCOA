@@ -378,6 +378,15 @@ averageByRegion <- function(loadingMat, coordinateDT, GRList, PCsToAnnotate = c(
 #' signal to noise ratio, how big is peak compared to noise of surrounding area
 #' with SNR, even a small peak could have a high SNR
 
+#' @param loadingProf
+loadingProfileSNR = function() {
+    # magnitude of the peak divided by standard deviation of 
+    # noise (signal in surrounding areas)
+}
 
+
+# support is just number of regions from each input region set that overlap at all with
+# the cytosines that have loading values 
+# GenomicRanges::findOverlaps(regionSet, MIRA:::dtToGr(coordinateDT)) 
 
 

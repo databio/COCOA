@@ -1,15 +1,6 @@
 
-library(LOLA)
-library(simpleCache)
-library(data.table)
-library(GenomicRanges)
-library(caret)
-library(RGenomeUtils)
-library(gridExtra) #marrangeGrob for colorClusterPlots()
-# some of the environmental variables from aml/.../00-init.R will need to be reset
-source(paste0(Sys.getenv("CODE"), "aml_e3999/src/00-init.R" ))
-source(paste0(Sys.getenv("CODE"), "PCARegionAnalysis/R/PRA.R"))
 
+source(paste0(Sys.getenv("CODE"), "PCARegionAnalysis/R/00-init.R"))
 
 # 
 setwd(paste0(Sys.getenv("PROCESSED"), "brca_PCA/analysis/"))
@@ -78,23 +69,32 @@ top10PCWeights = as.data.table(top10MPCA$rotation)
 #                   perplexity = 30)
 # plot(top10TSNE$Y)
 # run PC region set enrichment analysis
-rsEnrichment = pcRegionSetEnrichment(loadingMat=allMPCAWeights, coordinateDT = coordinates, 
-                      GRList, 
-                      PCsToAnnotate = c("PC1", "PC2", "PC3", "PC4", "PC5"), permute=FALSE)
-# rsNames = c("Estrogen_Receptor", loRegionAnno$filename[c(a549Ind, mcf7Ind)])
-rsNames = c("Estrogen_Receptor", loRegionAnno$filename[-sheff_dnaseInd])
-rsEnrichment[, rsNames:= rsNames]
+simpleCache("rsEnrichment", {
+    rsEnrichment = pcRegionSetEnrichment(loadingMat=allMPCAWeights, coordinateDT = coordinates, 
+                                         GRList, 
+                                         PCsToAnnotate = c("PC1", "PC2", "PC3", "PC4", "PC5"), permute=FALSE)
+    # rsNames = c("Estrogen_Receptor", loRegionAnno$filename[c(a549Ind, mcf7Ind)])
+    rsNames = c("Estrogen_Receptor", loRegionAnno$filename[-sheff_dnaseInd])
+    rsEnrichment[, rsNames:= rsNames]
+    rsEnrichment
+    
+})
 View(rsEnrichment[order(PC1,decreasing = TRUE)])
 
 # check whether is enrichment is specific to this region set by
 # seeing if loading values have a spike in the center of these region sets
 # compared to surrounding genome 
-GRList = lapply(GRList, resize, width = 10000, fix="center")
+GRList = lapply(GRList, resize, width = 14000, fix="center")
 
-pcProf = pcEnrichmentProfile(loadingMat = allMPCAWeights, coordinateDT = coordinates,
-                             GRList=GRList, PCsToAnnotate = c("PC1", "PC2", "PC3", "PC4", "PC5"),
-                             binNum = 21)
-pcP = pcProf
+simpleCache("pcProf14k",{
+    pcProf = pcEnrichmentProfile(loadingMat = allMPCAWeights, coordinateDT = coordinates,
+                                 GRList=GRList, PCsToAnnotate = c("PC1", "PC2", "PC3", "PC4", "PC5"),
+                                 binNum = 21)
+    # set names by reference
+    setattr(pcProf, "names", names(GRList))
+    pcProf
+})
+pcP = pcProf14k
 # plot(pcP$PC1, type="l")
 # plot(pcP$PC2, type="l")
 # plot(pcP$PC3, type="l")
