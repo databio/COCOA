@@ -8,10 +8,12 @@ library(GenomicRanges) # GRangesList, resize
 source(paste0(Sys.getenv("CODE"), "PCARegionAnalysis/R/PRA.R"))
 
 
-# reading the files in and creating annotation data.table
+# setting environment
 setwd(paste0(Sys.getenv("PROCESSED"), "ews_patients/"))
 Sys.setenv("PLOTS"=paste0(Sys.getenv("PROCESSED"), "ews_patients/analysis/plots/"))
 setCacheDir(paste0(Sys.getenv("PROCESSED"), "ews_patients/RCache/"))
+
+# reading in DNA methylation
 ewsFiles = list.files(pattern = "RRBS_cpgMethylation_EWS.+bed", recursive = TRUE)
 mDTList = lapply(ewsFiles, BSreadBiSeq)
 mDTList = addMethPropCol(mDTList)
@@ -99,7 +101,12 @@ erSet = fread(paste0(Sys.getenv("CODE"), "PCARegionAnalysis/inst/extdata/",
                      "GSM2305313_MCF7_E2_peaks_hg38.bed"))
 setnames(erSet, c("V1", "V2", "V3"), c("chr", "start", "end"))
 GRList = c(GRangesList(MIRA:::dtToGr(erSet)), GRList)
-
+# adding Ewing-related regions
+ewingSetNames = list.files(path=paste0(Sys.getenv("PROCESSED"), "Ewing_Regions/"),full.names = TRUE)
+ewingSets = lapply(ewingSetNames,
+                   RGenomeUtils::readBed)
+ewingSetNames = basename(ewingSetNames)
+GRList = c(GRList, GRangesList(ewingSets))
 
 #################################################################
 # doing PCA of the methylation data
@@ -119,18 +126,47 @@ top10PCWeights = as.data.table(top10MPCA$rotation)
 # top10TSNE = Rtsne(X = top10MPCA$x[, 1:50], pca = FALSE, max_iter=5000,
 #                   perplexity = 30)
 # plot(top10TSNE$Y)
+# plot(allMPCA$x[,c("PC1", "PC4")])
+#plot(allMPCA$x[,c("PC2", "PC4")])
+# plot(allMPCA$x[,c("PC3", "PC4")])
+# taking out two samples that were outliers in PCs 2,3,4,5,
+# in PC4 one was very high the other very low
+ol1Ind = which.max(allMPCA$x[,c("PC4")]) # EWS_T127 (48)
+ol2Ind = which.min(allMPCA$x[,c("PC4")]) # EWS_T126 (47)
+
+
+# then run PCA again
+simpleCache("allMPCA2", {
+    prcomp(t(mData)[-c(ol2Ind, ol1Ind), ], center = TRUE)
+})
+allMPCAWeights2 = as.data.table(allMPCA2$rotation)
+
+
+
+
+##################################################################
 # run PC region set enrichment analysis
 simpleCache("rsEnrichment", {
     rsEnrichment = pcRegionSetEnrichment(loadingMat=allMPCAWeights, coordinateDT = coordinates, 
                                          GRList, 
                                          PCsToAnnotate = c("PC1", "PC2", "PC3", "PC4", "PC5"), permute=FALSE)
     # rsNames = c("Estrogen_Receptor", loRegionAnno$filename[c(a549Ind, mcf7Ind)])
-    rsNames = c("Estrogen_Receptor", loRegionAnno$filename[-sheff_dnaseInd])
+    rsNames = c("Estrogen_Receptor", loRegionAnno$filename[-sheff_dnaseInd], ewingSetNames)
     rsEnrichment[, rsNames:= rsNames]
     rsEnrichment
 })
 
 View(rsEnrichment[order(PC1,decreasing = TRUE)])
+
+simpleCache("rsEnrichment2", {
+    rsEnrichment = pcRegionSetEnrichment(loadingMat=allMPCAWeights2, coordinateDT = coordinates, 
+                                         GRList, 
+                                         PCsToAnnotate = c("PC1", "PC2", "PC3", "PC4", "PC5"), permute=FALSE)
+    # rsNames = c("Estrogen_Receptor", loRegionAnno$filename[c(a549Ind, mcf7Ind)])
+    rsNames = c("Estrogen_Receptor", loRegionAnno$filename[-sheff_dnaseInd], ewingSetNames)
+    rsEnrichment[, rsNames:= rsNames]
+    rsEnrichment
+})
 
 # check whether is enrichment is specific to this region set by
 # seeing if loading values have a spike in the center of these region sets
