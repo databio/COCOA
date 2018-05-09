@@ -1,6 +1,8 @@
 # package to annotate PCA components of DNA methylation data
 # based on region set enrichment
 library(RGenomeUtils)
+library(GenomicRanges)
+library(data.table)
 
 #' Function to aggregate PCA loading weights over a given region set
 #' and then get p value for each PC based on a permutation
@@ -11,9 +13,10 @@ library(RGenomeUtils)
 #' #UPDATE: make sure only aggregating PCsToAnnotate to save time
 
 aggregateLoadings <- function(loadingMat, coordinateDT, regionSet, 
-                  PCsToAnnotate = c("PC1", "PC2"), permute=TRUE) {
+                  PCsToAnnotate = c("PC1", "PC2"), permute=FALSE) {
     # extreme positive or negative values both give important information
     loadingMat = abs(loadingMat) 
+    loadingMat = as.data.table(loadingMat)
     
     # reformat into data.table with chromosome location and weight
     loadingDT = data.table(coordinateDT, loadingMat[, PCsToAnnotate, with=FALSE])
@@ -29,7 +32,9 @@ aggregateLoadings <- function(loadingMat, coordinateDT, regionSet,
                                 rep("mean", length(PCsToAnnotate)))
     
     # do the actual aggregation
-    loadAgMain = RGenomeUtils::BSAggregate(BSDT = loadingDT, regionsGRL = GRangesList(regionSet),
+    # previously used BSAggregate from RGenomeUtils but now using local. 
+    # modified copy
+    loadAgMain = BSAggregate(BSDT = loadingDT, regionsGRL = GRangesList(regionSet),
                 jExpr = aggrCommand,
                 byRegionGroup = TRUE,
                 splitFactor = NULL)
@@ -56,7 +61,7 @@ aggregateLoadings <- function(loadingMat, coordinateDT, regionSet,
                 # naming does not work if only using one PC so add this line for that case
                 setnames(loadingDT, c("chr", "start", PCsToAnnotate)) 
                 
-                loadAgPerm[[i]] = RGenomeUtils::BSAggregate(BSDT = loadingDT, 
+                loadAgPerm[[i]] = BSAggregate(BSDT = loadingDT, 
                                                             regionsGRL = GRangesList(regionSet),
                                                             jExpr = aggrCommand,
                                                             byRegionGroup = TRUE,
@@ -79,8 +84,13 @@ aggregateLoadings <- function(loadingMat, coordinateDT, regionSet,
         if (is.null(loadAgMain)) {
             results = as.data.table(t(rep(NA, length(PCsToAnnotate))))
             setnames(results, PCsToAnnotate)
+            results[, cytosine_overlap := 0]
+            results[, region_overlap := 0]
+            # results[, total_region_number := ]
         } else {
             results = loadAgMain[, .SD, .SDcols = PCsToAnnotate]
+            results[, cytosine_overlap := loadAgMain[, .SD, .SDcols = "numCpGsOverlapping"]]
+            results[, region_overlap := loadAgMain[, .SD, .SDcols = "numRegionsOverlapping"]]
         }
         return(results)
     }
@@ -89,8 +99,18 @@ aggregateLoadings <- function(loadingMat, coordinateDT, regionSet,
 
 #' Wrapper function to do PCA region set enrichment 
 #' analysis for many region sets
-#' 
+#'
 #' For parallel processing, region sets are split up between the cores
+#' @param loadingMat
+#' @param 
+#' @return data.table of results, one row for each region set. 
+#' One column for each PC in PCsToAnnotate
+#' with average loading score for that PC for a given region set. 
+#' rsName column has region set name.
+#' rsDescription has a description for each region set. 
+#' column has number of cytosines that overlapped with the given region set.
+#' column has number of regions that overlapped with any cytosines.
+#' column has total number of regions. 
 
 pcRegionSetEnrichment <- function(loadingMat, coordinateDT, GRList, 
                   PCsToAnnotate = c("PC1", "PC2"), permute=TRUE) {
@@ -179,6 +199,7 @@ BSBinAggregate = function(BSDT, rangeDT, binCount, minReads = 500,
     binnedDT = rangeDT[, MIRA:::binRegion(start, end, binCount, get(seqnamesColName))]
     binnedGR = sapply(split(binnedDT, binnedDT$binID), dtToGr)
     message("Aggregating...")
+    
     binnedBSDT = RGenomeUtils::BSAggregate(BSDT, 
                              regionsGRL=GRangesList(binnedGR), 
                              jExpr=buildJ(PCsToAnnotate, rep("mean", length(PCsToAnnotate))), 
@@ -192,11 +213,20 @@ BSBinAggregate = function(BSDT, rangeDT, binCount, minReads = 500,
 }
 
 
-# modification of BSAggregate to just return mean per region
-# averageByRegion(BSDT = BSDT, regionsGRL, jCommand = MIRA:::buildJ(cols = "methylProp", "mean"))
+#' modification of BSAggregate to just return mean per region
+#' averageByRegion(BSDT = BSDT, regionsGRL, jCommand = MIRA:::buildJ(cols = "methylProp", "mean"))
+#' @param loadingMat matrix of loading values. One named column for each PC and
+#' rows are the original dimensions/variables. The $rotation output of prcomp.
+#' @param GRList a single region set as a GRangesList. If regionSet is a GRanges
+#' object, this can be made with the command: GRangesList(regionSet)
+#' @return a data.table with region coordinates and average loading 
+#' values for each region. Has columns chr, start, end, and a column for each
+#' PC in PCsToAnnotate. Regions are not in order along the rows of the data.table.
+#' 
+# Devel note: I could add a column for how many cytosines are in each region 
 averageByRegion <- function(loadingMat, coordinateDT, GRList, PCsToAnnotate = c("PC1", "PC2")) {
     
-    # old parameters
+    # old parameters of BSAggregate
     excludeGR = NULL
     splitFactor = NULL
     regionsGRL.length = NULL
@@ -208,6 +238,7 @@ averageByRegion <- function(loadingMat, coordinateDT, GRList, PCsToAnnotate = c(
     # reformating parameters and assigning new names
     regionsGRL = GRList
     loadingDT = as.data.table(abs(loadingMat))
+    # linking coordinates to loading values, has columns chr start, PCsToAnnotate
     BSDT = cbind(coordinateDT, loadingDT[, .SD, .SDcols = PCsToAnnotate])
     jCommand = MIRA:::buildJ(PCsToAnnotate, rep("mean", length(PCsToAnnotate)))
     
@@ -388,5 +419,168 @@ loadingProfileSNR = function() {
 # support is just number of regions from each input region set that overlap at all with
 # the cytosines that have loading values 
 # GenomicRanges::findOverlaps(regionSet, MIRA:::dtToGr(coordinateDT)) 
+
+###########################################################################
+
+# BSAggregate from RGenomeUtils
+#' BSaggregate -- Aggregate a BSDT across regions or region groups,
+#' for multiple samples at a time.
+#' This function is as BScombineByRegion, but can handle not only multiple
+#' samples in BSDT, but also simultaneously multiple region sets by passing
+#' a regionsGRL (GRangesList object).
+#' you can use jExpr to do other functions.
+
+#' Given a bisulfite data table as input, with an identifier column for
+#' different samples; plus a GRanges objects with regions to aggregate.
+#'
+#' @param BSDT The bisulfite data.table (output from one of the parsing
+#' functions for methylation calls) that you wish to aggregate. It can
+#' be a combined table, with individual samples identified by column passed
+#' to splitFactor.
+#' @param regionsGRL Regions across which you want to aggregate. Should be 
+#' from a single region set. eg GRangesList(regionSet)
+#' @param excludeGR A GenomicRanges object with regions you want to 
+#' exclude from the aggregation function. These regions will be eliminated
+#' from the input table and not counted.
+#' @param jExpr You can pass a custom command in the j slot to data.table
+#' specifying which columns to aggregate, and which functions to use. You
+#' can use buildJ() to build a jExpr argument easily.
+#' @param byRegionGroup You can aggregate by regionID or by regionGroupID; 
+#' this reflects the regionsGRL that you pass; by default, BSAggregate will
+#' aggregate each region individually -- scores will then be contiguous, and
+#' the output is 1 row per region.
+#' Turn on this flag to aggregate across all region groups, making the result
+#' uncontiguous, and resulting in 1 row per *region group*.
+#'
+#' @export
+BSAggregate = function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL.length = NULL, splitFactor=NULL, keepCols=NULL, 
+                       sumCols=NULL, jExpr=NULL, byRegionGroup=FALSE, keep.na=FALSE) {
+    
+    # Assert that regionsGRL is a GRL.
+    # If regionsGRL is given as a GRanges, we convert to GRL
+    if( "GRanges" %in% class(regionsGRL)) {
+        regionsGRL = GRangesList(regionsGRL)
+    } else if (! "GRangesList" %in% class(regionsGRL)) {
+        stop("regionsGRL is not a GRanges or GRangesList object")
+    }
+    
+    if(! is.null(excludeGR)) {
+        BSDT = BSFilter(BSDT, minReads=0, excludeGR)
+    }
+    
+    bsgr = MIRA:::BSdtToGRanges(list(BSDT))
+    
+    additionalColNames = setdiff(colnames(BSDT), c("chr","start", "end","hitCount","readCount", splitFactor))
+    
+    colModes = sapply(BSDT,mode)
+    if (is.null(sumCols)) {
+        sumCols = setdiff(colnames(BSDT),c("chr", "start", "end", "strand", splitFactor, keepCols))
+        # Restrict to numeric columns.		
+        sumCols = intersect(sumCols, names(colModes[which(colModes == "numeric")]))
+        
+    }
+    # It's required to do a findoverlaps on each region individually,
+    # Not on a GRL, because of the way overlaps with GRLs work. So,
+    # we must convert the GRL to a GR, but we must keep track of which
+    # regions came from which group.
+    regionsGR = unlist(regionsGRL)
+    
+    if(is.null(regionsGRL.length)) {
+        if (length(regionsGRL) > 100) {
+            message("BSAggregate: Calculating sizes. You can speed this up by supplying a regionsGRL.length vector...", appendLF=FALSE)
+        }
+        regionsGRL.length = sapply(regionsGRL, length)
+        message("Done counting regionsGRL lengths.")
+    }
+    
+    # Build a table to keep track of which regions belong to which group
+    region2group = data.table(
+        regionID=1:length(regionsGR), 
+        chr=as.vector(seqnames(regionsGR)), 
+        start=as.vector(start(regionsGR)), 
+        end=as.vector(end(regionsGR)),
+        withinGroupID= as.vector(unlist(sapply(regionsGRL.length, seq))),
+        regionGroupID=rep(1:length(regionsGRL), regionsGRL.length))
+    setkey(region2group, regionID)
+    
+    
+    message("Finding overlaps...")
+    fo = findOverlaps(query = bsgr[[1]], subject = regionsGR)
+    
+    ### use info from findOverlaps to see how many individual
+    # cytosines and how many regions overlap with each other
+    numCpGsOverlapping = length(unique(queryHits(fo)))
+    numRegionsOverlapping = length(unique(subjectHits(fo)))
+    
+    
+    setkey(BSDT, chr, start)
+    # Gut check:
+    # stopifnot(all(elementMetadata(bsgr[[1]])$readCount == BSDT$readCount))
+    
+    message("Setting regionIDs...")
+    BSDT = BSDT[queryHits(fo),] #restrict the table to CpGs in any region.
+    
+    if (NROW(BSDT) < 1) {
+        warning("No BSDT sites in the given region list; please expand your regionsGRL")
+        return(NULL)
+    }
+    
+    BSDT[,regionID:=subjectHits(fo)] #record which region they overlapped.
+    #BSDT[queryHits(fo),regionID:=subjectHits(fo)]
+    #if (!keep.na) {
+    #	BSDT = BSDT[queryHits(fo),]
+    #}
+    
+    if (is.null(jExpr)) {
+        cols=c(sumCols, keepCols)
+        funcs = c(rep("sum", length(sumCols)), rep("unique", length(keepCols)))
+        jExpr = buildJ(cols, funcs)
+    }
+    message("jExpr: ", jExpr)
+    
+    # Define aggregation column. aggregate by region or by region group?
+    if (byRegionGroup) {
+        agCol = "regionGroupID"
+    } else {
+        agCol = "regionID" # Default
+    }
+    
+    # Build the by string
+    if (is.null(splitFactor)) {
+        byString = paste0("list(regionID)")
+    } else {
+        byString = paste0("list(", paste("regionID", paste0(splitFactor, ""), collapse=", ", sep=", "), ")")
+    }
+    
+    # Now actually do the aggregate:
+    message("Combining...")
+    bsCombined = BSDT[,eval(parse(text=jExpr)), by=eval(parse(text=byString))]
+    setkey(bsCombined, regionID)
+    # Now aggregate across groups.
+    # I do this in 2 steps to avoid assigning regions to groups,
+    # which takes awhile. I think this preserve memory and is faster.
+    
+    # Define aggregation column. aggregate by region or by region group?
+    if (byRegionGroup) {
+        # must set allow=TRUE here in case there are multiple IDs (splitCol)
+        bsCombined[region2group, regionGroupID:=regionGroupID, allow=TRUE]
+        if (! is.null(splitFactor) ) { 
+            byStringGroup = paste0("list(", paste("regionGroupID", paste0(splitFactor, collapse=", "), sep=", "), ")")
+        } else {
+            byStringGroup = "list(regionGroupID)"
+        }
+        bsCombined=bsCombined[,eval(parse(text=jExpr)), by=eval(parse(text=byStringGroup))]
+        bsCombined[, numCpGsOverlapping := numCpGsOverlapping]
+        bsCombined[, numRegionsOverlapping := numRegionsOverlapping]
+        return(bsCombined)
+    } else {
+        e = region2group[bsCombined,]
+        setkey(e, regionID)
+        return(e)
+    }
+    # WARNING: There are now 2^2 ways to aggregate, sum vs mean
+    # at each level: across regions, then across region sets. THis
+    # doesn't give you a choice at this point. 
+}
 
 
