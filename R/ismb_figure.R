@@ -12,8 +12,7 @@ patientMetadata = brcaMetadata
 
 # DNA methylation data
 setCacheDir(paste0(Sys.getenv("PROCESSED"), "brca_PCA/RCache/"))
-simpleCache("combinedBRCAMethyl_noXY")
-brcaMList = combinedBRCAMethyl_noXY
+simpleCache("combinedBRCAMethyl_noXY", assignToVariable = "brcaMList")
 
 # reading in the metadata, will be used to split data 
 # into training and test set with balanced ER and PGR status
@@ -26,54 +25,109 @@ trainingMData = brcaMList[["methylProp"]][,
                                           colnames(brcaMList[["methylProp"]]) %in% trainingIDs] 
 
 ###########################################################
-
+# reading in the region sets
 # load LOLA database
-lolaPath = paste0(Sys.getenv("REGIONS"), "LOLACore/hg38/")
-#lolaPath = system.file("extdata", "hg19", package="LOLA")
-regionSetDB = loadRegionDB(lolaPath)
+lolaPath1 = paste0(Sys.getenv("REGIONS"), "/LOLACore/hg38/")
+regionSetDB = loadRegionDB(lolaPath1)
 loRegionAnno = regionSetDB$regionAnno
+lolaCoreRegionAnno = loRegionAnno
 # a549Ind = grep("a549", loRegionAnno$cellType, ignore.case = TRUE)
 sheff_dnaseInd = grep("sheffield_dnase", loRegionAnno$collection, ignore.case = TRUE)
 # mcf7Ind = grep("mcf-7", loRegionAnno$cellType, ignore.case = TRUE)
 # k562Ind = grep("k562", loRegionAnno$cellType,  ignore.case = TRUE)
 # GRList = GRangesList(regionSetDB$regionGRL[c(a549Ind, mcf7Ind)])
-GRList = GRangesList(regionSetDB$regionGRL[-sheff_dnaseInd])
-# adding ER Chipseq dataset
+fInd1 = filterFetal(lolaCoreRegionAnno)
+lolaCoreRegionAnno = lolaCoreRegionAnno[-sort(unique(c(sheff_dnaseInd, fInd1)))]
+GRList1 = GRangesList(regionSetDB$regionGRL[-sort(unique(c(sheff_dnaseInd, fInd1)))])
+
+# ROADMAP Epigenome project and Jaspar motifs
+lolaPath2 = paste0(Sys.getenv("REGIONS"), "/LOLAExt/hg38/")
+regionSetDB2 = loadRegionDB(lolaPath2, useCache = TRUE)
+loRegionAnno2 = regionSetDB2$regionAnno
+roadmapRegionAnno = loRegionAnno2[loRegionAnno2$collection == "roadmap_epigenomics", ]
+GRList2 = GRangesList(regionSetDB2$regionGRL[loRegionAnno2$collection == "roadmap_epigenomics"])
+fInd2 = filterFetal(roadmapRegionAnno)
+roadmapRegionAnno = roadmapRegionAnno[-fInd2]
+GRList2 = GRList2[-fInd2]
+
+# processing Jaspar motif regions
+# resizing regions and filtering to only open chromatin in K562
+# size was ~999
+motifRegionAnno = loRegionAnno2[loRegionAnno2$collection == "jaspar_motifs", ]
+GRList3 = GRangesList(regionSetDB2$regionGRL[loRegionAnno2$collection == "jaspar_motifs"])
+# filtering based on chromatin accessibility data from blood/AML
+load(paste0(Sys.getenv("PROCESSED"), "/aml_e3999/prjResources/","bloodAccessibleRegions.RData"))
+GRList3 = getOLRegions(GRList = GRList3, intGR=bloodAccessibleRegions, removeOL = FALSE)
+GRList3 = GRangesList(GRList3)
+#I'm not sure that center is where motif is: GRList3 = resize(GRList3, width = 200, fix="center") 
+
+# combine into one GRList
+GRList = c(GRList1, GRList2, GRList3)
+
+#adding ER Chipseq dataset
 erSet = fread(paste0(Sys.getenv("CODE"), "PCARegionAnalysis/inst/extdata/",
                      "GSM2305313_MCF7_E2_peaks_hg38.bed"))
 setnames(erSet, c("V1", "V2", "V3"), c("chr", "start", "end"))
 GRList = c(GRangesList(MIRA:::dtToGr(erSet)), GRList)
-names(GRList) = c("GSM2305313_MCF7_E2_peaks_hg38.bed", loRegionAnno$filename[-sheff_dnaseInd])
+# names(GRList) = c("GSM2305313_MCF7_E2_peaks_hg38.bed", names(GRList))
+
+#################################################################
+# cleaning up since there were many large objects
+rm(list = c("GRList1", "GRList2", "GRList3", "regionSetDB", "regionSetDB2"))
+
+#################################################################
+
+allMPCAString = "pca_top100C_02cVM_pQC"
+top10MPCAString = "pca_top10C_02cVM_pQC"
+
+# gives output of rsEnrichment from PCA of all shared cytosines
+# and rsEnrichmentTop10 from PCA of 10% most variable shared cytosines
+source(paste0(Sys.getenv("CODE"),"/aml_e3999/src/PCRSA_pipeline.R"))
+
+rsEnrichment = 
+rsEnrichmentTop10 = 
+
+write.csv(x = rsEnrichment, 
+          file = dirData("analysis/sheets/PC_Enrichment_All_Shared_Cs.csv"),
+          quote = FALSE, row.names = FALSE)
+write.csv(x = rsEnrichmentTop10, 
+          file = dirData("analysis/sheets/PC_Enrichment_Top_10%_Variable_Cs.csv"),
+          quote = FALSE, row.names = FALSE)
 
 ########################################################3333
 # do the PCA
 simpleCache("allMPCA_657", {
     prcomp(t(trainingMData), center = TRUE)
-})
-allMPCA = allMPCA_657
+}, assignToVariable = "allMPCA")
 # plot(allMPCA$x[,c("PC1", "PC3")])
 allMPCAWeights = as.data.table(allMPCA$rotation)
 mIQR = apply(trainingMData, 1, IQR)
 simpleCache("top10MPCA_657", {
     prcomp(t(trainingMData[mIQR >= quantile(mIQR, 0.9), ]), center = TRUE)
-})
-top10MPCA = top10MPCA_657
+}, assignToVariable = "top10MPCA")
 coordinates = brcaMList[["coordinates"]]
 top10Coord = coordinates[mIQR >= quantile(mIQR, 0.9), ]
 top10PCWeights = as.data.table(top10MPCA$rotation)
 
-########################################################3333
+########################################################
+
+rsNames = c("GSM2305313_MCF7_E2_peaks_hg38.bed", 
+            lolaCoreRegionAnno$filename, roadmapRegionAnno$filename, 
+            motifRegionAnno$filename)
+rsDescription = c("GSM2305313_MCF7_E2_peaks_hg38.bed",
+                  lolaCoreRegionAnno$description, roadmapRegionAnno$description, 
+                  motifRegionAnno$description)
+
 # run PC region set enrichment analysis
 simpleCache("rsEnrichment_657", {
     rsEnrichment = pcRegionSetEnrichment(loadingMat=allMPCAWeights, coordinateDT = coordinates, 
                                          GRList, 
-                                         PCsToAnnotate = c("PC1", "PC2", "PC3", "PC4", "PC5"), permute=FALSE)
+                                         PCsToAnnotate = paste0("PC", 1:10), permute=FALSE)
     # rsNames = c("Estrogen_Receptor", loRegionAnno$filename[c(a549Ind, mcf7Ind)])
-    rsNames = c("Estrogen_Receptor", loRegionAnno$filename[-sheff_dnaseInd])
     rsEnrichment[, rsNames:= rsNames]
-    rsEnrichment
+    rsEnrichment[, rsDescription := rsDescription]
     
-})
+}, recreate = TRUE)
 rsEnrichment = rsEnrichment_657
 View(rsEnrichment[order(PC1,decreasing = TRUE)])
 

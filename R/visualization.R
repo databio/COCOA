@@ -33,7 +33,8 @@ hist(stat5MData[, 30])
 #' @param pcaData The principal component scores for the samples 
 #' (ie transformed methylation data).
 #' @param pc The principal component used to order the samples in the heatmap
-rsMethylHeatmap <- function(methylData, coordGR, regionSet, pcaData, pc="PC1") {
+# library(ComplexHeatmap)
+rsMethylHeatmap <- function(methylData, coordGR, regionSet, pcaData, pc="PC1", ...) {
     
     # coordGR =
     olList = findOverlaps(regionSet, coordGR)
@@ -43,9 +44,10 @@ rsMethylHeatmap <- function(methylData, coordGR, regionSet, pcaData, pc="PC1") {
     subject_ID = row.names(thisRSMData)
     # centeredPCAMeth = t(apply(t(methylData), 1, function(x) x - pcaData$center)) # center first 
     # reducedValsPCA = centeredPCAMeth %*% pcaData$rotation
-    reducedValsPCA = pcaData$x
-    thisRSMData = thisRSMData[names(sort(pcaData$x[, "PC1"])), ]
+    # reducedValsPCA = pcaData$x
+    thisRSMData = thisRSMData[names(sort(pcaData[, "PC1"])), ]
     message(paste0("Number of cytosines: ", ncol(thisRSMData)))
     message(paste0("Number of regions: ", length(unique(queryHits(olList)))))
-    heatmap(thisRSMData, Rowv = NA, Colv = NA, col=cm.colors(256), scale = "none")
+    ComplexHeatmap::Heatmap(thisRSMData, cluster_rows = FALSE, cluster_columns = FALSE,
+                            use_raster=TRUE, raster_device = "png")
 }

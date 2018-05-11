@@ -14,6 +14,9 @@ library(data.table)
 
 aggregateLoadings <- function(loadingMat, coordinateDT, regionSet, 
                   PCsToAnnotate = c("PC1", "PC2"), permute=FALSE) {
+    
+    numOfRegions = length(regionSet)
+    
     # extreme positive or negative values both give important information
     loadingMat = abs(loadingMat) 
     loadingMat = as.data.table(loadingMat)
@@ -84,13 +87,14 @@ aggregateLoadings <- function(loadingMat, coordinateDT, regionSet,
         if (is.null(loadAgMain)) {
             results = as.data.table(t(rep(NA, length(PCsToAnnotate))))
             setnames(results, PCsToAnnotate)
-            results[, cytosine_overlap := 0]
-            results[, region_overlap := 0]
-            # results[, total_region_number := ]
+            results[, cytosine_coverage := 0]
+            results[, region_coverage := 0]
+            results[, total_region_number := numOfRegions]
         } else {
             results = loadAgMain[, .SD, .SDcols = PCsToAnnotate]
-            results[, cytosine_overlap := loadAgMain[, .SD, .SDcols = "numCpGsOverlapping"]]
-            results[, region_overlap := loadAgMain[, .SD, .SDcols = "numRegionsOverlapping"]]
+            results[, cytosine_coverage := loadAgMain[, .SD, .SDcols = "numCpGsOverlapping"]]
+            results[, region_coverage := loadAgMain[, .SD, .SDcols = "numRegionsOverlapping"]]
+            results[, total_region_number := numOfRegions]
         }
         return(results)
     }
