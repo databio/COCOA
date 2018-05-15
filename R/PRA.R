@@ -11,6 +11,7 @@ library(data.table)
 #' @param regionSet A genomic ranges object with regions corresponding
 #' to the same biological annotation.
 #' #UPDATE: make sure only aggregating PCsToAnnotate to save time
+#' # permute=TRUE is deprecated and that code chunk is not up to date
 
 aggregateLoadings <- function(loadingMat, coordinateDT, regionSet, 
                   PCsToAnnotate = c("PC1", "PC2"), permute=FALSE) {
@@ -90,11 +91,13 @@ aggregateLoadings <- function(loadingMat, coordinateDT, regionSet,
             results[, cytosine_coverage := 0]
             results[, region_coverage := 0]
             results[, total_region_number := numOfRegions]
+            results[, mean_region_size := round(mean(width(regionSet)), 1)]
         } else {
             results = loadAgMain[, .SD, .SDcols = PCsToAnnotate]
             results[, cytosine_coverage := loadAgMain[, .SD, .SDcols = "numCpGsOverlapping"]]
             results[, region_coverage := loadAgMain[, .SD, .SDcols = "numRegionsOverlapping"]]
             results[, total_region_number := numOfRegions]
+            results[, mean_region_size := round(mean(width(regionSet)), 1)]
         }
         return(results)
     }
