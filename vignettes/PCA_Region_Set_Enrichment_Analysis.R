@@ -1,5 +1,5 @@
 
-
+library(ComplexHeatmap)
 source(paste0(Sys.getenv("CODE"), "PCARegionAnalysis/R/00-init.R"))
 
 # 
@@ -124,36 +124,6 @@ write.csv(x = rsEnrichmentTop10,
 
 
 ####################################################################
-
-# do the PCA
-simpleCache("allMPCA", {
-    prcomp(t(trainingMData), center = TRUE)
-})
-# plot(allMPCA$x[,c("PC1", "PC3")])
-allMPCAWeights = as.data.table(allMPCA$rotation)
-mIQR = apply(trainingMData, 1, IQR)
-simpleCache("top10MPCA", {
-    prcomp(t(trainingMData[mIQR >= quantile(mIQR, 0.9), ]), center = TRUE)
-})
-coordinates = brcaMList[["coordinates"]]
-top10Coord = coordinates[mIQR >= quantile(mIQR, 0.9), ]
-top10PCWeights = as.data.table(top10MPCA$rotation)
-# top10TSNE = Rtsne(X = top10MPCA$x[, 1:50], pca = FALSE, max_iter=5000,
-#                   perplexity = 30)
-# plot(top10TSNE$Y)
-# run PC region set enrichment analysis
-simpleCache("rsEnrichment", {
-    rsEnrichment = pcRegionSetEnrichment(loadingMat=allMPCAWeights, coordinateDT = coordinates, 
-                                         GRList, 
-                                         PCsToAnnotate = c("PC1", "PC2", "PC3", "PC4", "PC5"), permute=FALSE)
-    # rsNames = c("Estrogen_Receptor", loRegionAnno$filename[c(a549Ind, mcf7Ind)])
-    rsNames = c("Estrogen_Receptor", loRegionAnno$filename[-sheff_dnaseInd])
-    rsEnrichment[, rsNames:= rsNames]
-    rsEnrichment
-    
-})
-View(rsEnrichment[order(PC1,decreasing = TRUE)])
-
 # check whether is enrichment is specific to this region set by
 # seeing if loading values have a spike in the center of these region sets
 # compared to surrounding genome 
@@ -309,6 +279,62 @@ RGenomeUtils::writeBed(pc3Reg, filename = "fos_PC3.bed")
 # findOverlaps(dtToGr(pc1RegEsr), dtToGr(pc1RegFos))
     
 ##################################################################################
+# visualization of enrichment score results and methylation in related regions
+plotList = list()
+PCsToAnnotate = paste0("PC", 1:10)
+# see https://github.com/jokergoo/ComplexHeatmap/issues/110
+grDevices::pdf(file = paste0(Sys.getenv("PLOTS"), "rsEnrichHeatmap.pdf"), width = 11, height = 8.5 * length(PCsToAnnotate))
+grid.newpage()
+for (i in 1:10) {
+    multiHM = grid.grabExpr(draw(rsEnrichHeatmap(rsEnrichment = rsEnrichment, PCsToAnnotate = paste0("PC", 1:10),
+                orderByPC = paste0("PC", i), rsNameCol = "rsName", topX = 40)))
+    
+    pushViewport(viewport(y = unit((8.5*length(PCsToAnnotate))-(i-1)*8.5, "in"), height = unit(8, "in"), just = "top"))
+    grid.draw(multiHM)
+    popViewport()
+}
+# multiColPlots = marrangeGrob(grobs = plotList, ncol = 1, nrow = 1)
+# ggsave(filename = paste0(Sys.getenv("PLOTS"), "rsEnrichHeatmap.pdf"), plot = multiColPlots, device = "pdf")
+# gridextra
+# multiColPlots = marrangeGrob(plotList, ncol = 2, nrow = 2)
+dev.off()
+
+# for rsEnrichmentTop10
+
+grDevices::pdf(file = paste0(Sys.getenv("PLOTS"), "rsEnrichHeatmapTop10Variable.pdf"), width = 11, height = 8.5 * length(PCsToAnnotate))
+grid.newpage()
+for (i in 1:10) {
+    multiHM = grid.grabExpr(draw(rsEnrichHeatmap(rsEnrichment = rsEnrichmentTop10, PCsToAnnotate = paste0("PC", 1:10),
+                                                 orderByPC = paste0("PC", i), rsNameCol = "rsName", topX = 40)))
+    
+    pushViewport(viewport(y = unit((8.5*length(PCsToAnnotate))-(i-1)*8.5, "in"), height = unit(8, "in"), just = "top"))
+    grid.draw(multiHM)
+    popViewport()
+}
+# multiColPlots = marrangeGrob(grobs = plotList, ncol = 1, nrow = 1)
+# ggsave(filename = paste0(Sys.getenv("PLOTS"), "rsEnrichHeatmap.pdf"), plot = multiColPlots, device = "pdf")
+# gridextra
+# multiColPlots = marrangeGrob(plotList, ncol = 2, nrow = 2)
+dev.off()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+###################################################################################
+
 # could also do the analysis for hormone receptors in breast cancer:
 # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4754852/
 load("allBRCAexpression.RData")
