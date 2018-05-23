@@ -1,6 +1,7 @@
 
 library(ComplexHeatmap)
 source(paste0(Sys.getenv("CODE"), "PCARegionAnalysis/R/00-init.R"))
+library(fastICA)
 
 # 
 setwd(paste0(Sys.getenv("PROCESSED"), "brca_PCA/analysis/"))
@@ -12,7 +13,7 @@ set.seed(1234)
 
 # DNA methylation data
 setCacheDir(paste0(Sys.getenv("PROCESSED"), "brca_PCA/RCache/"))
-simpleCache("combinedBRCAMethyl_noXY", assignToVariable = brcaMList)
+simpleCache("combinedBRCAMethyl_noXY", assignToVariable = "brcaMList")
 
 
 # reading in the metadata, will be used to split data 
@@ -226,6 +227,51 @@ for (i in c(2, 4:6)) {
 }
 
 
+###################################################################################
+# visualizing ICA
+allMICA = fastICA(X = brcaMList$methylProp, n.comp = 5)#, alg.typ = "deflation")
+
+i=2
+cpgToPlotNum=20000
+pdf(paste0(Sys.getenv("PLOTS"), "ICA_cpg_plots.pdf"))
+for (i in 1:ncol(allMICA$S)) {
+    for (j in 1:ncol(allMICA$S)) {
+        cpgToPlot = sample(1:nrow(allMICA$S), cpgToPlotNum)
+        plot(allMICA$S[cpgToPlot, i], allMICA$S[cpgToPlot, j])
+    }
+}
+dev.off()
+plot(allMICA$S[1:cpgToPlot, i], allMICA$S[1:cpgToPlot, 2])
+plot(allMICA$S[1:cpgToPlot, i], allMICA$S[1:cpgToPlot, 3])
+plot(allMICA$S[1:cpgToPlot, i], allMICA$S[1:cpgToPlot, 4])
+plot(allMICA$S[1:cpgToPlot, i], allMICA$S[1:cpgToPlot, 5])
+
+# # add annotation information
+# icaWithAnno = cbind(as.data.table(allMICA$x), patientMetadata[dataSplit, ])
+# 
+# colorByCols = colnames(patientMetadata)[!(colnames(patientMetadata) %in% "subject_ID")]
+# for (i in 2:6) {
+#     multiColorICAPlots = colorClusterPlots(icaWithAnno, 
+#                                            plotCols = c("PC1", paste0("PC", i)), 
+#                                            colorByCols=colorByCols)
+#     ggplot2::ggsave(filename=paste0(Sys.getenv("PLOTS"), paste0("multiColorICAPlots1", i), 
+#                                     ".pdf"), plot = multiColorICAPlots, device = "pdf",
+#                     limitsize=FALSE)
+# }
+# for (i in c(2, 4:6)) {
+#     multiColorICAPlots = colorClusterPlots(icaWithAnno, 
+#                                            plotCols = c("PC3", paste0("PC", i)), 
+#                                            colorByCols=colorByCols)
+#     ggplot2::ggsave(filename=paste0(Sys.getenv("PLOTS"), paste0("multiColorICAPlots3", i), 
+#                                     ".pdf"), plot = multiColorICAPlots, device = "pdf",
+#                     limitsize=FALSE)
+# }
+
+
+
+
+
+# visualizing 
 
 
 ######################################################################################
@@ -322,11 +368,30 @@ dev.off()
 
 
 
+#############################################################################
+# generate plots of methylation distribution across patients
+# one plot per cpg
+set.seed(1234)
+numCpgsToPlot = 10000
+cpgsToPlot = sample(x = 1:nrow(brcaMList$methylProp), numCpgsToPlot)
+histList = list()
+# grDevices::pdf(paste0(Sys.getenv("PLOTS"), "cpg_methyl_distr_across_samples.pdf"))
+for (i in 1:numCpgsToPlot) {
+    histList[[i]] = t(hist(brcaMList$methylProp[cpgsToPlot[i], ], breaks = seq(from=0, to=1, by = 0.1))$count)
+}
+countMat = do.call(rbind, histList)
+# dev.off()
+# scale max to 1 for heatmap
+histList2 = lapply(histList, FUN = function(x) x / max(x))
 
+countMat2 = do.call(rbind, histList2)
 
-
-
-
+grDevices::pdf(paste0(Sys.getenv("PLOTS"), "cpg_methyl_distr_across_samples_heatmap.pdf"))
+Heatmap(countMat, cluster_columns = FALSE, cluster_rows = TRUE)
+dev.off()
+grDevices::pdf(paste0(Sys.getenv("PLOTS"), "cpg_methyl_distr_across_samples_heatmap_scaled.pdf"))
+Heatmap(countMat2, cluster_columns = FALSE, cluster_rows = TRUE)
+dev.off()
 
 
 
