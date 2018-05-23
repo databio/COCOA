@@ -120,8 +120,13 @@ write.csv(x = rsEnrichmentTop10,
           file = dirData("analysis/sheets/PC_Enrichment_Top_10%_Variable_Cs_657.csv"),
           quote = FALSE, row.names = FALSE)
 
-########################################################3333
-
+# for rsEnrichment, PCs 2-4
+# for rsEnrichmentTop10, PCs 1 and 3 could separate ER+/-
+# make PCRSA_pipeline be able to take PCA object? otherwise create new cache with PC values
+# specialPCEnr = PCRSA_pipeline(mData=trainingMData, coordinates=brcaMList[["coordinates"]], 
+#                               GRList=GRList, useCache=TRUE, 
+#                               allMPCAString=allMPCAString, top10MPCAString = top10MPCAString, 
+#                               rsName = rsName, rsDescription = rsDescription)
 
 
 ####################################################################
@@ -191,6 +196,10 @@ dev.off()
 ######################################################
 # visualizing PCA
 
+# load PCA data
+simpleCache(allMPCAString, assignToVariable = "allMPCA")
+simpleCache(top10MPCAString, assignToVariable = "top10MPCA")
+
 # shorten metadata for visualization
 patientMetadata$menopause_status = sub(pattern = "Pre (<6 months since LMP AND no prior bilateral ovariectomy AND not on estrogen replacement)", 
             "Pre", x = patientMetadata$menopause_status, fixed = TRUE)
@@ -206,7 +215,7 @@ patientMetadata$race = sub(pattern = "AMERICAN INDIAN OR ALASKA NATIVE",
                            "NATIVE AM. OR ALASKAN", x = patientMetadata$race, fixed = TRUE)
 
 # add annotation information
-pcaWithAnno = cbind(as.data.table(allMPCA$x), patientMetadata[dataSplit, ])
+pcaWithAnno = cbind(as.data.table(allMPCA$x), patientMetadata)
 
 colorByCols = colnames(patientMetadata)[!(colnames(patientMetadata) %in% "subject_ID")]
 for (i in 2:6) {
@@ -226,9 +235,32 @@ for (i in c(2, 4:6)) {
                     limitsize=FALSE)
 }
 
+# repeat for PCA of top 10% variable cytosines
+# add annotation information
+pcaWithAnno = cbind(as.data.table(top10MPCA$x), patientMetadata)
+
+colorByCols = colnames(patientMetadata)[!(colnames(patientMetadata) %in% "subject_ID")]
+for (i in 2:6) {
+    multiColorPCAPlots = colorClusterPlots(pcaWithAnno, 
+                                           plotCols = c("PC1", paste0("PC", i)), 
+                                           colorByCols=colorByCols)
+    ggplot2::ggsave(filename=paste0(Sys.getenv("PLOTS"), paste0("multiColorPCAPlots_", top10MPCAString, "_1", i), 
+                                    ".pdf"), plot = multiColorPCAPlots, device = "pdf",
+                    limitsize=FALSE)
+}
+for (i in c(2, 4:6)) {
+    multiColorPCAPlots = colorClusterPlots(pcaWithAnno, 
+                                           plotCols = c("PC3", paste0("PC", i)), 
+                                           colorByCols=colorByCols)
+    ggplot2::ggsave(filename=paste0(Sys.getenv("PLOTS"), paste0("multiColorPCAPlots_", top10MPCAString, "_3", i), 
+                                    ".pdf"), plot = multiColorPCAPlots, device = "pdf",
+                    limitsize=FALSE)
+}
+
 
 ###################################################################################
 # visualizing ICA
+# treating cytosines as observations and patients as dimensions 
 allMICA = fastICA(X = brcaMList$methylProp, n.comp = 5)#, alg.typ = "deflation")
 
 i=2
@@ -326,42 +358,41 @@ RGenomeUtils::writeBed(pc3Reg, filename = "fos_PC3.bed")
     
 ##################################################################################
 # visualization of enrichment score results and methylation in related regions
-plotList = list()
-PCsToAnnotate = paste0("PC", 1:10)
+
 # see https://github.com/jokergoo/ComplexHeatmap/issues/110
-grDevices::pdf(file = paste0(Sys.getenv("PLOTS"), "rsEnrichHeatmap.pdf"), width = 11, height = 8.5 * length(PCsToAnnotate))
-grid.newpage()
-for (i in 1:10) {
-    multiHM = grid.grabExpr(draw(rsEnrichHeatmap(rsEnrichment = rsEnrichment, PCsToAnnotate = paste0("PC", 1:10),
-                orderByPC = paste0("PC", i), rsNameCol = "rsName", topX = 40)))
+#' create pdf with multiple heatmap plots (number = length(PCsToRankBy)). 
+#' Plot i will be ranked by PCsToRankBy[i]. 
+comparePCHeatmap <- function(rsEnrichment, PCsToRankBy=paste0("PC", 1:5), PCsToInclude=paste0("PC", 1:10), fileName=NULL) {
+    if (!is.null(fileName)) {
+        grDevices::pdf(file = fileName, width = 11, height = 8.5 * length(PCsToRankBy))
+        grid.newpage()
+        for (i in seq_along(PCsToRankBy)) {
+            multiHM = grid.grabExpr(draw(rsEnrichHeatmap(rsEnrichment = rsEnrichment, PCsToAnnotate = PCsToInclude,
+                                                         orderByPC = PCsToRankBy[i], rsNameCol = "rsName", topX = 40)))
+            
+            pushViewport(viewport(y = unit((8.5*length(PCsToRankBy))-(i-1)*8.5, "in"), height = unit(8, "in"), just = "top"))
+            grid.draw(multiHM)
+            popViewport()
+        }
+        dev.off()
+    }
     
-    pushViewport(viewport(y = unit((8.5*length(PCsToAnnotate))-(i-1)*8.5, "in"), height = unit(8, "in"), just = "top"))
-    grid.draw(multiHM)
-    popViewport()
+    # multiColPlots = marrangeGrob(grobs = plotList, ncol = 1, nrow = 1)
+    # ggsave(filename = paste0(Sys.getenv("PLOTS"), "rsEnrichHeatmap.pdf"), plot = multiColPlots, device = "pdf")
+    # gridextra
+    # multiColPlots = marrangeGrob(plotList, ncol = 2, nrow = 2)
 }
-# multiColPlots = marrangeGrob(grobs = plotList, ncol = 1, nrow = 1)
-# ggsave(filename = paste0(Sys.getenv("PLOTS"), "rsEnrichHeatmap.pdf"), plot = multiColPlots, device = "pdf")
-# gridextra
-# multiColPlots = marrangeGrob(plotList, ncol = 2, nrow = 2)
-dev.off()
+
+# for rsEnrichment
+comparePCHeatmap(rsEnrichment=rsEnrichment, 
+                 PCsToRankBy=paste0("PC", 1:10), PCsToInclude=paste0("PC", 1:10),
+                 fileName=paste0(Sys.getenv("PLOTS"), "rsEnrichHeatmap.pdf"))
 
 # for rsEnrichmentTop10
+comparePCHeatmap(rsEnrichment=rsEnrichmentTop10, 
+                PCsToRankBy=paste0("PC", 1:10), PCsToInclude=paste0("PC", 1:10),
+                fileName=paste0(Sys.getenv("PLOTS"), "rsEnrichHeatmapTop10Variable.pdf"))
 
-grDevices::pdf(file = paste0(Sys.getenv("PLOTS"), "rsEnrichHeatmapTop10Variable.pdf"), width = 11, height = 8.5 * length(PCsToAnnotate))
-grid.newpage()
-for (i in 1:10) {
-    multiHM = grid.grabExpr(draw(rsEnrichHeatmap(rsEnrichment = rsEnrichmentTop10, PCsToAnnotate = paste0("PC", 1:10),
-                                                 orderByPC = paste0("PC", i), rsNameCol = "rsName", topX = 40)))
-    
-    pushViewport(viewport(y = unit((8.5*length(PCsToAnnotate))-(i-1)*8.5, "in"), height = unit(8, "in"), just = "top"))
-    grid.draw(multiHM)
-    popViewport()
-}
-# multiColPlots = marrangeGrob(grobs = plotList, ncol = 1, nrow = 1)
-# ggsave(filename = paste0(Sys.getenv("PLOTS"), "rsEnrichHeatmap.pdf"), plot = multiColPlots, device = "pdf")
-# gridextra
-# multiColPlots = marrangeGrob(plotList, ncol = 2, nrow = 2)
-dev.off()
 
 
 
@@ -409,7 +440,7 @@ ER1Ind = grep(pattern = "ENSG00000091831", x = myExprDT[, "Gene"],
 hist(as.numeric(myExprDT[ER1Ind, 2:ncol(myExprDT)]),
      breaks = seq(0,300,1))
 sum(as.numeric(myExprDT[ER1Ind, 2:ncol(myExprDT)]) < 1) / (ncol(myExprDT)-1)
-# progesterone receptoer positive
+# progesterone receptor positive
 PGRInd = grep(pattern = "ENSG00000082175", x = myExprDT[, "Gene"],
               ignore.case = TRUE) # PGR
 hist(as.numeric(myExprDT[PGRInd, 2:ncol(myExprDT)]),
