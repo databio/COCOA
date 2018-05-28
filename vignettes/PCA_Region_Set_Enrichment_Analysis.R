@@ -391,13 +391,15 @@ simpleCache("rsEnrichmentTop10_657", assignToVariable = "rsEnrichmentTop10")
 # TODO: filter out low coverage region sets
 # for rsEnrichment
 comparePCHeatmap(rsEnrichment=rsEnrichment, 
-                 PCsToRankBy=paste0("PC", 1:10), PCsToInclude=paste0("PC", 1:10),
-                 fileName=paste0(Sys.getenv("PLOTS"), "rsEnrichHeatmap.pdf"))
+                 PCsToRankBy=c("PC1m4", "PC1p3", paste0("PC", 1:10)), 
+                 PCsToInclude=c("PC1m4", "PC1p3", paste0("PC", 1:10)),
+                 fileName=paste0(Sys.getenv("PLOTS"), "rsEnrichHeatmap_657.pdf"))
 
 # for rsEnrichmentTop10
 comparePCHeatmap(rsEnrichment=rsEnrichmentTop10, 
-                PCsToRankBy=paste0("PC", 1:10), PCsToInclude=paste0("PC", 1:10),
-                fileName=paste0(Sys.getenv("PLOTS"), "rsEnrichHeatmapTop10Variable.pdf"))
+                 PCsToRankBy=c("PC1m4", "PC1p3", paste0("PC", 1:10)), 
+                 PCsToInclude=c("PC1m4", "PC1p3", paste0("PC", 1:10)),
+                fileName=paste0(Sys.getenv("PLOTS"), "rsEnrichHeatmapTop10Variable_657.pdf"))
 
 
 
@@ -432,60 +434,77 @@ dev.off()
 
 
 ##################################################################################
+# looking at methylation level data at individual cytosines ordered by PC 
+# only looking at regions with high average loading scores
+# still individual cytosine methylation
+# centeredPCAMeth = t(apply(t(brcaMList$methylProp), 1, function(x) x - mPCATop10$center)) 
+# reducedValsPCA = centeredPCAMeth %*% mPCATop10$rotation
+# https://stackoverflow.com/questions/8048984/plot-as-bitmap-in-pdf
+rsEnrichment[, rsIndex := 1:nrow(rsEnrichment)]
+# getting appropriate region
+pc1 = rsEnrichment[order(PC1, decreasing = TRUE), ]
 
-# 
-# PCsToAnnotate = paste0("PC", c(1, 3))
-# for (j in seq_along(PCsToAnnotate)) {
-#     topRegionToPlotNum = 10
-#     grDevices::pdf(paste0(Sys.getenv("PLOTS"), plotSubdir, "regionMethylHeatmaps", PCsToAnnotate[j], ".pdf"), width = 11, height = 8.5 * topRegionToPlotNum)
-#     for (i in 1:topRegionToPlotNum) { # loop through top region sets
-#         regionSet = GRList[[pc1$rsIndex[i]]] 
-#         regionSetName = paste0(pc1$rsName[i], " : ", pc1$rsDescription[i])
-#         # regionSet = GRList[[pc1$rsIndex[4]]]
-#         length(regionSet)
-#         regionLoadAv =averageByRegion(loadingMat = mPCA$rotation, coordinateDT = bigSharedC$coordinates, GRList = regionSet, PCsToAnnotate = PCsToAnnotate[j])
-#         # hist(regionLoadAv$PC1)
-#         # pdf("test.pdf")
-#         # PCsToAnnotate = paste0("PC", 1:10)
-#         # for (i in seq_along(PCsToAnnotate)) {
-#         #     hist(regionLoadAv[, get(PCsToAnnotate[i])], main = PCsToAnnotate[i])
-#         # }
-#         # dev.off()
-#         
-#         # finding a suitable threshold for "high" average loading score
-#         # loadingMeans = apply(X = abs(mPCATop10$rotation[, PCsToAnnotate]), 2, mean)
-#         # getting 95th percentile for each PC
-#         # loading95Perc = apply(abs(mPCA$rotation[, PCsToAnnotate]), 2, function(x) quantile(x, 0.95))
-#         loading95Perc = quantile(abs(mPCA$rotation[, PCsToAnnotate]), 0.95)
-#         
-#         # hist(mPCATop10$rotation[, "PC1"])
-#         highVariable = regionLoadAv[get(PCsToAnnotate[j]) > loading95Perc, .(chr, start, end)]
-#         nrow(regionLoadAv)
-#         if (nrow(highVariable) > 0) {
-#             regionSet = MIRA:::dtToGr(highVariable)
-#             
-#             
-#             # text(paste0(pc1$rsDescription[i], ":", pc1$rsName[i]))
-#             multiHM = grid.grabExpr(draw(rsMethylHeatmap(methylData = bigSharedC[["methylProp"]], 
-#                                                          coordGR = MIRA:::dtToGr(bigSharedC[["coordinates"]]), 
-#                                                          regionSet = regionSet, 
-#                                                          pcaData = mPCA$x, 
-#                                                          pc = PCsToAnnotate[j], column_title= regionSetName)))
-#             pushViewport(viewport(y = unit((8.5*topRegionToPlotNum)-(i-1)*8.5, "in"), height = unit(8, "in"), just = "top"))
-#             grid.draw(multiHM)
-#             popViewport()
-#             # ,
-#             #                 name = paste0(pc1$rsDescription[i], " : ", pc1$rsName[i]), 
-#             #                 column_title = paste0(pc1$rsDescription[i], " : ", pc1$rsName[i]),
-#             #                 column_title_side = "top",
-#             #                 column_title_gp = gpar(fontsize = 14))
-#             #                 # column_title = paste0(pc1$rsDescription[i], " : ", pc1$rsName[i]))
-#         }
-#         
-#     }
-#     dev.off()
-# }
-# 
+
+PCsToAnnotate = paste0("PC", c(1, 4))
+for (j in seq_along(PCsToAnnotate)) {
+    topRegionToPlotNum = 10
+    grDevices::pdf(paste0(Sys.getenv("PLOTS"), "regionMethylHeatmapsTest", PCsToAnnotate[j], ".pdf"), width = 11, height = 8.5 * topRegionToPlotNum)
+    for (i in 1:topRegionToPlotNum) { # loop through top region sets
+        regionSet = GRList[[pc1$rsIndex[i]]] 
+        regionSetName = paste0(pc1$rsName[i], " : ", pc1$rsDescription[i])
+        # regionSet = GRList[[pc1$rsIndex[4]]]
+        length(regionSet)
+        regionLoadAv =averageByRegion(loadingMat = allMPCA$rotation, coordinateDT = brcaMList$coordinates, GRList = regionSet, PCsToAnnotate = PCsToAnnotate[j])
+        # hist(regionLoadAv$PC1)
+        # pdf("test.pdf")
+        # PCsToAnnotate = paste0("PC", 1:10)
+        # for (i in seq_along(PCsToAnnotate)) {
+        #     hist(regionLoadAv[, get(PCsToAnnotate[i])], main = PCsToAnnotate[i])
+        # }
+        # dev.off()
+        
+        # finding a suitable threshold for "high" average loading score
+        # loadingMeans = apply(X = abs(mPCATop10$rotation[, PCsToAnnotate]), 2, mean)
+        # getting 95th percentile for each PC
+        # loading95Perc = apply(abs(mPCA$rotation[, PCsToAnnotate]), 2, function(x) quantile(x, 0.95))
+        loading95Perc = quantile(abs(allMPCA$rotation[, PCsToAnnotate]), 0.95)
+        
+        # hist(mPCATop10$rotation[, "PC1"])
+        highVariable = regionLoadAv[get(PCsToAnnotate[j]) > loading95Perc, .(chr, start, end, score=get(PCsToAnnotate[j]))]
+        
+        if (nrow(highVariable) > 50) {
+            highVariable[, rowIndex :=  1:nrow(highVariable)]
+            tmp = highVariable[order(score, decreasing = TRUE), ]
+            tmp = tmp[1:50,]
+            tmp = tmp[order(rowIndex, decreasing = FALSE), ]
+            highVariable = highVariable[tmp$rowIndex, ]
+        }
+        
+        nrow(regionLoadAv)
+        if (nrow(highVariable) > 0) {
+            regionSet = MIRA:::dtToGr(highVariable)
+            
+            
+            # text(paste0(pc1$rsDescription[i], ":", pc1$rsName[i]))
+            multiHM = grid.grabExpr(draw(rsMethylHeatmap(methylData = brcaMList[["methylProp"]], 
+                                                         coordGR = MIRA:::dtToGr(brcaMList[["coordinates"]]), 
+                                                         regionSet = regionSet, 
+                                                         pcaData = allMPCA$x, 
+                                                         pc = PCsToAnnotate[j], column_title= regionSetName))) # use_raster=TRUE, raster_device="jpeg")
+            pushViewport(viewport(y = unit((8.5*topRegionToPlotNum)-(i-1)*8.5, "in"), height = unit(8, "in"), just = "top"))
+            grid.draw(multiHM)
+            popViewport()
+            # ,
+            #                 name = paste0(pc1$rsDescription[i], " : ", pc1$rsName[i]), 
+            #                 column_title = paste0(pc1$rsDescription[i], " : ", pc1$rsName[i]),
+            #                 column_title_side = "top",
+            #                 column_title_gp = gpar(fontsize = 14))
+            #                 # column_title = paste0(pc1$rsDescription[i], " : ", pc1$rsName[i]))
+        }
+        
+    }
+    dev.off()
+}
 
 
 ###################################################################################
