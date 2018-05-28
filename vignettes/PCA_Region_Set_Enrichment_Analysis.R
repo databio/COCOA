@@ -1,5 +1,6 @@
 
 library(ComplexHeatmap)
+project.init(codeRoot = paste0(Sys.getenv("CODE"), "PCARegionAnalysis/R/"), dataDir = paste0(Sys.getenv("PROCESSED"), "brca_PCA/"))
 source(paste0(Sys.getenv("CODE"), "PCARegionAnalysis/R/00-init.R"))
 library(fastICA)
 
@@ -101,18 +102,50 @@ rsDescription = c("ER ChIPseq, MCF7 cell line, estradiol stimulation",
                   roadmapRegionAnno$description,
                   motifRegionAnno$filename)
            
+# loading PCA and combining components that could separate ER=/-
+# for rsEnrichment, PCs 1 and 4 could separate ER+/-
+simpleCache(allMPCAString, assignToVariable = "allMPCA")
+simpleCache(top10MPCAString, assignToVariable = "top10MPCA")
+# getting new axis in direction that separates, normalizing to length one
+PC1m4 = (1/sqrt(2)) * allMPCA$rotation[, "PC1"] - (1/sqrt(2)) * allMPCA$rotation[, "PC4"]
+allMPCA$rotation = cbind(allMPCA$rotation, PC1m4)
+# also adding combination that could separate ER+/- in top10MPCA which should not here
+PC1p3 = (1/sqrt(2)) * allMPCA$rotation[, "PC1"] + (1/sqrt(2)) * allMPCA$rotation[, "PC3"]
+allMPCA$rotation = cbind(allMPCA$rotation, PC1p3)
+
+# for rsEnrichmentTop10, PCs 1 and 3 could separate ER+/-
+PC1p3 = (1/sqrt(2)) * top10MPCA$rotation[, "PC1"] + (1/sqrt(2)) * top10MPCA$rotation[, "PC3"]
+top10MPCA$rotation = cbind(top10MPCA$rotation, PC1p3)
+# also adding combination that could separate ER+/- in allMPCA which should not here
+PC1m4 = (1/sqrt(2)) * top10MPCA$rotation[, "PC1"] - (1/sqrt(2)) * top10MPCA$rotation[, "PC4"]
+top10MPCA$rotation = cbind(top10MPCA$rotation, PC1m4)
+# make PCRSA_pipeline be able to take PCA object? otherwise create new cache with PC values
+# specialPCEnr = PCRSA_pipeline(mData=trainingMData, coordinates=brcaMList[["coordinates"]], 
+#                               GRList=GRList, useCache=TRUE, 
+#                               allMPCAString=allMPCAString, top10MPCAString = top10MPCAString, 
+#                               rsName = rsName, rsDescription = rsDescription)
+
+
 
 # gives output of rsEnrichment from PCA of all shared cytosines
 # and rsEnrichmentTop10 from PCA of 10% most variable shared cytosines
 source(paste0(Sys.getenv("CODE"),"/aml_e3999/src/PCRSA_pipeline.R"))
 enrichResults = PCRSA_pipeline(mData=trainingMData, coordinates=brcaMList[["coordinates"]], 
-               GRList=GRList, useCache=TRUE, 
-               allMPCAString=allMPCAString, top10MPCAString = top10MPCAString, 
-               rsName = rsName, rsDescription = rsDescription) 
+               GRList=GRList, 
+               PCsToAnnotate = c("PC1m4", "PC1p3", paste0("PC", 1:10)), 
+               pcaCache=FALSE, 
+               allMPCACacheName=allMPCAString, top10MPCACacheName = top10MPCAString, 
+               overwritePCACaches = FALSE, 
+               allMPCA = allMPCA, top10MPCA = top10MPCA,
+               rsName = rsName, rsDescription = rsDescription,
+               rsEnCache = TRUE, rsEnCacheName = "rsEnrichment_657",
+               rsEnTop10CacheName = "rsEnrichmentTop10_657",
+               overwriteResultsCaches = TRUE) 
 
 rsEnrichment = enrichResults[[1]]
 rsEnrichmentTop10 = enrichResults[[2]]
-    
+
+
 write.csv(x = rsEnrichment, 
               file = dirData("analysis/sheets/PC_Enrichment_All_Shared_Cs_657.csv"),
               quote = FALSE, row.names = FALSE)
@@ -120,13 +153,6 @@ write.csv(x = rsEnrichmentTop10,
           file = dirData("analysis/sheets/PC_Enrichment_Top_10%_Variable_Cs_657.csv"),
           quote = FALSE, row.names = FALSE)
 
-# for rsEnrichment, PCs 2-4
-# for rsEnrichmentTop10, PCs 1 and 3 could separate ER+/-
-# make PCRSA_pipeline be able to take PCA object? otherwise create new cache with PC values
-# specialPCEnr = PCRSA_pipeline(mData=trainingMData, coordinates=brcaMList[["coordinates"]], 
-#                               GRList=GRList, useCache=TRUE, 
-#                               allMPCAString=allMPCAString, top10MPCAString = top10MPCAString, 
-#                               rsName = rsName, rsDescription = rsDescription)
 
 
 ####################################################################
@@ -357,32 +383,12 @@ RGenomeUtils::writeBed(pc3Reg, filename = "fos_PC3.bed")
 # findOverlaps(dtToGr(pc1RegEsr), dtToGr(pc1RegFos))
     
 ##################################################################################
-# visualization of enrichment score results and methylation in related regions
+# visualization of enrichment score results across PCs
+# see if region set high in one PC is also high in others
+simpleCache("rsEnrichment_657", assignToVariable = "rsEnrichment")
+simpleCache("rsEnrichmentTop10_657", assignToVariable = "rsEnrichmentTop10")
 
-# see https://github.com/jokergoo/ComplexHeatmap/issues/110
-#' create pdf with multiple heatmap plots (number = length(PCsToRankBy)). 
-#' Plot i will be ranked by PCsToRankBy[i]. 
-comparePCHeatmap <- function(rsEnrichment, PCsToRankBy=paste0("PC", 1:5), PCsToInclude=paste0("PC", 1:10), fileName=NULL) {
-    if (!is.null(fileName)) {
-        grDevices::pdf(file = fileName, width = 11, height = 8.5 * length(PCsToRankBy))
-        grid.newpage()
-        for (i in seq_along(PCsToRankBy)) {
-            multiHM = grid.grabExpr(draw(rsEnrichHeatmap(rsEnrichment = rsEnrichment, PCsToAnnotate = PCsToInclude,
-                                                         orderByPC = PCsToRankBy[i], rsNameCol = "rsName", topX = 40)))
-            
-            pushViewport(viewport(y = unit((8.5*length(PCsToRankBy))-(i-1)*8.5, "in"), height = unit(8, "in"), just = "top"))
-            grid.draw(multiHM)
-            popViewport()
-        }
-        dev.off()
-    }
-    
-    # multiColPlots = marrangeGrob(grobs = plotList, ncol = 1, nrow = 1)
-    # ggsave(filename = paste0(Sys.getenv("PLOTS"), "rsEnrichHeatmap.pdf"), plot = multiColPlots, device = "pdf")
-    # gridextra
-    # multiColPlots = marrangeGrob(plotList, ncol = 2, nrow = 2)
-}
-
+# TODO: filter out low coverage region sets
 # for rsEnrichment
 comparePCHeatmap(rsEnrichment=rsEnrichment, 
                  PCsToRankBy=paste0("PC", 1:10), PCsToInclude=paste0("PC", 1:10),
@@ -425,8 +431,61 @@ Heatmap(countMat2, cluster_columns = FALSE, cluster_rows = TRUE)
 dev.off()
 
 
+##################################################################################
 
-
+# 
+# PCsToAnnotate = paste0("PC", c(1, 3))
+# for (j in seq_along(PCsToAnnotate)) {
+#     topRegionToPlotNum = 10
+#     grDevices::pdf(paste0(Sys.getenv("PLOTS"), plotSubdir, "regionMethylHeatmaps", PCsToAnnotate[j], ".pdf"), width = 11, height = 8.5 * topRegionToPlotNum)
+#     for (i in 1:topRegionToPlotNum) { # loop through top region sets
+#         regionSet = GRList[[pc1$rsIndex[i]]] 
+#         regionSetName = paste0(pc1$rsName[i], " : ", pc1$rsDescription[i])
+#         # regionSet = GRList[[pc1$rsIndex[4]]]
+#         length(regionSet)
+#         regionLoadAv =averageByRegion(loadingMat = mPCA$rotation, coordinateDT = bigSharedC$coordinates, GRList = regionSet, PCsToAnnotate = PCsToAnnotate[j])
+#         # hist(regionLoadAv$PC1)
+#         # pdf("test.pdf")
+#         # PCsToAnnotate = paste0("PC", 1:10)
+#         # for (i in seq_along(PCsToAnnotate)) {
+#         #     hist(regionLoadAv[, get(PCsToAnnotate[i])], main = PCsToAnnotate[i])
+#         # }
+#         # dev.off()
+#         
+#         # finding a suitable threshold for "high" average loading score
+#         # loadingMeans = apply(X = abs(mPCATop10$rotation[, PCsToAnnotate]), 2, mean)
+#         # getting 95th percentile for each PC
+#         # loading95Perc = apply(abs(mPCA$rotation[, PCsToAnnotate]), 2, function(x) quantile(x, 0.95))
+#         loading95Perc = quantile(abs(mPCA$rotation[, PCsToAnnotate]), 0.95)
+#         
+#         # hist(mPCATop10$rotation[, "PC1"])
+#         highVariable = regionLoadAv[get(PCsToAnnotate[j]) > loading95Perc, .(chr, start, end)]
+#         nrow(regionLoadAv)
+#         if (nrow(highVariable) > 0) {
+#             regionSet = MIRA:::dtToGr(highVariable)
+#             
+#             
+#             # text(paste0(pc1$rsDescription[i], ":", pc1$rsName[i]))
+#             multiHM = grid.grabExpr(draw(rsMethylHeatmap(methylData = bigSharedC[["methylProp"]], 
+#                                                          coordGR = MIRA:::dtToGr(bigSharedC[["coordinates"]]), 
+#                                                          regionSet = regionSet, 
+#                                                          pcaData = mPCA$x, 
+#                                                          pc = PCsToAnnotate[j], column_title= regionSetName)))
+#             pushViewport(viewport(y = unit((8.5*topRegionToPlotNum)-(i-1)*8.5, "in"), height = unit(8, "in"), just = "top"))
+#             grid.draw(multiHM)
+#             popViewport()
+#             # ,
+#             #                 name = paste0(pc1$rsDescription[i], " : ", pc1$rsName[i]), 
+#             #                 column_title = paste0(pc1$rsDescription[i], " : ", pc1$rsName[i]),
+#             #                 column_title_side = "top",
+#             #                 column_title_gp = gpar(fontsize = 14))
+#             #                 # column_title = paste0(pc1$rsDescription[i], " : ", pc1$rsName[i]))
+#         }
+#         
+#     }
+#     dev.off()
+# }
+# 
 
 
 ###################################################################################

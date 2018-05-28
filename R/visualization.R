@@ -109,3 +109,29 @@ rsEnrichHeatmap <- function(rsEnrichment, PCsToAnnotate=paste0("PC", 1:5),
     
 }
 
+
+
+#' create pdf with multiple heatmap plots (number = length(PCsToRankBy)). 
+#' Plot i will be ranked by PCsToRankBy[i]. 
+#' # see https://github.com/jokergoo/ComplexHeatmap/issues/110
+comparePCHeatmap <- function(rsEnrichment, PCsToRankBy=paste0("PC", 1:5), PCsToInclude=paste0("PC", 1:10), fileName=NULL) {
+    if (!is.null(fileName)) {
+        grDevices::pdf(file = fileName, width = 11, height = 8.5 * length(PCsToRankBy))
+        grid.newpage()
+        for (i in seq_along(PCsToRankBy)) {
+            multiHM = grid.grabExpr(draw(rsEnrichHeatmap(rsEnrichment = rsEnrichment, PCsToAnnotate = PCsToInclude,
+                                                         orderByPC = PCsToRankBy[i], rsNameCol = "rsName", topX = 40)))
+            
+            pushViewport(viewport(y = unit((8.5*length(PCsToRankBy))-(i-1)*8.5, "in"), height = unit(8, "in"), just = "top"))
+            grid.draw(multiHM)
+            popViewport()
+        }
+        dev.off()
+    }
+    
+    # multiColPlots = marrangeGrob(grobs = plotList, ncol = 1, nrow = 1)
+    # ggsave(filename = paste0(Sys.getenv("PLOTS"), "rsEnrichHeatmap.pdf"), plot = multiColPlots, device = "pdf")
+    # gridextra
+    # multiColPlots = marrangeGrob(plotList, ncol = 2, nrow = 2)
+}
+
