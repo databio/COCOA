@@ -51,7 +51,7 @@ rsMethylHeatmap <- function(methylData, coordGR, regionSet, pcaData, pc="PC1", .
     # centeredPCAMeth = t(apply(t(methylData), 1, function(x) x - pcaData$center)) # center first 
     # reducedValsPCA = centeredPCAMeth %*% pcaData$rotation
     # reducedValsPCA = pcaData$x
-    thisRSMData = thisRSMData[names(sort(pcaData[, "PC1"])), ]
+    thisRSMData = thisRSMData[names(sort(pcaData[, pc])), ]
     message(paste0("Number of cytosines: ", ncol(thisRSMData)))
     message(paste0("Number of regions: ", length(unique(queryHits(olList)))))
     ComplexHeatmap::Heatmap(thisRSMData, cluster_rows = FALSE, cluster_columns = FALSE, ...)# ,
