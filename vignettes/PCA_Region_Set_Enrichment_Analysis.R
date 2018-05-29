@@ -1,6 +1,6 @@
-
+# library(projectInit)
 library(ComplexHeatmap)
-project.init(codeRoot = paste0(Sys.getenv("CODE"), "PCARegionAnalysis/R/"), dataDir = paste0(Sys.getenv("PROCESSED"), "brca_PCA/"))
+# project.init(codeRoot = paste0(Sys.getenv("CODE"), "PCARegionAnalysis/R/"), dataDir = paste0(Sys.getenv("PROCESSED"), "brca_PCA/"))
 source(paste0(Sys.getenv("CODE"), "PCARegionAnalysis/R/00-init.R"))
 library(fastICA)
 
@@ -240,28 +240,37 @@ patientMetadata$race = sub(pattern = "BLACK OR AFRICAN AMERICAN",
 patientMetadata$race = sub(pattern = "AMERICAN INDIAN OR ALASKA NATIVE", 
                            "NATIVE AM. OR ALASKAN", x = patientMetadata$race, fixed = TRUE)
 
+# getting PC scores manually so artificial PCs will be included (PC1m4 and PC1p3)
+centeredPCAMeth = t(apply(trainingMData, 2, function(x) x - allMPCA$center)) # center first 
+reducedValsPCA = centeredPCAMeth %*% allMPCA$rotation
+pcaValDF = as.data.frame(reducedValsPCA)
+
 # add annotation information
-pcaWithAnno = cbind(as.data.table(allMPCA$x), patientMetadata)
+pcaWithAnno = cbind(pcaValDF, patientMetadata)
 
 colorByCols = colnames(patientMetadata)[!(colnames(patientMetadata) %in% "subject_ID")]
-for (i in 2:6) {
-    multiColorPCAPlots = colorClusterPlots(pcaWithAnno, 
-                                             plotCols = c("PC1", paste0("PC", i)), 
-                                             colorByCols=colorByCols)
-    ggplot2::ggsave(filename=paste0(Sys.getenv("PLOTS"), paste0("multiColorPCAPlots1", i), 
-                                    ".pdf"), plot = multiColorPCAPlots, device = "pdf",
-                    limitsize=FALSE)
-}
-for (i in c(2, 4:6)) {
-    multiColorPCAPlots = colorClusterPlots(pcaWithAnno, 
-                                           plotCols = c("PC3", paste0("PC", i)), 
-                                           colorByCols=colorByCols)
-    ggplot2::ggsave(filename=paste0(Sys.getenv("PLOTS"), paste0("multiColorPCAPlots3", i), 
-                                    ".pdf"), plot = multiColorPCAPlots, device = "pdf",
-                    limitsize=FALSE)
+
+if (!dir.exists(paste0(Sys.getenv("PLOTS"), "/allMPCA_PCA_Plots"))) {
+    dir.create(paste0(Sys.getenv("PLOTS"), "/allMPCA_PCA_Plots"), recursive = TRUE)
 }
 
-# repeat for PCA of top 10% variable cytosines
+PCsToPlot = c("PC1m4", "PC1p3", paste0("PC", 1:10))
+for (i in seq_along(PCsToPlot)) {
+    for (j in seq_along(PCsToPlot)) {
+        multiColorPCAPlots = colorClusterPlots(pcaWithAnno, 
+                                               plotCols = c(PCsToPlot[i], PCsToPlot[j]), 
+                                               colorByCols=colorByCols)
+        ggplot2::ggsave(filename=paste0(Sys.getenv("PLOTS"), "/allMPCA_PCA_Plots/multiColorPCAPlots_allMPCA_", 
+                                        PCsToPlot[i], "x", PCsToPlot[j], 
+                                        ".pdf"), plot = multiColorPCAPlots, device = "pdf",
+                        limitsize=FALSE)
+        
+    }
+    
+}
+
+
+# for PCA of top 10% variable cytosines
 # add annotation information
 pcaWithAnno = cbind(as.data.table(top10MPCA$x), patientMetadata)
 
@@ -505,6 +514,25 @@ for (j in seq_along(PCsToAnnotate)) {
     }
     dev.off()
 }
+
+
+###################################################################################
+
+# need region sets and PCA loadings
+simpleCache("rsEnrichment_657", assignToVariable = "rsEnrichment")
+simpleCache("rsEnrichmentTop10_657", assignToVariable = "rsEnrichmentTop10")
+
+PCsToAnnotate = c("PC1m4", "PC1p3", paste0("PC", 1:10))
+rsIndex = sort.int(rsEnrichment$PC1, index.return = TRUE, decreasing = TRUE)$ix[3]
+regionSet = GRList[[rsIndex]] 
+regionSetName = paste0(rsEnrichment$rsName[rsIndex], " : ", rsEnrichment$rsDescription[rsIndex])
+rsRegionAverage = averageByRegion(loadingMat = allMPCA$rotation, coordinateDT = brcaMList$coordinates, 
+                                  GRList = regionSet, PCsToAnnotate = PCsToAnnotate)
+                                  # returnQuantile = TRUE)
+# ranking in terms of percentiles in case there were different distributions of loading scores for each PC
+
+Heatmap(matrix = as.matrix(rsRegionAverage[, PCsToAnnotate, with=FALSE]), 
+        column_title = regionSetName, cluster_columns = FALSE, name = "Quantile of Loading Scores")
 
 
 ###################################################################################

@@ -231,7 +231,7 @@ BSBinAggregate = function(BSDT, rangeDT, binCount, minReads = 500,
 #' PC in PCsToAnnotate. Regions are not in order along the rows of the data.table.
 #' 
 # Devel note: I could add a column for how many cytosines are in each region 
-averageByRegion <- function(loadingMat, coordinateDT, GRList, PCsToAnnotate = c("PC1", "PC2")) {
+averageByRegion <- function(loadingMat, coordinateDT, GRList, PCsToAnnotate = c("PC1", "PC2"), returnQuantile=FALSE) {
     
     # old parameters of BSAggregate
     excludeGR = NULL
@@ -349,6 +349,18 @@ averageByRegion <- function(loadingMat, coordinateDT, GRList, PCsToAnnotate = c(
     
     avPerRegion = merge(bsCombined, region2group)
     avPerRegion[, c("regionID", "withinGroupID", "regionGroupID") := NULL]
+    
+    if (returnQuantile) {
+       
+        for (i in seq_along(PCsToAnnotate)) {
+            # perhaps this could be more efficient with mapply
+            avPerRegion[, c(PCsToAnnotate[i]) := ecdf(loadingDT[[PCsToAnnotate[i]]])(avPerRegion[[PCsToAnnotate[i]]])]
+            # I tried set() to improve performance but it took about the same time
+        }
+
+    }
+    
+    
     return(avPerRegion)
     
     # Now aggregate across groups.

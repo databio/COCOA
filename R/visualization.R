@@ -135,3 +135,10 @@ comparePCHeatmap <- function(rsEnrichment, PCsToRankBy=paste0("PC", 1:5), PCsToI
     # multiColPlots = marrangeGrob(plotList, ncol = 2, nrow = 2)
 }
 
+#' Heatmap of average loading score for individual regions across PCs.
+#' For a single region set.
+#' @param
+
+regionPCHeatmap <- function() {
+    
+}
