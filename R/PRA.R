@@ -602,4 +602,61 @@ BSAggregate = function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL.length = NUL
     # doesn't give you a choice at this point. 
 }
 
+#' Function to see how representative the cytosines in a region set are:
+#' can cytosines from a region set reproduce PC ordering and how high is 
+#' the correlation of original PCs with ordering from subset of cytosines?
+#' @param regionSet The region set to subset by. Only loading values for
+#' cytosines in these regions will be used to make a PC score.
+#' @param pca The pca data. Output from prcomp().
+#' @param methylData DNA methylation levels in matrix or data.frame. 
+#' Rows are cytosines. Columns are 
+#' samples.
+#' @param coordinateDT One row per cytosine coordinate, corresponding to
+#' a row of methylMat. Columns are chr, start, end.   
+#' @param returnCor Option to return correlation between these scores and
+#' original PC scores. 
+#' 
+#' @return a score for each patient from only loading values for cytosines in 
+#' regionSet. If returnCor = TRUE, returns a correlation score (or matrix 
+#' for multiple PCofInterest).
 
+pcFromSubset <- function(regionSet, pca, methylData, coordinateDT, PCofInterest="PC1", returnCor=FALSE) {
+    
+    # test for appropriateness of inputs/right format
+    
+    # get subset of loading values
+   #  subsetInd = 
+    coordGR = MIRA:::dtToGr(coordinateDT)
+    olList = findOverlaps(query = regionSet, subject = coordGR)
+    # regionHitInd = sort(unique(queryHits(olList)))
+    cytosineHitInd = sort(unique(subjectHits(olList)))
+    thisRSMData = t(methylData[cytosineHitInd, ])
+    # subject_ID = row.names(thisRSMData)
+    # centeredPCAMeth = t(apply(t(methylData), 1, function(x) x - pcaData$center)) # center first 
+    # reducedValsPCA = centeredPCAMeth %*% pcaData$rotation
+    # reducedValsPCA = pcaData$x
+    # use subset of loading values on subset of DNA methylation values
+    # getting PC scores manually so artificial PCs will be included (PC1m4 and PC1p3)
+    centeringSubset = pca$center[cytosineHitInd]
+    centeredMeth = t(apply(thisRSMData, 1, function(x) x - centeringSubset)) # center first 
+    reducedValsPCA = centeredMeth %*% pca$rotation[cytosineHitInd, PCofInterest]
+    colnames(reducedValsPCA) <- PCofInterest
+    # pcaValDF = as.data.frame(reducedValsPCA)
+    
+    
+    # optional calculate correlation
+    if (returnCor) {
+        # plot(reducedValsPCA[, PCofInterest], pca$x[, PCofInterest])
+        corMat = cor(reducedValsPCA[, PCofInterest], pca$x[, PCofInterest])
+        return(corMat)
+        # origPCCor = cor(pca$x[, PCofInterest])
+        # subsetPCCor = cor(reducedValsPCA[, PCofInterest])
+        # Heatmap(corMat, cluster_columns = FALSE, cluster_rows = FALSE)
+        # Heatmap(origPCCor, cluster_columns = FALSE, cluster_rows = FALSE)
+        # Heatmap(subsetPCCor, cluster_columns = FALSE, cluster_rows = FALSE)
+        # Heatmap(pca$rotation[cytosineHitInd, PCofInterest])
+    } else {
+        return(reducedValsPCA)
+    }
+    
+}
