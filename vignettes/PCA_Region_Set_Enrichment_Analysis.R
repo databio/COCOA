@@ -534,6 +534,26 @@ rsRegionAverage = averageByRegion(loadingMat = allMPCA$rotation, coordinateDT = 
 Heatmap(matrix = as.matrix(rsRegionAverage[, PCsToAnnotate, with=FALSE]), 
         column_title = regionSetName, cluster_columns = FALSE, name = "Quantile of Loading Scores")
 
+##################################################################################
+# seeing whether a subset of cytosines (ie a single region set) can
+# recapitulate PC score from all cytosines
+rsIndex = sort.int(rsEnrichment$PC2, index.return = TRUE, decreasing = TRUE)$ix[1:10]
+regionSetList = GRList[rsIndex] 
+regionSetName = paste0(rsEnrichment$rsName[rsIndex], " : ", rsEnrichment$rsDescription[rsIndex])
+names(regionSetList) <-  regionSetName
+subsetCorList = lapply(X = as.list(regionSetList), FUN = function(x) pcFromSubset(regionSet = x, 
+                                                                         pca = allMPCA, 
+                                                                         methylData = trainingMData, 
+                                                                         coordinateDT = brcaMList$coordinates, 
+                                                                         PCofInterest = paste0("PC", 1:10),
+                                                                         returnCor = TRUE))
+i=4
+Heatmap(subsetCorList[[i]], cluster_rows = FALSE, cluster_columns = FALSE, 
+        column_title = names(subsetCorList)[i])
+subsetCorList[[i]]
+#cell_fun = function(j, i, x, y, width, height, fill) {
+# grid.text(sprintf("%.1f", mat[i, j]), x, y, gp = gpar(fontsize = 10))
+# })
 
 ###################################################################################
 

@@ -626,6 +626,8 @@ pcFromSubset <- function(regionSet, pca, methylData, coordinateDT, PCofInterest=
     
     # get subset of loading values
    #  subsetInd = 
+    newColNames <- paste0(PCofInterest, "_subset")
+    
     coordGR = MIRA:::dtToGr(coordinateDT)
     olList = findOverlaps(query = regionSet, subject = coordGR)
     # regionHitInd = sort(unique(queryHits(olList)))
@@ -640,14 +642,14 @@ pcFromSubset <- function(regionSet, pca, methylData, coordinateDT, PCofInterest=
     centeringSubset = pca$center[cytosineHitInd]
     centeredMeth = t(apply(thisRSMData, 1, function(x) x - centeringSubset)) # center first 
     reducedValsPCA = centeredMeth %*% pca$rotation[cytosineHitInd, PCofInterest]
-    colnames(reducedValsPCA) <- PCofInterest
+    colnames(reducedValsPCA) <- newColNames
     # pcaValDF = as.data.frame(reducedValsPCA)
     
     
     # optional calculate correlation
     if (returnCor) {
         # plot(reducedValsPCA[, PCofInterest], pca$x[, PCofInterest])
-        corMat = cor(reducedValsPCA[, PCofInterest], pca$x[, PCofInterest])
+        corMat = cor(reducedValsPCA[, newColNames], pca$x[, PCofInterest])
         return(corMat)
         # origPCCor = cor(pca$x[, PCofInterest])
         # subsetPCCor = cor(reducedValsPCA[, PCofInterest])
