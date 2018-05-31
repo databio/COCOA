@@ -41,7 +41,7 @@ trainingMData = brcaMList[["methylProp"]][,
 ###########################################################
 # reading in the region sets
 # load LOLA database
-lolaPath1 = paste0(Sys.getenv("REGIONS"), "/LOLACore/hg38/")
+lolaPath1 = paste0(Sys.getenv("RESOURCES"), "/regions/LOLACore/hg38/")
 regionSetDB = loadRegionDB(lolaPath1)
 loRegionAnno = regionSetDB$regionAnno
 lolaCoreRegionAnno = loRegionAnno
@@ -55,7 +55,7 @@ lolaCoreRegionAnno = lolaCoreRegionAnno[-sort(unique(c(sheff_dnaseInd, fInd1)))]
 GRList1 = GRangesList(regionSetDB$regionGRL[-sort(unique(c(sheff_dnaseInd, fInd1)))])
 
 # ROADMAP Epigenome project and Jaspar motifs
-lolaPath2 = paste0(Sys.getenv("REGIONS"), "/LOLAExt/hg38/")
+lolaPath2 = paste0(Sys.getenv("RESOURCES"), "/regions/LOLAExt/hg38/")
 regionSetDB2 = loadRegionDB(lolaPath2, useCache = TRUE)
 loRegionAnno2 = regionSetDB2$regionAnno
 roadmapRegionAnno = loRegionAnno2[loRegionAnno2$collection == "roadmap_epigenomics", ]

@@ -662,3 +662,45 @@ pcFromSubset <- function(regionSet, pca, methylData, coordinateDT, PCofInterest=
     }
     
 }
+
+#' Determine what percent of cytosines in region sets overlap.
+#' Slightly different than percent overlap of region sets.
+#' @param coordinateGR GenomicRanges object with coordinates for cytosines 
+#' included in the PCA.
+#' @param regionSet1
+#' @param regionSet2
+#' @return Total number of cytosines from methylation data that overlapped with
+#' each region set. Also the percent of cytosines that overlapped with
+#' other region set.
+
+percentCOverlap <- function(coordGR, regionSet1, regionSet2) {
+    
+    if (is.data.table(coordinateGR)) {
+        coordinateGR <- MIRA:::dtToGr(coordGR)
+    }
+    
+    # overlap between each region set and methylation data to see 
+    # which cytosines were covered by each region set
+    olList = lapply(X = GRList, 
+                    function(x) findOverlaps(query = x, subject = coordGR))
+    
+    # indices for cytosines that overlapped with each region set
+    cHitInd = lapply(X = olList, function(x) sort(unique(subjectHits(x))))
+
+    # total number
+    total_cytosines = sapply(X = cHitInd, length)
+    
+    # make matrix of combinatorial intersection, will eventually have percent overlap
+    pOL = matrix(nrow=length(GRList), ncol=length(GRList))
+    
+    # intersect each iten in cHitInd with each item in cHitInd
+    sharedC = lapply(X = cHitInd, 
+                     FUN = function(x) sapply(X = cHitInd, FUN = function(y) length(intersect(x, y))))
+    
+    # converting to proportion of cytosines covered by each region set
+    prop_overlap = lapply(X = sharedC, function(x) x / total_cytosines)
+    prop_overlap = do.call(rbind, prop_overlap)
+
+    return(list(prop_overlap, total_cytosines))    
+    
+}
