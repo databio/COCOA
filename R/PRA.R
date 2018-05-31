@@ -617,8 +617,8 @@ BSAggregate = function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL.length = NUL
 #' original PC scores. 
 #' 
 #' @return a score for each patient from only loading values for cytosines in 
-#' regionSet. If returnCor = TRUE, returns a correlation score (or matrix 
-#' for multiple PCofInterest).
+#' regionSet. If returnCor = TRUE, returns a correlation score for scores from
+#' each PCofInterest with scores from a subset of loading values for that PC.
 
 pcFromSubset <- function(regionSet, pca, methylData, coordinateDT, PCofInterest="PC1", returnCor=FALSE) {
     
@@ -650,7 +650,10 @@ pcFromSubset <- function(regionSet, pca, methylData, coordinateDT, PCofInterest=
     if (returnCor) {
         # plot(reducedValsPCA[, PCofInterest], pca$x[, PCofInterest])
         corMat = cor(reducedValsPCA[, newColNames], pca$x[, PCofInterest])
-        return(corMat)
+        # only correlation between subset and matching PC, not with other PCs
+        mainCor = diag(corMat)
+        names(mainCor) <- PCofInterest
+        return(mainCor)
         # origPCCor = cor(pca$x[, PCofInterest])
         # subsetPCCor = cor(reducedValsPCA[, PCofInterest])
         # Heatmap(corMat, cluster_columns = FALSE, cluster_rows = FALSE)
@@ -658,6 +661,7 @@ pcFromSubset <- function(regionSet, pca, methylData, coordinateDT, PCofInterest=
         # Heatmap(subsetPCCor, cluster_columns = FALSE, cluster_rows = FALSE)
         # Heatmap(pca$rotation[cytosineHitInd, PCofInterest])
     } else {
+        colnames(reducedValsPCA) <- PCofInterest
         return(reducedValsPCA)
     }
     
@@ -665,18 +669,17 @@ pcFromSubset <- function(regionSet, pca, methylData, coordinateDT, PCofInterest=
 
 #' Determine what percent of cytosines in region sets overlap.
 #' Slightly different than percent overlap of region sets.
-#' @param coordinateGR GenomicRanges object with coordinates for cytosines 
+#' @param coordGR GenomicRanges object with coordinates for cytosines 
 #' included in the PCA.
-#' @param regionSet1
-#' @param regionSet2
+#' @param GRList
 #' @return Total number of cytosines from methylation data that overlapped with
 #' each region set. Also the percent of cytosines that overlapped with
 #' other region set.
 
-percentCOverlap <- function(coordGR, regionSet1, regionSet2) {
+percentCOverlap <- function(coordGR, GRList) {
     
-    if (is.data.table(coordinateGR)) {
-        coordinateGR <- MIRA:::dtToGr(coordGR)
+    if (is.data.table(coordGR)) {
+        coordGR <- MIRA:::dtToGr(coordGR)
     }
     
     # overlap between each region set and methylation data to see 

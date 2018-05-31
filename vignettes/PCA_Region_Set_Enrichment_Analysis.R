@@ -517,7 +517,7 @@ for (j in seq_along(PCsToAnnotate)) {
 
 
 ###################################################################################
-
+# comparing loading scores/percentiles for individual regions among PCs
 # need region sets and PCA loadings
 simpleCache("rsEnrichment_657", assignToVariable = "rsEnrichment")
 simpleCache("rsEnrichmentTop10_657", assignToVariable = "rsEnrichmentTop10")
@@ -547,7 +547,7 @@ subsetCorList = lapply(X = as.list(regionSetList), FUN = function(x) pcFromSubse
                                                                          coordinateDT = brcaMList$coordinates, 
                                                                          PCofInterest = paste0("PC", 1:10),
                                                                          returnCor = TRUE))
-i=4
+i=5
 Heatmap(subsetCorList[[i]], cluster_rows = FALSE, cluster_columns = FALSE, 
         column_title = names(subsetCorList)[i])
 subsetCorList[[i]]
