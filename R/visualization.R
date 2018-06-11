@@ -229,3 +229,36 @@ methylAlongPC <- function (loadingMat, loadingThreshold,
         
     }
 }
+
+
+
+#' plot individual region scores/percentiles across PCs for a single region set
+#' One plot for each region set
+#' @param loadingMat
+#' @param coordinateDT
+#' @param GRList
+#' @param rsNames
+#' @param PCsToAnnotate
+
+regionQuantileByPC <- function(loadingMat, coordinateDT, GRList, 
+                               rsNames, PCsToAnnotate=paste0("PC", 1:5)) {
+    
+    for (i in seq_along(GRList)) { # loop through top region sets
+        
+        # rsIndex = sort.int(rsEnrichment$PC2, index.return = TRUE, decreasing = TRUE)$ix[6]
+        regionSet = GRList[[i]]
+        rsRegionAverage = averageByRegion(loadingMat = mPCA$rotation, coordinateDT = bigSharedC$coordinates, 
+                                          GRList = regionSet, PCsToAnnotate = PCsToAnnotate,
+                                          returnQuantile = TRUE)
+        # ranking in terms of percentiles in case there were different distributions of loading scores for each PC
+        
+        
+        multiHM = grid.grabExpr(draw(Heatmap(matrix = as.matrix(rsRegionAverage[, PCsToAnnotate, with=FALSE]), column_title = rsNames[i], 
+                                             cluster_columns = FALSE, name = "Percentile of Loading Scores in PC"))) # use_raster=TRUE, raster_device="jpeg")
+        pushViewport(viewport(y = unit((8.5*length(topRSInd))-(i-1) * 8.5, "in"), height = unit(8, "in"), just = "top"))
+        grid.draw(multiHM)
+        popViewport()
+        
+    }
+    
+}
