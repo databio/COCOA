@@ -142,3 +142,90 @@ comparePCHeatmap <- function(rsEnrichment, PCsToRankBy=paste0("PC", 1:5), PCsToI
 regionPCHeatmap <- function() {
     
 }
+
+
+
+# looking at methylation level data at individual cytosines ordered by PC 
+# only looking at regions with high average loading scores
+# still individual cytosine methylation
+
+#' raw methylation at top enriched regions for a single region set and single PC.
+#' Patients are ordered by PC score for given PC
+#' #' TODO: deal with bug when nrow(highVariable) = 1
+#' @param loadingMat
+#' @param loadingThreshold Only select regions with average 
+#' loading at least this high.
+#' @param pcScores
+#' @param coordinateDT
+#' @param methylData
+#' @param GRList
+#' @param orderByPC PC to order patients by (order rows of heatmap by PC score)
+#' @param topRSToPlotNum number of region sets to plot
+#' REMOVE: rsInd 
+#' @param topXRegions max number of regions to plot, avoids excessively large 
+#' plots which can be hard to load. Number of regions on plot will be less
+#' than or equal to topXRegions (less than if there are not that many regions
+#' total) 
+#' 
+
+
+
+methylAlongPC <- function (loadingMat, loadingThreshold, 
+                           pcScores, coordinateDT, methylData, 
+                           GRList, orderByPC, 
+                           topRSToPlotNum, topXRegions) {
+    
+    # once for each plot/region set
+    for (i in 1:topRSToPlotNum) { # loop through top region sets
+        regionSet = GRList[[i]] 
+        regionSetName = paste0(rsEnrichment$rsName[rsInd], " : ", rsEnrichment$rsDescription[rsInd])
+        
+        length(regionSet)
+        regionLoadAv = averageByRegion(loadingMat = mPCA$rotation, 
+                                       coordinateDT = bigSharedC$coordinates, 
+                                       GRList = regionSet, 
+                                       PCsToAnnotate = orderByPC)
+        
+        # finding a suitable threshold for "high" average loading score
+        # loadingMeans = apply(X = abs(mPCATop10$rotation[, PCsToAnnotate]), 2, mean)
+        # getting 95th percentile for each PC
+        # loadingXPerc = apply(abs(mPCA$rotation[, PCsToAnnotate]), 2, function(x) quantile(x, 0.95))
+        loadingXPerc = quantile(abs(mPCA$rotation[, PCsToAnnotate]), loadingThreshold)
+        
+        # hist(mPCATop10$rotation[, "PC1"])
+        highVariable = regionLoadAv[get(orderByPC) > loadingXPerc, .(chr, start, end, score=get(orderByPC))]
+        
+        # reducing to top X regions so plot won't be too large
+        if (nrow(highVariable) > topXRegions) {
+            highVariable[, rowIndex :=  1:nrow(highVariable)]
+            tmp = highVariable[order(score, decreasing = TRUE), ]
+            tmp = tmp[1:50,]
+            tmp = tmp[order(rowIndex, decreasing = FALSE), ]
+            highVariable = highVariable[tmp$rowIndex, ]
+        }
+        
+        nrow(regionLoadAv)
+        if (nrow(highVariable) > 1) {
+            regionSet = MIRA:::dtToGr(highVariable)
+            
+            
+            # text(paste0(pc1$rsDescription[i], ":", pc1$rsName[i]))
+            # gives error if nrow(highVariable = 1) (happened for PC2)
+            multiHM = grid.grabExpr(draw(rsMethylHeatmap(methylData = methylData, 
+                                                         coordGR = MIRA:::dtToGr(coordinateDT), 
+                                                         regionSet = regionSet, 
+                                                         pcaData = pcScores, 
+                                                         pc = orderByPC, column_title= regionSetName))) # use_raster=TRUE, raster_device="jpeg")
+            pushViewport(viewport(y = unit((8.5*topRSToPlotNum)-(i-1)*8.5, "in"), height = unit(8, "in"), just = "top"))
+            grid.draw(multiHM)
+            popViewport()
+            # 
+            #                 name = paste0(pc1$rsDescription[i], " : ", pc1$rsName[i]), 
+            #                 column_title = paste0(pc1$rsDescription[i], " : ", pc1$rsName[i]),
+            #                 column_title_side = "top",
+            #                 column_title_gp = gpar(fontsize = 14))
+            #                 # column_title = paste0(pc1$rsDescription[i], " : ", pc1$rsName[i]))
+        }
+        
+    }
+}
