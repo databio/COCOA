@@ -154,18 +154,17 @@ regionPCHeatmap <- function() {
 #' #' TODO: deal with bug when nrow(highVariable) = 1
 #' @param loadingMat
 #' @param loadingThreshold Only select regions with average 
-#' loading at least this high.
+#' loading at least this high. Based on loading values from orderByPC.
 #' @param pcScores
 #' @param coordinateDT
 #' @param methylData
 #' @param GRList
 #' @param orderByPC PC to order patients by (order rows of heatmap by PC score)
-#' @param topRSToPlotNum number of region sets to plot
 #' REMOVE: rsInd 
 #' @param topXRegions max number of regions to plot, avoids excessively large 
 #' plots which can be hard to load. Number of regions on plot will be less
 #' than or equal to topXRegions (less than if there are not that many regions
-#' total) 
+#' total). 50 is arbitrary 
 #' 
 
 
@@ -173,10 +172,13 @@ regionPCHeatmap <- function() {
 methylAlongPC <- function (loadingMat, loadingThreshold, 
                            pcScores, coordinateDT, methylData, 
                            GRList, orderByPC, 
-                           topRSToPlotNum, topXRegions) {
+                           nRSToPlot, topXRegions=50) {
+    
+    # number of region sets to plot
+    nRSToPlot = length(GRList)
     
     # once for each plot/region set
-    for (i in 1:topRSToPlotNum) { # loop through top region sets
+    for (i in seq_along(GRList)) { # loop through top region sets
         regionSet = GRList[[i]] 
         regionSetName = paste0(rsEnrichment$rsName[rsInd], " : ", rsEnrichment$rsDescription[rsInd])
         
@@ -216,7 +218,7 @@ methylAlongPC <- function (loadingMat, loadingThreshold,
                                                          regionSet = regionSet, 
                                                          pcaData = pcScores, 
                                                          pc = orderByPC, column_title= regionSetName))) # use_raster=TRUE, raster_device="jpeg")
-            pushViewport(viewport(y = unit((8.5*topRSToPlotNum)-(i-1)*8.5, "in"), height = unit(8, "in"), just = "top"))
+            pushViewport(viewport(y = unit((8.5*nRSToPlot)-(i-1)*8.5, "in"), height = unit(8, "in"), just = "top"))
             grid.draw(multiHM)
             popViewport()
             # 
