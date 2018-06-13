@@ -707,3 +707,48 @@ percentCOverlap <- function(coordGR, GRList) {
     return(list(prop_overlap, total_cytosines))    
     
 }
+
+#' A convenience function to easily get indices for
+#' the top region sets that were enriched for each PC. 
+#' For each PC, get index of original region sets but ordered by rsEnrichment
+#' ranking for each PC. First number in a given column will be 
+#' original index of the region set ranked first for that PC. Second row for a
+#' column will be the original index of the region set that ranked second
+#' for that PC, etc. 
+#' 
+#' Use this function when you want to look at top region sets to make it 
+#' easier to get the original indices to select them from a list of region sets.
+#' 
+#' @param rsEnrichment Should be in the same order as GRList (the list of 
+#' region sets used to create it.)
+#' @param PCsToAnnotate PCs in rsEnrichment for which you want
+#' the indices of the original region sets
+#' @return A data.table with columns PCsToAnnotate. Each column has been 
+#' ranked by enrichment score for region sets for that PC.
+#' Original indices for region sets that were used to create rsEnrichment
+#' are given. 
+#' 
+rsRankingIndex <- function(rsEnrichment, PCsToAnnotate) {
+    
+    # so by references changes will not be a problem
+    rsEnrichment <- copy(rsEnrichment)
+    rsEnrichment[, rsIndex := 1:nrow(rsEnrichment)]
+    
+    PCsToAnnotate = PCsToAnnotate[PCsToAnnotate %in% colnames(rsEnrichment)]
+    
+    rsEnSortedInd = subset(rsEnrichment, select= PCsToAnnotate)
+    
+    # then scores by each PC and make a column with the original index for sorted region sets
+    # this object will be used to pull out region sets that were top hits for each PC
+    for (i in seq_along(PCsToAnnotate)) {
+        
+        # -1 for decreasing order of scores
+        setorderv(rsEnrichment, cols = PCsToAnnotate[i], order=-1L)
+        
+        rsEnSortedInd[, PCsToAnnotate[i] := rsEnrichment[, rsIndex]]
+    }
+    
+    # reset order
+    # setorderv(rsEnrichment, cols = "rsIndex", order=1L)
+    return(rsEnSortedInd)
+}
