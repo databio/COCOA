@@ -172,62 +172,72 @@ regionPCHeatmap <- function() {
 methylAlongPC <- function (loadingMat, loadingThreshold, 
                            pcScores, coordinateDT, methylData, 
                            GRList, orderByPC, 
-                           nRSToPlot, topXRegions=50) {
+                           topXRegions=50) {
     
     # number of region sets to plot
     nRSToPlot = length(GRList)
-    
+    rsNames = names(GRList)
+  
+        
     # once for each plot/region set
     for (i in seq_along(GRList)) { # loop through top region sets
         regionSet = GRList[[i]] 
-        regionSetName = paste0(rsEnrichment$rsName[rsInd], " : ", rsEnrichment$rsDescription[rsInd])
+        regionSetName = rsNames[i]
         
         length(regionSet)
+        # if no overlap, will return NULL
         regionLoadAv = averageByRegion(loadingMat = mPCA$rotation, 
                                        coordinateDT = bigSharedC$coordinates, 
                                        GRList = regionSet, 
                                        PCsToAnnotate = orderByPC)
         
-        # finding a suitable threshold for "high" average loading score
-        # loadingMeans = apply(X = abs(mPCATop10$rotation[, PCsToAnnotate]), 2, mean)
-        # getting 95th percentile for each PC
-        # loadingXPerc = apply(abs(mPCA$rotation[, PCsToAnnotate]), 2, function(x) quantile(x, 0.95))
-        loadingXPerc = quantile(abs(mPCA$rotation[, PCsToAnnotate]), loadingThreshold)
-        
-        # hist(mPCATop10$rotation[, "PC1"])
-        highVariable = regionLoadAv[get(orderByPC) > loadingXPerc, .(chr, start, end, score=get(orderByPC))]
-        
-        # reducing to top X regions so plot won't be too large
-        if (nrow(highVariable) > topXRegions) {
-            highVariable[, rowIndex :=  1:nrow(highVariable)]
-            tmp = highVariable[order(score, decreasing = TRUE), ]
-            tmp = tmp[1:50,]
-            tmp = tmp[order(rowIndex, decreasing = FALSE), ]
-            highVariable = highVariable[tmp$rowIndex, ]
-        }
-        
-        nrow(regionLoadAv)
-        if (nrow(highVariable) > 1) {
-            regionSet = MIRA:::dtToGr(highVariable)
+        #if (!is.null(regionLoadAv)) {
+            
+            # finding a suitable threshold for "high" average loading score
+            # loadingMeans = apply(X = abs(mPCATop10$rotation[, PCsToAnnotate]), 2, mean)
+            # getting 95th percentile for each PC
+            # loadingXPerc = apply(abs(mPCA$rotation[, PCsToAnnotate]), 2, function(x) quantile(x, 0.95))
+            loadingXPerc = quantile(abs(mPCA$rotation[, orderByPC]), loadingThreshold)
+            
+            # hist(mPCATop10$rotation[, "PC1"])
+            highVariable = regionLoadAv[get(orderByPC) > loadingXPerc, .(chr, start, end, score=get(orderByPC))]
+            
+            # reducing to top X regions so plot won't be too large
+            if (nrow(highVariable) > topXRegions) {
+                highVariable[, rowIndex :=  1:nrow(highVariable)]
+                tmp = highVariable[order(score, decreasing = TRUE), ]
+                tmp = tmp[1:50,]
+                tmp = tmp[order(rowIndex, decreasing = FALSE), ]
+                highVariable = highVariable[tmp$rowIndex, ]
+            }
+            
+            nrow(regionLoadAv)
+            if (nrow(highVariable) > 1) {
+                regionSet = MIRA:::dtToGr(highVariable)
+                
+                
+                # text(paste0(pc1$rsDescription[i], ":", pc1$rsName[i]))
+                # gives error if nrow(highVariable = 1) (happened for PC2)
+                multiHM = grid.grabExpr(draw(rsMethylHeatmap(methylData = methylData, 
+                                                             coordGR = MIRA:::dtToGr(coordinateDT), 
+                                                             regionSet = regionSet, 
+                                                             pcaData = pcScores, 
+                                                             pc = orderByPC, column_title= regionSetName))) # use_raster=TRUE, raster_device="jpeg")
+                pushViewport(viewport(y = unit((8.5*nRSToPlot)-(i-1)*8.5, "in"), height = unit(8, "in"), just = "top"))
+                grid.draw(multiHM)
+                popViewport()
+                # 
+                #                 name = paste0(pc1$rsDescription[i], " : ", pc1$rsName[i]), 
+                #                 column_title = paste0(pc1$rsDescription[i], " : ", pc1$rsName[i]),
+                #                 column_title_side = "top",
+                #                 column_title_gp = gpar(fontsize = 14))
+                #                 # column_title = paste0(pc1$rsDescription[i], " : ", pc1$rsName[i]))
             
             
-            # text(paste0(pc1$rsDescription[i], ":", pc1$rsName[i]))
-            # gives error if nrow(highVariable = 1) (happened for PC2)
-            multiHM = grid.grabExpr(draw(rsMethylHeatmap(methylData = methylData, 
-                                                         coordGR = MIRA:::dtToGr(coordinateDT), 
-                                                         regionSet = regionSet, 
-                                                         pcaData = pcScores, 
-                                                         pc = orderByPC, column_title= regionSetName))) # use_raster=TRUE, raster_device="jpeg")
-            pushViewport(viewport(y = unit((8.5*nRSToPlot)-(i-1)*8.5, "in"), height = unit(8, "in"), just = "top"))
-            grid.draw(multiHM)
-            popViewport()
-            # 
-            #                 name = paste0(pc1$rsDescription[i], " : ", pc1$rsName[i]), 
-            #                 column_title = paste0(pc1$rsDescription[i], " : ", pc1$rsName[i]),
-            #                 column_title_side = "top",
-            #                 column_title_gp = gpar(fontsize = 14))
-            #                 # column_title = paste0(pc1$rsDescription[i], " : ", pc1$rsName[i]))
+            
         }
+        
+        #}
         
     }
 }
@@ -257,7 +267,7 @@ regionQuantileByPC <- function(loadingMat, coordinateDT, GRList,
         
         multiHM = grid.grabExpr(draw(Heatmap(matrix = as.matrix(rsRegionAverage[, PCsToAnnotate, with=FALSE]), column_title = rsNames[i], 
                                              cluster_columns = FALSE, name = "Percentile of Loading Scores in PC"))) # use_raster=TRUE, raster_device="jpeg")
-        pushViewport(viewport(y = unit((8.5*length(topRSInd))-(i-1) * 8.5, "in"), height = unit(8, "in"), just = "top"))
+        pushViewport(viewport(y = unit((8.5*length(GRList))-(i-1) * 8.5, "in"), height = unit(8, "in"), just = "top"))
         grid.draw(multiHM)
         popViewport()
         
