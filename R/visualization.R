@@ -37,7 +37,8 @@
 #' @param coordGR coordinates for methylation loci in methylData. (chromosome, start, end)
 #' @param regionSet 
 #' @param pcaData The principal component scores for the samples 
-#' (ie transformed methylation data).
+#' (ie transformed methylation data). Must have subject_ID as row names,
+#' These same subject_IDs must be column names of methylData
 #' @param pc The principal component used to order the samples in the heatmap
 # library(ComplexHeatmap)
 rsMethylHeatmap <- function(methylData, coordGR, regionSet, pcaData, pc="PC1", ...) {
@@ -51,6 +52,7 @@ rsMethylHeatmap <- function(methylData, coordGR, regionSet, pcaData, pc="PC1", .
     # centeredPCAMeth = t(apply(t(methylData), 1, function(x) x - pcaData$center)) # center first 
     # reducedValsPCA = centeredPCAMeth %*% pcaData$rotation
     # reducedValsPCA = pcaData$x
+    # pcaData must have subject_ID as row name
     thisRSMData = thisRSMData[names(sort(pcaData[, pc])), ]
     message(paste0("Number of cytosines: ", ncol(thisRSMData)))
     message(paste0("Number of regions: ", length(unique(queryHits(olList)))))
