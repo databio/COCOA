@@ -43,6 +43,16 @@
 # library(ComplexHeatmap)
 rsMethylHeatmap <- function(methylData, coordGR, regionSet, pcaData, pc="PC1", ...) {
     
+    # PCA object must have subject_ID as row.names (corresponding 
+    # to column names of methylData)
+    if (sum(row.names(pcaData) %in% colnames(methylData)) < 2) {
+        error(MIRA:::cleanws("Sample names on pca data (row names) 
+                      must match sample names on methylation
+                             (column names)"))
+    }
+    
+    
+    
     # coordGR =
     olList = findOverlaps(regionSet, coordGR)
     # regionHitInd = sort(unique(queryHits(olList)))
@@ -175,6 +185,17 @@ methylAlongPC <- function (loadingMat, loadingThreshold,
                            pcScores, coordinateDT, methylData, 
                            GRList, orderByPC, 
                            topXRegions=50) {
+    
+    
+    # PCA object must have subject_ID as row.names (corresponding 
+    # to column names of methylData)
+    if (sum(row.names(pcScores) %in% colnames(methylData)) < 2) {
+        error(MIRA:::cleanws("Sample names on pca data (row names) 
+                             must match sample names on methylation
+                             (column names)"))
+    }
+    
+    
     
     # number of region sets to plot
     nRSToPlot = length(GRList)
