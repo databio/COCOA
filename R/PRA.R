@@ -12,20 +12,25 @@ library(data.table)
 #' to the same biological annotation.
 #' #UPDATE: make sure only aggregating PCsToAnnotate to save time
 #' # permute=TRUE is deprecated and that code chunk is not up to date
+#' @param metric Scoring metric. Mean difference ("meanDiff") or just a simple
+#' average of the loading values with no normalization ("raw").
+#' @param pcLoadAv The average absolute loading value for each PC. Will
+#' significantly speed up computation if this is given.
 
 aggregateLoadings <- function(loadingMat, coordinateDT, regionSet, 
-                  PCsToAnnotate = c("PC1", "PC2"), permute=FALSE) {
+                  PCsToAnnotate = c("PC1", "PC2"), permute=FALSE, metric="meanDiff", pcLoadAv=NULL) {
     
     numOfRegions = length(regionSet)
+    totalCpGs = nrow(loadingMat)
     
     # extreme positive or negative values both give important information
-    loadingMat = abs(loadingMat) 
+    loadingMat = abs(loadingMat) # required for later code
     loadingMat = as.data.table(loadingMat)
     
     # reformat into data.table with chromosome location and weight
     loadingDT = data.table(coordinateDT, loadingMat[, PCsToAnnotate, with=FALSE])
     # naming does not work if only using one PC so add this line for that case
-    setnames(loadingDT, c("chr", "start", PCsToAnnotate)) 
+    setnames(loadingDT, c("chr", "start", PCsToAnnotate))
     
     # would rounding speed up aggregation?, potentially make a sparse matrix
     # if a lot of entries became 0
@@ -93,7 +98,22 @@ aggregateLoadings <- function(loadingMat, coordinateDT, regionSet,
             results[, total_region_number := numOfRegions]
             results[, mean_region_size := round(mean(width(regionSet)), 1)]
         } else {
-            results = loadAgMain[, .SD, .SDcols = PCsToAnnotate]
+            if (metric == "raw") {
+                results = loadAgMain[, .SD, .SDcols = PCsToAnnotate]
+            } else if (metric == "meanDiff") {
+                
+                # if (is.null(pcLoadAv)) {
+                #     # calculate (should already be absolute)
+                #     pcLoadAv = apply(X = loadingDT[, PCsToAnnotate, with=FALSE], MARGIN = 2, FUN = mean)
+                # }
+                
+                results = loadAgMain[, .SD / sqrt(1 / numCpGsOverlapping - 1 / (totalCpGs - numCpGsOverlapping)), .SDcols = PCsToAnnotate]
+                
+            } else {
+                error(MIRA:::cleanws("metric was not recognized. 
+                      Check spelling and available options."))
+            }
+            
             results[, cytosine_coverage := loadAgMain[, .SD, .SDcols = "numCpGsOverlapping"]]
             results[, region_coverage := loadAgMain[, .SD, .SDcols = "numRegionsOverlapping"]]
             results[, total_region_number := numOfRegions]
