@@ -48,6 +48,8 @@ aggregateLoadings <- function(loadingMat, coordinateDT, regionSet,
                 byRegionGroup = TRUE,
                 splitFactor = NULL)
     
+    # cpgOLMetrics() # make sure it works with no overlap
+    
     
     if (permute) {
         # if no cytosines from loadings overlapped with regionSet, no need for
@@ -490,10 +492,13 @@ loadingProfileSNR = function() {
 #' the output is 1 row per region.
 #' Turn on this flag to aggregate across all region groups, making the result
 #' uncontiguous, and resulting in 1 row per *region group*.
+#' @param returnSD Whether the standard deviation of the columns of interest 
+#' should be returned. Standard deviation for rows that overlap with region set
+#' and also for rows that do not overlap with region set.
 #'
 #' @export
 BSAggregate = function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL.length = NULL, splitFactor=NULL, keepCols=NULL, 
-                       sumCols=NULL, jExpr=NULL, byRegionGroup=FALSE, keep.na=FALSE) {
+                       sumCols=NULL, jExpr=NULL, byRegionGroup=FALSE, keep.na=FALSE, returnSD=FALSE) {
     
     # Assert that regionsGRL is a GRL.
     # If regionsGRL is given as a GRanges, we convert to GRL
@@ -621,6 +626,64 @@ BSAggregate = function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL.length = NUL
     # at each level: across regions, then across region sets. THis
     # doesn't give you a choice at this point. 
 }
+
+#' Instead of averaging within regions first as BSAggregate does,
+#' this function does a simple average and standard deviation
+#'  for all CpGs that overlap
+#' with regions of a region set, also does average and 
+#' standard deviation for non overlapping CpGs. Created to 
+#' get metrics of loading values for each PC.
+#' 
+#' Faster if given total average for each column of interest
+#' 
+#' @param dataDT should have chr, start, end columns as well
+#' as columns to get metrics of, 
+#' eg (PC1, PC2) or could be DNA methylation
+#' @param alsoNonOLMet also include same metrics
+#' for non overlapping CpGs
+#' 
+cpgOLMetrics <- function(dataDT, regionGR, metrics=c("mean", "sd"), columnMeans=NULL, alsoNonOLMet=TRUE) {
+    
+    # convert DT to GR for finding overlaps
+    dataGR = MIRA:::BSdtToGRanges(list(dataDT))
+    
+    OL = findOverlaps(query = regionGR, subject = dataGR)
+    # get indices for overlapping and non overlapping CpGs
+    olCpG = subjectHits(OL)
+    
+    # if no overlap, exit
+    
+    
+    
+    nonOLCpG = (1:nrow(dataDT))[-olCpG]
+    
+    # gets metrics for all columns except chr, start, end
+    testCols = colnames(dataDT)[!(colnames(dataDT) %in% c("chr", "start", "end"))] 
+    
+    jExpr = MIRA:::buildJ(testCols, rep(metrics, length(testCols)),
+                          newColNames = paste0(rep(testCols, each=2), "_", metrics))
+    
+    # getting the metrics
+    olMetrics = dataDT[olCpG, eval(parse(text=jExpr))]
+    
+    # if no OL for region set, don't calculate for non region set 
+    # TODO make conditional
+    nonOLMetrics = dataDT[nonOLCpG, eval(parse(text=jExpr))]
+    
+    # calculate average of nonOLCpGs based on columnMean if given
+    # if (!is.null())
+    #
+    
+    
+    colnames(olMetrics) <- paste0(colnames(olLMetrics), "_OL")
+    colnames(nonOLMetrics) <- paste0(colnames(nonOLMetrics), "_nonOL")
+    
+    metricDT = cbind(olMetrics, nonOLMetrics)
+    
+    return(metricDT)
+}
+ 
+
 
 #' Function to see how representative the cytosines in a region set are:
 #' can cytosines from a region set reproduce PC ordering and how high is 
