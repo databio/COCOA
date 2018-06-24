@@ -633,16 +633,19 @@ cpgOLMetrics <- function(dataDT, regionGR, metrics=c("mean", "sd"), columnMeans=
     dataGR = MIRA:::BSdtToGRanges(list(dataDT))[[1]]
     
     OL = findOverlaps(query = regionGR, subject = dataGR)
+    
+    # if no overlap, exit
+    if (length(OL) == 0) {
+        return(NULL)
+    }
+    
     # get indices for overlapping and non overlapping CpGs
     olCpG = subjectHits(OL)
     
     # region set info
     total_region_number = length(regionGR)
     mean_region_size = round(mean(width(regionGR)), 1)
-    
-    # if no overlap, exit
-    
-    
+
     
     # get info on degree of overlap
     # number of CpGs that overlap
