@@ -1,15 +1,36 @@
 
+library(data.table)
+
 # generate synthetic data
-# loadingMat = 
-coordinates = data.table(chr=rep("chr1", nrow(loadingMat)), start = 1:nrow(loadingMat))
-regionSet = data.table(chr = c("chr1", "chr1", "chr1", "chr1"), 
-                       start = c(1, 500, 800, 1000),
-                       end = c(400, 700, 950, 1500))
-regionSet = MIRA:::dtToGr(regionSet)
+# coordinateDT: positions of cytosines
+chr1 = seq(from=1, to = 4000, by = 200)
+chr2 = seq(from=4001, to = 6400, by = 200)
+start = c(chr1, chr2)
+coordinateDT = data.table(chr=c(rep("chr1", length(chr1)),
+                             rep("chr2", length(chr2))),
+                         start = start)
+# loading values
+loadingMat = matrix(data = rep(1, (length(start) * 2)), ncol = 2)
+colnames(loadingMat) <- c("PC1", "PC3")
 
-aggregateLoadings(loadingMat = loadingMat, 
-                  coordinateDT = coordinates, 
-                  regionSet = regionSet)
+# region sets that will be tested
+regionSet1 = data.table(chr = c("chr1", "chr1", "chr1", "chr2", "chr2"), 
+                       start = c(1, 500, 3100, 5100, 6000),
+                       end = c(400, 700, 3400, 5150, 6450))
+regionSet1 = MIRA:::dtToGr(regionSet1)
+regionSet2 = data.table(chr = c("chr1", "chr1", "chr1", "chr2", "chr2"), 
+                                     start = c(1000, 1500, 3700, 4000, 4300),
+                                     end = c(1400, 1700, 3800, 4100, 4700))
+regionSet2 = MIRA:::dtToGr(regionSet2)
+
+# running the tests
 
 
+# aggregateLoadings(loadingMat = loadingMat, 
+#                   coordinateDT = coordinates, 
+#                   regionSet = regionSet)
+
+# cpgOLMetrics
+dataDT = cbind(coordinateDT, as.data.frame(loadingMat))
+cpgOLMetrics(dataDT=dataDT, regionGR = regionSet1, metrics = c("mean", "sd"), alsoNonOLMet = TRUE)
 
