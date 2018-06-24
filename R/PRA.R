@@ -25,10 +25,10 @@ aggregateLoadings <- function(loadingMat, coordinateDT, regionSet,
     
     # extreme positive or negative values both give important information
     loadingMat = abs(loadingMat) # required for later code
-    loadingMat = as.data.table(loadingMat)
+    loadingDT = as.data.table(loadingMat)
     
     # reformat into data.table with chromosome location and weight
-    loadingDT = data.table(coordinateDT, loadingMat[, PCsToAnnotate, with=FALSE])
+    loadingDT = data.table(coordinateDT, loadingDT[, PCsToAnnotate, with=FALSE])
     # naming does not work if only using one PC so add this line for that case
     setnames(loadingDT, c("chr", "start", PCsToAnnotate))
     
@@ -41,56 +41,14 @@ aggregateLoadings <- function(loadingMat, coordinateDT, regionSet,
                                 rep("mean", length(PCsToAnnotate)))
     
     # do the actual aggregation
-    # previously used BSAggregate from RGenomeUtils but now using local. 
-    # modified copy
-    loadAgMain = BSAggregate(BSDT = loadingDT, regionsGRL = GRangesList(regionSet),
-                jExpr = aggrCommand,
-                byRegionGroup = TRUE,
-                splitFactor = NULL)
-    
-    # cpgOLMetrics() # make sure it works with no overlap
-    
-    
-    if (permute) {
-        # if no cytosines from loadings overlapped with regionSet, no need for
-        # permutations
-        if (is.null(loadAgMain)) {
-            results = as.data.table(t(rep(NA, length(PCsToAnnotate))))
-            setnames(results, PCsToAnnotate)
-            return(results)
-        } else {
-            # permutation test?
-            # shuffle chromosomal coordinate labels and rerun 1000? times
-            set.seed(100) # will this cause the user problems if they independently have set
-            # ...the seed for other functions?
-            loadAgPerm = list()
-            for (i in 1:100) {
-                permInd = sample(1:nrow(loadingDT), replace = FALSE)
-                # reformat into data.table with chromosome location and weight
-                loadingDT = data.table(coordinateDT[permInd, ], loadingMat[, PCsToAnnotate, with=FALSE])
-                
-                # naming does not work if only using one PC so add this line for that case
-                setnames(loadingDT, c("chr", "start", PCsToAnnotate)) 
-                
-                loadAgPerm[[i]] = BSAggregate(BSDT = loadingDT, 
-                                                            regionsGRL = GRangesList(regionSet),
-                                                            jExpr = aggrCommand,
-                                                            byRegionGroup = TRUE,
-                                                            splitFactor = NULL)
-                
-            }
-            loadAgPerm = rbindlist(loadAgPerm)
-            
-            testCDF = lapply(X = loadAgPerm[, .SD, .SDcols = PCsToAnnotate], ecdf)
-            pVals = mapply(function(x, y) y(x), loadAgMain[, .SD, .SDcols = PCsToAnnotate],
-                           testCDF)
-            pVals2 = (0.5 - abs(pVals - 0.5)) * 2 # two sided?    
-            
-            # UPDATE to return p value from permutation test?
-            return(pVals2)
-            #return(loadAgMain[, PCsToAnnotate])
-        }
-    } else {
+    if (metric == "raw") {
+        # previously used BSAggregate from RGenomeUtils but now using local, 
+        # modified copy
+        loadAgMain = BSAggregate(BSDT = loadingDT, regionsGRL = GRangesList(regionSet),
+                                 jExpr = aggrCommand,
+                                 byRegionGroup = TRUE,
+                                 splitFactor = NULL)
+        results = loadAgMain[, .SD, .SDcols = PCsToAnnotate]
         # if no cytosines from loadings were included in regionSet, result is NA
         if (is.null(loadAgMain)) {
             results = as.data.table(t(rep(NA, length(PCsToAnnotate))))
@@ -100,30 +58,56 @@ aggregateLoadings <- function(loadingMat, coordinateDT, regionSet,
             results[, total_region_number := numOfRegions]
             results[, mean_region_size := round(mean(width(regionSet)), 1)]
         } else {
-            if (metric == "raw") {
-                results = loadAgMain[, .SD, .SDcols = PCsToAnnotate]
-            } else if (metric == "meanDiff") {
-                
-                # if (is.null(pcLoadAv)) {
-                #     # calculate (should already be absolute)
-                #     pcLoadAv = apply(X = loadingDT[, PCsToAnnotate, with=FALSE], MARGIN = 2, FUN = mean)
-                # }
-                
-                results = loadAgMain[, .SD / sqrt(1 / numCpGsOverlapping - 1 / (totalCpGs - numCpGsOverlapping)), .SDcols = PCsToAnnotate]
-                
-            } else {
-                error(MIRA:::cleanws("metric was not recognized. 
-                      Check spelling and available options."))
-            }
-            
             results[, cytosine_coverage := loadAgMain[, .SD, .SDcols = "numCpGsOverlapping"]]
             results[, region_coverage := loadAgMain[, .SD, .SDcols = "numRegionsOverlapping"]]
             results[, total_region_number := numOfRegions]
             results[, mean_region_size := round(mean(width(regionSet)), 1)]
         }
+    } else if (metric == "meanDiff") {
+        # if (is.null(pcLoadAv)) {
+        #     # calculate (should already be absolute)
+        #     pcLoadAv = apply(X = loadingDT[, PCsToAnnotate, with=FALSE], MARGIN = 2, FUN = mean)
+        # }
+        loadMetrics = cpgOLMetrics(dataDT=loadingDT, regionGR=regionSet, 
+                                   metrics=c("mean", "sd"), columnMeans=NULL, 
+                                   alsoNonOLMet=TRUE)
+        if (is.null(loadMetrics)) {
+            results = as.data.table(t(rep(NA, length(PCsToAnnotate))))
+            setnames(results, PCsToAnnotate)
+            results[, cytosine_coverage := 0]
+            results[, region_coverage := 0]
+            results[, total_region_number := numOfRegions]
+            results[, mean_region_size := round(mean(width(regionSet)), 1)]
+        } else {
+            # calculate mean difference
+            # pooled standard deviation
+            sdPool = sqrt((loadMetrics$sd_OL^2 + loadMetrics$sd_nonOL^2) / 2)
+            
+            # mean difference
+            # error if numCpGsOverlapping > (1/2) * totalCpGs
+            meanDiff = (loadMetrics$mean_OL - loadMetrics$mean_nonOL) / 
+                (sdPool * sqrt((1 / loadMetrics$cytosine_coverage) - (1 / (totalCpGs - loadMetrics$cytosine_coverage))))
+            results = as.data.table(t(meanDiff))
+            colnames(results) <- loadMetrics$testCol
+            
+            # add information about degree of overlap
+            results = cbind(results, loadMetrics[1, .SD, .SDcols = c("cytosine_coverage", "region_coverage", 
+                                                      "total_region_number", "mean_region_size")]) 
+         }
+        
+        
+    } else {
+        error(MIRA:::cleanws("metric was not recognized. 
+                      Check spelling and available options."))
+    }
+    
+    
+    # cpgOLMetrics() # make sure it works with no overlap
+    
+        
         return(results)
     }
-}
+
 
 
 #' Wrapper function to do PCA region set enrichment 
@@ -142,7 +126,7 @@ aggregateLoadings <- function(loadingMat, coordinateDT, regionSet,
 #' column has total number of regions. 
 
 pcRegionSetEnrichment <- function(loadingMat, coordinateDT, GRList, 
-                  PCsToAnnotate = c("PC1", "PC2"), permute=TRUE) {
+                  PCsToAnnotate = c("PC1", "PC2"), scoringMetric = "meanDiff", permute=TRUE) {
  
     # apply over the list of region sets
     resultsList = MIRA:::lapplyAlias(GRList, 
@@ -150,6 +134,7 @@ pcRegionSetEnrichment <- function(loadingMat, coordinateDT, GRList,
                                                             coordinateDT=coordinateDT, 
                                                             regionSet=x, 
                                                             PCsToAnnotate = PCsToAnnotate,
+                                                            metric = scoringMetric,
                                                             permute=permute))
     resultsDT = do.call(rbind, resultsList) 
     row.names(resultsDT) = row.names(GRList)
@@ -645,13 +630,26 @@ BSAggregate = function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL.length = NUL
 cpgOLMetrics <- function(dataDT, regionGR, metrics=c("mean", "sd"), columnMeans=NULL, alsoNonOLMet=TRUE) {
     
     # convert DT to GR for finding overlaps
-    dataGR = MIRA:::BSdtToGRanges(list(dataDT))
+    dataGR = MIRA:::BSdtToGRanges(list(dataDT))[[1]]
     
     OL = findOverlaps(query = regionGR, subject = dataGR)
     # get indices for overlapping and non overlapping CpGs
     olCpG = subjectHits(OL)
     
+    # region set info
+    total_region_number = length(regionGR)
+    mean_region_size = round(mean(width(regionGR)), 1)
+    
     # if no overlap, exit
+    
+    
+    
+    # get info on degree of overlap
+    # number of CpGs that overlap
+    cytosine_coverage = length(unique(olCpG))
+    # number of regions that overlap
+    region_coverage = length(unique(queryHits(OL)))
+
     
     
     
@@ -664,21 +662,28 @@ cpgOLMetrics <- function(dataDT, regionGR, metrics=c("mean", "sd"), columnMeans=
                           newColNames = paste0(rep(testCols, each=2), "_", metrics))
     
     # getting the metrics
-    olMetrics = dataDT[olCpG, eval(parse(text=jExpr))]
+    olMetrics = as.data.frame(dataDT[olCpG, eval(parse(text=jExpr))])
     
     # if no OL for region set, don't calculate for non region set 
-    # TODO make conditional
-    nonOLMetrics = dataDT[nonOLCpG, eval(parse(text=jExpr))]
+    # TODO make conditional on region set having any overlap
+    nonOLMetrics = as.data.frame(dataDT[nonOLCpG, eval(parse(text=jExpr))])
     
     # calculate average of nonOLCpGs based on columnMean if given
     # if (!is.null())
     #
+    # formatting so there is one row per PC/testCol
+    olResults = sapply(X = metrics, FUN = function(x) as.numeric(olMetrics[, grepl(pattern = x, colnames(olMetrics))]))
+    olResults = as.data.table(olResults)
+    setnames(olResults, old = colnames(olResults), new = paste0(colnames(olResults), "_OL"))
     
     
-    colnames(olMetrics) <- paste0(colnames(olLMetrics), "_OL")
-    colnames(nonOLMetrics) <- paste0(colnames(nonOLMetrics), "_nonOL")
+    nonOLResults = sapply(X = metrics, FUN = function(x) as.numeric(nonOLMetrics[, grepl(pattern = x, colnames(nonOLMetrics))]))
+    nonOLResults = as.data.table(nonOLResults)
+    setnames(nonOLResults, old = colnames(nonOLResults), new = paste0(colnames(nonOLResults), "_nonOL"))
     
-    metricDT = cbind(olMetrics, nonOLMetrics)
+
+    
+    metricDT = cbind(data.table(testCol=testCols), olResults, nonOLResults, data.table(cytosine_coverage, region_coverage, total_region_number, mean_region_size))
     
     return(metricDT)
 }
