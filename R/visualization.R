@@ -276,23 +276,31 @@ methylAlongPC <- function (loadingMat, loadingThreshold,
 #' @param PCsToAnnotate
 
 regionQuantileByPC <- function(loadingMat, coordinateDT, GRList, 
-                               rsNames, PCsToAnnotate=paste0("PC", 1:5)) {
+                               rsNames, PCsToAnnotate=paste0("PC", 1:5),
+                               maxRegionsToPlot = 8000, cluster_rows = TRUE) {
     
     for (i in seq_along(GRList)) { # loop through top region sets
         
         # rsIndex = sort.int(rsEnrichment$PC2, index.return = TRUE, decreasing = TRUE)$ix[6]
         regionSet = GRList[[i]]
+        
+
         rsRegionAverage = averageByRegion(loadingMat = mPCA$rotation, coordinateDT = bigSharedC$coordinates, 
                                           GRList = regionSet, PCsToAnnotate = PCsToAnnotate,
                                           returnQuantile = TRUE)
         # ranking in terms of percentiles in case there were different distributions of loading scores for each PC
         
-        
-        multiHM = grid.grabExpr(draw(Heatmap(matrix = as.matrix(rsRegionAverage[, PCsToAnnotate, with=FALSE]), column_title = rsNames[i], 
-                                             cluster_columns = FALSE, name = "Percentile of Loading Scores in PC"))) # use_raster=TRUE, raster_device="jpeg")
-        pushViewport(viewport(y = unit((8.5*length(GRList))-(i-1) * 8.5, "in"), height = unit(8, "in"), just = "top"))
-        grid.draw(multiHM)
-        popViewport()
+        # if there are too many regions, don't plot because the attempt to cluster
+        # will cause a memory error
+        if (nrow(rsRegionAverage) <= maxRegionsToPlot) {
+            multiHM = grid.grabExpr(draw(Heatmap(matrix = as.matrix(rsRegionAverage[, PCsToAnnotate, with=FALSE]), column_title = rsNames[i], 
+                                                 cluster_rows = cluster_rows,
+                                                 cluster_columns = FALSE, name = "Percentile of Loading Scores in PC"))) # use_raster=TRUE, raster_device="jpeg")
+            pushViewport(viewport(y = unit((8.5*length(GRList))-(i-1) * 8.5, "in"), height = unit(8, "in"), just = "top"))
+            grid.draw(multiHM)
+            popViewport()
+        }
+
         
     }
     
