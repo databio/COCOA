@@ -1,8 +1,46 @@
-# package to annotate PCA components of DNA methylation data
-# based on region set enrichment
-library(RGenomeUtils)
-library(GenomicRanges)
-library(data.table)
+# PACKAGE DOCUMENTATION
+#' Principal Component Region Set Analysis (PCRSA)
+#' 
+#' Purpose of PCRSA/description.
+#' package to annotate PCA components of DNA methylation data
+#' based on region set enrichment
+#'
+#' @docType package
+#' @name PCRSA
+#' @author John Lawson
+#' @author Nathan Sheffield
+#'
+#' @references \url{http://github.com/databio}
+#' @importFrom GenomicRanges GRanges GRangesList elementMetadata strand
+#'             seqnames granges
+#' @importFrom ggplot2 ggplot aes facet_wrap geom_boxplot geom_jitter geom_line
+#'             theme_classic xlab ylab geom_hline ylim scale_color_discrete
+#'             scale_x_discrete scale_fill_brewer scale_color_manual
+#'             scale_color_brewer
+#' @import BiocGenerics S4Vectors IRanges
+#' @importFrom data.table ":=" setDT data.table setkey fread setnames 
+#'             setcolorder rbindlist setattr setorder copy is.data.table
+#' @importFrom Biobase sampleNames
+#' @importFrom stats lm coefficients poly
+#' @importFrom bsseq getCoverage getMeth
+#' @importFrom methods is
+NULL
+
+
+# Because of some issues with CRAN submission, 
+# (see here: http://stackoverflow.com/questions/9439256/)
+# I have to register stuff used in data.table as non-standard evaluation, 
+# in order to pass some R CMD check NOTES.
+if (getRversion() >= "2.15.1") {
+    utils::globalVariables(c(
+        ".", "bin", "binID", "chr", "element_blank", "featureID", 
+        "geom_violin", "methylCount", "id", "meth", 
+        "methylProp", "coverage", "sumCoverage", "regionGroupID", "regionID", 
+        "sampleName", "sampleType", "theme", "ubinID", "V1"))
+}
+
+#########################################################################
+
 
 #' Function to aggregate PCA loading weights over a given region set
 #' and then get p value for each PC based on a permutation
@@ -16,6 +54,7 @@ library(data.table)
 #' average of the loading values with no normalization ("raw").
 #' @param pcLoadAv The average absolute loading value for each PC. Will
 #' significantly speed up computation if this is given.
+#' @export
 
 aggregateLoadings <- function(loadingMat, coordinateDT, regionSet, 
                   PCsToAnnotate = c("PC1", "PC2"), permute=FALSE, metric="meanDiff", pcLoadAv=NULL) {
@@ -124,6 +163,7 @@ aggregateLoadings <- function(loadingMat, coordinateDT, regionSet,
 #' column has number of cytosines that overlapped with the given region set.
 #' column has number of regions that overlapped with any cytosines.
 #' column has total number of regions. 
+#' @export
 
 pcRegionSetEnrichment <- function(loadingMat, coordinateDT, GRList, 
                   PCsToAnnotate = c("PC1", "PC2"), scoringMetric = "meanDiff", permute=TRUE) {
@@ -238,6 +278,7 @@ BSBinAggregate = function(BSDT, rangeDT, binCount, minReads = 500,
 #' PC in PCsToAnnotate. Regions are not in order along the rows of the data.table.
 #' 
 # Devel note: I could add a column for how many cytosines are in each region 
+#' @export
 averageByRegion <- function(loadingMat, coordinateDT, GRList, PCsToAnnotate = c("PC1", "PC2"), returnQuantile=FALSE) {
     
     # old parameters of BSAggregate
@@ -710,6 +751,7 @@ cpgOLMetrics <- function(dataDT, regionGR, metrics=c("mean", "sd"), columnMeans=
 #' @return a score for each patient from only loading values for cytosines in 
 #' regionSet. If returnCor = TRUE, returns a correlation score for scores from
 #' each PCofInterest with scores from a subset of loading values for that PC.
+#' @export
 
 pcFromSubset <- function(regionSet, pca, methylData, coordinateDT, PCofInterest="PC1", returnCor=FALSE) {
     
@@ -766,6 +808,7 @@ pcFromSubset <- function(regionSet, pca, methylData, coordinateDT, PCofInterest=
 #' @return Total number of cytosines from methylation data that overlapped with
 #' each region set. Also the percent of cytosines that overlapped with
 #' other region set.
+#' @export
 
 percentCOverlap <- function(coordGR, GRList) {
     
@@ -818,6 +861,7 @@ percentCOverlap <- function(coordGR, GRList) {
 #' ranked by enrichment score for region sets for that PC.
 #' Original indices for region sets that were used to create rsEnrichment
 #' are given. 
+#' @export
 #' 
 rsRankingIndex <- function(rsEnrichment, PCsToAnnotate) {
     
