@@ -41,6 +41,7 @@
 #' These same subject_IDs must be column names of methylData
 #' @param pc The principal component used to order the samples in the heatmap
 # library(ComplexHeatmap)
+#' @export
 rsMethylHeatmap <- function(methylData, coordGR, regionSet, pcaData, pc="PC1", ...) {
     
     # PCA object must have subject_ID as row.names (corresponding 
@@ -80,7 +81,8 @@ rsMethylHeatmap <- function(methylData, coordGR, regionSet, pcaData, pc="PC1", .
 #' include in the plot, eg c("PC1", "PC2")
 #' @param orderByPC PC to order by (decreasing order) in heatmap
 #
-#' @example enrichmentHeatmap = rsEnrichHeatmap(rsEnrichment, PCsToAnnotate=paste0("PC", 1:10), orderByPC = "PC2")
+# @example enrichmentHeatmap = rsEnrichHeatmap(rsEnrichment, PCsToAnnotate=paste0("PC", 1:10), orderByPC = "PC2")
+#' @export
 rsEnrichHeatmap <- function(rsEnrichment, PCsToAnnotate=paste0("PC", 1:5),
                             orderByPC="PC1", rsNameCol = "rsNames", topX = 20) {
     
@@ -126,6 +128,7 @@ rsEnrichHeatmap <- function(rsEnrichment, PCsToAnnotate=paste0("PC", 1:5),
 #' create pdf with multiple heatmap plots (number = length(PCsToRankBy)). 
 #' Plot i will be ranked by PCsToRankBy[i]. 
 #' # see https://github.com/jokergoo/ComplexHeatmap/issues/110
+#' @export
 comparePCHeatmap <- function(rsEnrichment, PCsToRankBy=paste0("PC", 1:5), PCsToInclude=paste0("PC", 1:10), fileName=NULL) {
     if (!is.null(fileName)) {
         grDevices::pdf(file = fileName, width = 11, height = 8.5 * length(PCsToRankBy))
@@ -177,10 +180,7 @@ regionPCHeatmap <- function() {
 #' plots which can be hard to load. Number of regions on plot will be less
 #' than or equal to topXRegions (less than if there are not that many regions
 #' total). 50 is arbitrary 
-#' 
-
-
-
+#' @export
 methylAlongPC <- function (loadingMat, loadingThreshold, 
                            pcScores, coordinateDT, methylData, 
                            GRList, orderByPC, 
@@ -274,7 +274,7 @@ methylAlongPC <- function (loadingMat, loadingThreshold,
 #' @param GRList
 #' @param rsNames
 #' @param PCsToAnnotate
-
+#' @export
 regionQuantileByPC <- function(loadingMat, coordinateDT, GRList, 
                                rsNames, PCsToAnnotate=paste0("PC", 1:5),
                                maxRegionsToPlot = 8000, cluster_rows = TRUE) {

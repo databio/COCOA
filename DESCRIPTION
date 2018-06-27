@@ -1,0 +1,39 @@
+Package: PCRSA
+Version: 0.99.0
+Date: 2018-06-27
+Title: Principal Component Region Set Analysis
+Description: description
+Authors@R: c(person("John", "Lawson", email="jtl2hk@virginia.edu", role=c("aut", "cre")),
+    person("Nathan", "Sheffield", role=c("aut")))
+Author:John Lawson [aut, cre],
+    Nathan Sheffield <http://www.databio.org> [aut]
+    
+Maintainer: John Lawson <jtl2hk@virginia.edu>
+Depends: R (>= 3.4)
+Imports:
+    BiocGenerics,
+    S4Vectors,
+    IRanges,
+    GenomicRanges,
+    data.table,
+    ggplot2,
+    Biobase,
+    stats,
+    bsseq,
+    methods
+Suggests:
+    knitr,
+    parallel,
+    testthat,
+    BiocStyle,
+    rmarkdown,
+    AnnotationHub,
+    LOLA
+VignetteBuilder: knitr
+License: GPL-3
+biocViews: DNAMethylation, GeneRegulation, GenomeAnnotation, 
+	   SystemsBiology, FunctionalGenomics, ChIPSeq, 
+           MethylSeq, Sequencing, Epigenetics, Coverage
+URL: http://github.com/databio/PCRSA
+BugReports: https://github.com/databio/PCRSA
+RoxygenNote: 6.0.1
