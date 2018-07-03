@@ -1,5 +1,6 @@
 
 library(data.table)
+library(GenomicRanges)
 
 # generate synthetic data
 # coordinateDT: positions of cytosines
@@ -12,6 +13,11 @@ coordinateDT = data.table(chr=c(rep("chr1", length(chr1)),
 # loading values
 loadingMat = matrix(data = rep(1, (length(start) * 2)), ncol = 2)
 colnames(loadingMat) <- c("PC1", "PC3")
+
+dataDT = data.table(coordinateDT, loadingMat)
+# arbitrarily make some != 1
+dataDT$PC1[3] = 0
+dataDT$PC3[5] = 2
 
 # region sets that will be tested
 regionSet1 = data.table(chr = c("chr1", "chr1", "chr1", "chr2", "chr2"), 
