@@ -135,6 +135,20 @@ aggregateLoadings <- function(loadingMat, coordinateDT, regionSet,
          }
         
         
+    } else if (metric == "rankSum"){
+        # one sided test since I took the absolute value of the loadings 
+        wRes = rsWilcox(dataDT = loadingDT, regionGR=regionSet, alternative="greater")
+        
+        if (is.null(wRes)) {
+            results = as.data.table(t(rep(NA, length(PCsToAnnotate))))
+            setnames(results, PCsToAnnotate)
+            results[, cytosine_coverage := 0]
+            results[, region_coverage := 0]
+            results[, total_region_number := numOfRegions]
+            results[, mean_region_size := round(mean(width(regionSet)), 1)]
+        } else {
+            results = as.data.table(wRes)
+        }
     } else {
         error(MIRA:::cleanws("metric was not recognized. 
                       Check spelling and available options."))
@@ -653,84 +667,7 @@ BSAggregate = function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL.length = NUL
     # doesn't give you a choice at this point. 
 }
 
-#' Instead of averaging within regions first as BSAggregate does,
-#' this function does a simple average and standard deviation
-#'  for all CpGs that overlap
-#' with regions of a region set, also does average and 
-#' standard deviation for non overlapping CpGs. Created to 
-#' get metrics of loading values for each PC.
-#' 
-#' Faster if given total average for each column of interest
-#' 
-#' @param dataDT should have chr, start, end columns as well
-#' as columns to get metrics of, 
-#' eg (PC1, PC2) or could be DNA methylation
-#' @param alsoNonOLMet also include same metrics
-#' for non overlapping CpGs
-#' 
-cpgOLMetrics <- function(dataDT, regionGR, metrics=c("mean", "sd"), columnMeans=NULL, alsoNonOLMet=TRUE) {
-    
-    # convert DT to GR for finding overlaps
-    dataGR = MIRA:::BSdtToGRanges(list(dataDT))[[1]]
-    
-    OL = findOverlaps(query = regionGR, subject = dataGR)
-    
-    # if no overlap, exit
-    if (length(OL) == 0) {
-        return(NULL)
-    }
-    
-    # get indices for overlapping and non overlapping CpGs
-    olCpG = subjectHits(OL)
-    
-    # region set info
-    total_region_number = length(regionGR)
-    mean_region_size = round(mean(width(regionGR)), 1)
 
-    
-    # get info on degree of overlap
-    # number of CpGs that overlap
-    cytosine_coverage = length(unique(olCpG))
-    # number of regions that overlap
-    region_coverage = length(unique(queryHits(OL)))
-
-    
-    
-    
-    nonOLCpG = (1:nrow(dataDT))[-olCpG]
-    
-    # gets metrics for all columns except chr, start, end
-    testCols = colnames(dataDT)[!(colnames(dataDT) %in% c("chr", "start", "end"))] 
-    
-    jExpr = MIRA:::buildJ(testCols, rep(metrics, length(testCols)),
-                          newColNames = paste0(rep(testCols, each=2), "_", metrics))
-    
-    # getting the metrics
-    olMetrics = as.data.frame(dataDT[olCpG, eval(parse(text=jExpr))])
-    
-    # if no OL for region set, don't calculate for non region set 
-    # TODO make conditional on region set having any overlap
-    nonOLMetrics = as.data.frame(dataDT[nonOLCpG, eval(parse(text=jExpr))])
-    
-    # calculate average of nonOLCpGs based on columnMean if given
-    # if (!is.null())
-    #
-    # formatting so there is one row per PC/testCol
-    olResults = sapply(X = metrics, FUN = function(x) as.numeric(olMetrics[, grepl(pattern = x, colnames(olMetrics))]))
-    olResults = as.data.table(olResults)
-    setnames(olResults, old = colnames(olResults), new = paste0(colnames(olResults), "_OL"))
-    
-    
-    nonOLResults = sapply(X = metrics, FUN = function(x) as.numeric(nonOLMetrics[, grepl(pattern = x, colnames(nonOLMetrics))]))
-    nonOLResults = as.data.table(nonOLResults)
-    setnames(nonOLResults, old = colnames(nonOLResults), new = paste0(colnames(nonOLResults), "_nonOL"))
-    
-
-    
-    metricDT = cbind(data.table(testCol=testCols), olResults, nonOLResults, data.table(cytosine_coverage, region_coverage, total_region_number, mean_region_size))
-    
-    return(metricDT)
-}
  
 
 
@@ -887,3 +824,143 @@ rsRankingIndex <- function(rsEnrichment, PCsToAnnotate) {
     # setorderv(rsEnrichment, cols = "rsIndex", order=1L)
     return(rsEnSortedInd)
 }
+
+#################### Metric functions ########################################
+# scores, metrics, or statistical tests
+
+#' Instead of averaging within regions first as BSAggregate does,
+#' this function does a simple average and standard deviation
+#'  for all CpGs that overlap
+#' with regions of a region set, also does average and 
+#' standard deviation for non overlapping CpGs. Created to 
+#' get metrics of loading values for each PC.
+#' 
+#' Faster if given total average for each column of interest
+#' 
+#' @param dataDT should have chr, start, end columns as well
+#' as columns to get metrics of, 
+#' eg (PC1, PC2) or could be DNA methylation
+#' @param alsoNonOLMet also include same metrics
+#' for non overlapping CpGs
+#' 
+cpgOLMetrics <- function(dataDT, regionGR, metrics=c("mean", "sd"), columnMeans=NULL, alsoNonOLMet=TRUE) {
+    
+    # convert DT to GR for finding overlaps
+    dataGR = MIRA:::BSdtToGRanges(list(dataDT))[[1]]
+    
+    OL = findOverlaps(query = regionGR, subject = dataGR)
+    
+    # if no overlap, exit
+    if (length(OL) == 0) {
+        return(NULL)
+    }
+    
+    # get indices for overlapping and non overlapping CpGs
+    olCpG = subjectHits(OL)
+    
+    # region set info
+    total_region_number = length(regionGR)
+    mean_region_size = round(mean(width(regionGR)), 1)
+    
+    
+    # get info on degree of overlap
+    # number of CpGs that overlap
+    cytosine_coverage = length(unique(olCpG))
+    # number of regions that overlap
+    region_coverage = length(unique(queryHits(OL)))
+    
+    
+    
+    
+    nonOLCpG = (1:nrow(dataDT))[-olCpG]
+    
+    # gets metrics for all columns except chr, start, end
+    testCols = colnames(dataDT)[!(colnames(dataDT) %in% c("chr", "start", "end"))] 
+    
+    jExpr = MIRA:::buildJ(testCols, rep(metrics, length(testCols)),
+                          newColNames = paste0(rep(testCols, each=2), "_", metrics))
+    
+    # getting the metrics
+    olMetrics = as.data.frame(dataDT[olCpG, eval(parse(text=jExpr))])
+    
+    # if no OL for region set, don't calculate for non region set 
+    # TODO make conditional on region set having any overlap
+    nonOLMetrics = as.data.frame(dataDT[nonOLCpG, eval(parse(text=jExpr))])
+    
+    # calculate average of nonOLCpGs based on columnMean if given
+    # if (!is.null())
+    #
+    # formatting so there is one row per PC/testCol
+    olResults = sapply(X = metrics, FUN = function(x) as.numeric(olMetrics[, grepl(pattern = x, colnames(olMetrics))]))
+    olResults = as.data.table(olResults)
+    setnames(olResults, old = colnames(olResults), new = paste0(colnames(olResults), "_OL"))
+    
+    
+    nonOLResults = sapply(X = metrics, FUN = function(x) as.numeric(nonOLMetrics[, grepl(pattern = x, colnames(nonOLMetrics))]))
+    nonOLResults = as.data.table(nonOLResults)
+    setnames(nonOLResults, old = colnames(nonOLResults), new = paste0(colnames(nonOLResults), "_nonOL"))
+    
+    
+    
+    metricDT = cbind(data.table(testCol=testCols), olResults, nonOLResults, data.table(cytosine_coverage, region_coverage, total_region_number, mean_region_size))
+    
+    return(metricDT)
+}
+
+
+#' Wilcoxon rank sum test for a region set
+#' @param dataDT should have chr, start, end columns as well
+#' as columns to get metrics of, 
+#' eg (PC1, PC2) or could be DNA methylation
+#' @param regionGR Region set, GenomicRanges object
+#' @param ... Additional parameters of wilcox.test function. See ?wilcox.test.
+#' For instance specify alternative hypothesis: alternative = "greater".
+#' @return A vector with a p value for each column other than chr, start or end. 
+
+# could make this a generic function then apply it across PCs of interest
+
+rsWilcox <- function(dataDT, regionGR, ...) {
+    
+    # region set info
+    total_region_number = length(regionGR)
+    mean_region_size = round(mean(width(regionGR)), 1)
+    
+
+    # columns of interest
+    testCols = colnames(dataDT)[!(colnames(dataDT) %in% c("chr", "start", "end"))]
+    
+    
+    # convert DT to GR for finding overlaps
+    dataGR = MIRA:::BSdtToGRanges(list(dataDT))[[1]]
+    
+    OL = findOverlaps(query = regionGR, subject = dataGR)
+    
+    # if no overlap, exit
+    if (length(OL) == 0) {
+        return(NULL)
+    }
+    
+    # get indices for overlapping and non overlapping CpGs
+    olCpG = subjectHits(OL)
+    nonOLCpG = (1:nrow(dataDT))[-olCpG]
+    
+    
+    # get info on degree of overlap
+    # number of CpGs that overlap
+    cytosine_coverage = length(unique(olCpG))
+    # number of regions that overlap
+    region_coverage = length(unique(queryHits(OL)))
+    
+    
+    # calculate Wilcoxon rank sum test for each column
+    # additional parameters given with ...
+    pVals =sapply(X = testCols, FUN = function(x) wilcox.test(x = as.numeric(as.matrix(dataDT[olCpG, x, with=FALSE])), 
+                                               y = as.numeric(as.matrix(dataDT[nonOLCpG, x, with=FALSE])), ...)$p.value)
+     
+    
+    
+    wRes = data.frame(t(wRes), cytosine_coverage, region_coverage, total_region_number, mean_region_size)
+    return(wRes)
+}
+
+
