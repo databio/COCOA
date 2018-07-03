@@ -1,0 +1,18 @@
+---
+title: "Introduction to Principal Component Region Set Analysis"
+author: "John Lawson"
+date: "`r Sys.Date()`"
+output: 
+  BiocStyle::html_document
+vignette: >
+  %\VignetteIndexEntry{Introduction to Principal Component Region Set Analysis}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# 
+
+
+# 
+
+
