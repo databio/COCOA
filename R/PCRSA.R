@@ -959,7 +959,7 @@ rsWilcox <- function(dataDT, regionGR, ...) {
      
     
     
-    wRes = data.frame(t(wRes), cytosine_coverage, region_coverage, total_region_number, mean_region_size)
+    wRes = data.frame(t(pVals), cytosine_coverage, region_coverage, total_region_number, mean_region_size)
     return(wRes)
 }
 
