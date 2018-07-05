@@ -127,6 +127,31 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
             results[, total_region_number := numOfRegions]
             results[, mean_region_size := round(mean(width(regionSet)), 1)]
         }
+    } else if (metric == "raw_CpG") {
+        
+        # average of loadings for all CpGs within region set
+        loadMetrics = cpgOLMetrics(dataDT=loadingDT, regionGR=regionSet, 
+                                   metrics="mean", columnMeans=NULL, 
+                                   alsoNonOLMet=FALSE)
+        if (is.null(loadMetrics)) {
+            results = as.data.table(t(rep(NA, length(PCsToAnnotate))))
+            setnames(results, PCsToAnnotate)
+            results[, cytosine_coverage := 0]
+            results[, region_coverage := 0]
+            results[, total_region_number := numOfRegions]
+            results[, mean_region_size := round(mean(width(regionSet)), 1)]
+        } else {
+            
+            # simple mean 
+            results = as.data.table(t(loadMetrics$mean_OL))
+            colnames(results) <- loadMetrics$testCol
+            
+            # add information about degree of overlap
+            results = cbind(results, loadMetrics[1, .SD, .SDcols = c("cytosine_coverage", "region_coverage", 
+                                                                     "total_region_number", "mean_region_size")]) 
+        }
+        
+        
     } else if (metric == "meanDiff") {
         # if (is.null(pcLoadAv)) {
         #     # calculate (should already be absolute)
