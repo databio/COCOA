@@ -5,11 +5,14 @@
 \title{Determine what percent of cytosines in region sets overlap.
 Slightly different than percent overlap of region sets.}
 \usage{
-percentCOverlap(coordGR, GRList)
+percentCOverlap(mCoord, GRList)
 }
 \arguments{
-\item{coordGR}{GenomicRanges object with coordinates for cytosines 
-included in the PCA.}
+\item{mCoord}{a GRanges object or data frame with coordinates 
+for the cytosines included in the PCA. Coordinates should be in the 
+same order as the methylation data and loadings. If a data.frame, 
+must have chr and start columns. If end is included, start 
+and end should be the same. Start coordinate will be used for calculations.}
 
 \item{GRList}{GRangesList object. Each list item is 
 a distinct region set (regions that correspond to 

@@ -6,7 +6,7 @@
 Patients are ordered by PC score for given PC
 #' TODO: deal with bug when nrow(highVariable) = 1}
 \usage{
-methylAlongPC(loadingMat, loadingThreshold, pcScores, coordinateDT, methylData,
+methylAlongPC(loadingMat, loadingThreshold, pcScores, mCoord, methylData,
   GRList, orderByPC, topXRegions = 50)
 }
 \arguments{
@@ -22,6 +22,12 @@ loading at least this high. Based on loading values from orderByPC.}
  (ie transformed methylation data). The $x output of prcomp() but must 
 have subject_ID as row names.
 These same subject_IDs must be column names of methylData.}
+
+\item{mCoord}{a GRanges object or data frame with coordinates 
+for the cytosines included in the PCA. Coordinates should be in the 
+same order as the methylation data and loadings. If a data.frame, 
+must have chr and start columns. If end is included, start 
+and end should be the same. Start coordinate will be used for calculations.}
 
 \item{methylData}{DNA methylation levels (0 to 1) in matrix or data.frame. 
 Rows are cytosines. Columns are samples.}

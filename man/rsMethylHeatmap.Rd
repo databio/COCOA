@@ -5,14 +5,18 @@
 \title{Look at methylation in regions of interest across samples, 
 with samples ordered according to PC of interest}
 \usage{
-rsMethylHeatmap(methylData, coordGR, regionSet, pcScores, orderByPC = "PC1",
+rsMethylHeatmap(methylData, mCoord, regionSet, pcScores, orderByPC = "PC1",
   ...)
 }
 \arguments{
 \item{methylData}{DNA methylation levels (0 to 1) in matrix or data.frame. 
 Rows are cytosines. Columns are samples.}
 
-\item{coordGR}{coordinates for methylation loci in methylData. (chromosome, start, end)}
+\item{mCoord}{a GRanges object or data frame with coordinates 
+for the cytosines included in the PCA. Coordinates should be in the 
+same order as the methylation data and loadings. If a data.frame, 
+must have chr and start columns. If end is included, start 
+and end should be the same. Start coordinate will be used for calculations.}
 
 \item{regionSet}{}
 

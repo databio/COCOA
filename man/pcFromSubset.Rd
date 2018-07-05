@@ -6,7 +6,7 @@
 can cytosines from a region set reproduce PC ordering and how high is 
 the correlation of original PCs with ordering from subset of cytosines?}
 \usage{
-pcFromSubset(regionSet, mPCA, methylData, coordinateDT, PCofInterest = "PC1",
+pcFromSubset(regionSet, mPCA, methylData, mCoord, PCofInterest = "PC1",
   returnCor = FALSE)
 }
 \arguments{
@@ -22,8 +22,11 @@ mPCA$center with values used to center DNA methylation.}
 Rows are cytosines. Columns are 
 samples.}
 
-\item{coordinateDT}{One row per cytosine coordinate, corresponding to
-a row of methylMat. Columns are chr, start, end.}
+\item{mCoord}{a GRanges object or data frame with coordinates 
+for the cytosines included in the PCA. Coordinates should be in the 
+same order as the methylation data and loadings. If a data.frame, 
+must have chr and start columns. If end is included, start 
+and end should be the same. Start coordinate will be used for calculations.}
 
 \item{returnCor}{Option to return correlation between these scores and
 original PC scores.}

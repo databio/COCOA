@@ -4,25 +4,28 @@
 \alias{rsRankingIndex}
 \title{A convenience function to easily get indices for
 the top region sets that were enriched for each PC. 
-For each PC, get index of original region sets but ordered by rsEnrichment
+For each PC, get index of original region sets but ordered by rsScores
 ranking for each PC. First number in a given column will be 
 original index of the region set ranked first for that PC. Second row for a
 column will be the original index of the region set that ranked second
 for that PC, etc.}
 \usage{
-rsRankingIndex(rsEnrichment, PCsToAnnotate)
+rsRankingIndex(rsScores, PCsToAnnotate)
 }
 \arguments{
-\item{rsEnrichment}{Should be in the same order as GRList (the list of 
+\item{rsScores}{a data.table with scores for each 
+region set from main PCRSA function. 
+Each row is a region set. Columns are PCs and info on region set overlap
+with DNA methylation data. Should be in the same order as GRList (the list of 
 region sets used to create it.)}
 
-\item{PCsToAnnotate}{PCs in rsEnrichment for which you want
+\item{PCsToAnnotate}{PCs in rsScores for which you want
 the indices of the original region sets}
 }
 \value{
 A data.table with columns PCsToAnnotate. Each column has been 
 ranked by enrichment score for region sets for that PC.
-Original indices for region sets that were used to create rsEnrichment
+Original indices for region sets that were used to create rsScores
 are given.
 }
 \description{

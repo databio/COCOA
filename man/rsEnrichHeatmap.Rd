@@ -5,12 +5,18 @@
 \title{Heatmap of enrichment scores across PCs
 A visualization of the enrichment data.table.}
 \usage{
-rsEnrichHeatmap(rsEnrichment, PCsToAnnotate = paste0("PC", 1:5),
+rsEnrichHeatmap(rsScores, PCsToAnnotate = paste0("PC", 1:5),
   orderByPC = "PC1", rsNameCol = "rsNames", topX = 20)
 }
 \arguments{
+\item{rsScores}{a data.table with scores for each 
+region set from main PCRSA function. 
+Each row is a region set. Columns are PCs and info on region set overlap
+with DNA methylation data. Should be in the same order as GRList (the list of 
+region sets used to create it.)}
+
 \item{PCsToAnnotate}{A character vector with principal components to 
-include in the plot, eg c("PC1", "PC2")}
+include. eg c("PC1", "PC2")}
 
 \item{orderByPC}{PC to order by (decreasing order) in heatmap}
 }

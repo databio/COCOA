@@ -2,21 +2,39 @@
 % Please edit documentation in R/PCRSA.R
 \name{pcRegionSetEnrichment}
 \alias{pcRegionSetEnrichment}
-\title{Wrapper function to do PCA region set enrichment 
-analysis for many region sets}
+\title{Do PCRSA for many region sets}
 \usage{
-pcRegionSetEnrichment(loadingMat, coordinateDT, GRList,
-  PCsToAnnotate = c("PC1", "PC2"), scoringMetric = "meanDiff",
-  permute = TRUE)
+pcRegionSetEnrichment(loadingMat, mCoord, GRList, PCsToAnnotate = c("PC1",
+  "PC2"), scoringMetric = "raw")
 }
 \arguments{
 \item{loadingMat}{matrix of loadings (the coefficients of 
 the linear combination that defines each PC). One named column for each PC.
 One row for each original dimension/variable (should be same order 
 as original data/mCoord). The x$rotation output of prcomp().}
+
+\item{mCoord}{a GRanges object or data frame with coordinates 
+for the cytosines included in the PCA. Coordinates should be in the 
+same order as the methylation data and loadings. If a data.frame, 
+must have chr and start columns. If end is included, start 
+and end should be the same. Start coordinate will be used for calculations.}
+
+\item{GRList}{GRangesList object. Each list item is 
+a distinct region set to test (region set: regions that correspond to 
+the same biological annotation).}
+
+\item{PCsToAnnotate}{A character vector with principal components to 
+include. eg c("PC1", "PC2")}
+
+\item{scoringMetric}{Scoring metric. "raw" is a simple
+average of the loading values with no normalization (recommended). With
+"raw" score, be cautious in interpretation for
+ region sets with low number of regions.
+Mean difference ("meanDiff") is also supported but is skewed toward 
+ranking large region sets highly.}
 }
 \value{
-data.table of results, one row for each region set. 
+data.frame of results, one row for each region set. 
 One column for each PC in PCsToAnnotate
 with average loading score for that PC for a given region set. 
 rsName column has region set name.
@@ -26,5 +44,5 @@ column has number of regions that overlapped with any cytosines.
 column has total number of regions.
 }
 \description{
-For parallel processing, region sets are split up between the cores
+Do PCRSA for many region sets
 }

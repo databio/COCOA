@@ -5,9 +5,8 @@
 \title{Function to aggregate PCA loading weights over a given region set
 and then get p value for each PC based on a permutation}
 \usage{
-aggregateLoadings(loadingMat, coordinateDT, regionSet,
-  PCsToAnnotate = c("PC1", "PC2"), permute = FALSE, metric = "meanDiff",
-  pcLoadAv = NULL)
+aggregateLoadings(loadingMat, mCoord, regionSet, PCsToAnnotate = c("PC1",
+  "PC2"), metric = "raw", pcLoadAv = NULL)
 }
 \arguments{
 \item{loadingMat}{matrix of loadings (the coefficients of 
@@ -15,16 +14,27 @@ the linear combination that defines each PC). One named column for each PC.
 One row for each original dimension/variable (should be same order 
 as original data/mCoord). The x$rotation output of prcomp().}
 
-\item{regionSet}{A genomic ranges object with regions corresponding
-to the same biological annotation.
-#UPDATE: make sure only aggregating PCsToAnnotate to save time
-# permute=TRUE is deprecated and that code chunk is not up to date}
+\item{mCoord}{a GRanges object or data frame with coordinates 
+for the cytosines included in the PCA. Coordinates should be in the 
+same order as the methylation data and loadings. If a data.frame, 
+must have chr and start columns. If end is included, start 
+and end should be the same. Start coordinate will be used for calculations.}
 
-\item{metric}{Scoring metric. Mean difference ("meanDiff") or just a simple
-average of the loading values with no normalization ("raw").}
+\item{regionSet}{A genomic ranges object with regions corresponding
+to the same biological annotation.}
+
+\item{metric}{Scoring metric. "raw" is a simple
+average of the loading values with no normalization (recommended). With
+"raw" score, be cautious in interpretation for
+ region sets with low number of regions.
+Mean difference ("meanDiff") is also supported but is skewed toward 
+ranking large region sets highly.}
 
 \item{pcLoadAv}{The average absolute loading value for each PC. Will
 significantly speed up computation if this is given.}
+}
+\value{
+
 }
 \description{
 Function to aggregate PCA loading weights over a given region set

@@ -5,10 +5,16 @@
 \title{create pdf with multiple heatmap plots (number = length(PCsToRankBy)). 
 Plot i will be ranked by PCsToRankBy[i].}
 \usage{
-comparePCHeatmap(rsEnrichment, PCsToRankBy = paste0("PC", 1:5),
+comparePCHeatmap(rsScores, PCsToRankBy = paste0("PC", 1:5),
   PCsToInclude = paste0("PC", 1:10), fileName = NULL)
 }
 \arguments{
+\item{rsScores}{a data.table with scores for each 
+region set from main PCRSA function. 
+Each row is a region set. Columns are PCs and info on region set overlap
+with DNA methylation data. Should be in the same order as GRList (the list of 
+region sets used to create it.)}
+
 \item{fileName}{# see https://github.com/jokergoo/ComplexHeatmap/issues/110}
 }
 \description{
