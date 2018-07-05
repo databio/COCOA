@@ -21,31 +21,31 @@ vignette: >
 First, we load the example data and required packages:
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
-library(PCRSA)
+# library(PCRSA)
 library(data.table)
 library(GenomicRanges)
-data()
-data()
+# data()
+# data()
 
 ```
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 # prepare data
-GRList 
-rsName
+# GRList 
+# rsName
 ```
 
 Now we test how much each region set is associated with each principal component:
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
-PCsToAnnotate = paste0("PC", 1:4)
-rsEnrichment = pcRegionSetEnrichment(loadingMat=allMPCAWeights, 
-                                             coordinateDT = coordinates, 
-                                             GRList=GRList, 
-                                             PCsToAnnotate = PCsToAnnotate, 
-                                             scoringMetric="raw")
-rsEnrichment$rsName = rsName
-rsEnrichment$rsDescription = rsDescription
+# PCsToAnnotate = paste0("PC", 1:4)
+# rsEnrichment = pcRegionSetEnrichment(loadingMat=allMPCAWeights, 
+                                             # coordinateDT = coordinates, 
+                                             # GRList=GRList, 
+                                             # PCsToAnnotate = PCsToAnnotate, 
+                                             # scoringMetric="raw")
+# rsEnrichment$rsName = rsName
+# rsEnrichment$rsDescription = rsDescription
 ```
 
 We can see whether variability along the PC is specific to the region of 
@@ -53,10 +53,10 @@ interest by comparing it to the surrounding genome. To do this we will
 calculate the average loadings of a wide area surrounding the regions of interest.
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
-wideGRList = lapply(GRList, resize, width = 14000, fix="center")
-pcProf = pcEnrichmentProfile(loadingMat = mPCA$rotation, coordinateDT = coordinateDT,
-                                 GRList=wideGRList, PCsToAnnotate = PCsToAnnotate,
-                                 binNum = 21)
+# wideGRList = lapply(GRList, resize, width = 14000, fix="center")
+# pcProf = pcEnrichmentProfile(loadingMat = mPCA$rotation, coordinateDT = coordinateDT,
+                                 # GRList=wideGRList, PCsToAnnotate = PCsToAnnotate,
+                                 # binNum = 21)
 ```
 
 We will normalize the result for each PC so we can better compare them.

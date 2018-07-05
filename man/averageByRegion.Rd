@@ -5,15 +5,17 @@
 \title{modification of BSAggregate to just return mean per region
 averageByRegion(BSDT = BSDT, regionsGRL, jCommand = MIRA:::buildJ(cols = "methylProp", "mean"))}
 \usage{
-averageByRegion(loadingMat, coordinateDT, GRList, PCsToAnnotate = c("PC1",
+averageByRegion(loadingMat, coordinateDT, regionSet, PCsToAnnotate = c("PC1",
   "PC2"), returnQuantile = FALSE)
 }
 \arguments{
-\item{loadingMat}{matrix of loading values. One named column for each PC and
-rows are the original dimensions/variables. The $rotation output of prcomp.}
+\item{loadingMat}{matrix of loadings (the coefficients of 
+the linear combination that defines each PC). One named column for each PC.
+One row for each original dimension/variable (should be same order 
+as original data/mCoord). The x$rotation output of prcomp().}
 
-\item{GRList}{a single region set as a GRangesList. If regionSet is a GRanges
-object, this can be made with the command: GRangesList(regionSet)}
+\item{regionSet}{A GRanges object with regions corresponding
+to the same biological annotation.}
 }
 \value{
 a data.table with region coordinates and average loading 

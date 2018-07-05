@@ -3,50 +3,43 @@
 # MIRA: dtToGr
 # ComplexHeatmap
 
-#' # functions to visualize results of PCRSA, relevant regions, and variation in the dataset
-#' 
-#' 
-#' #' Function to look at methylation in regions of interest across patients, 
-#' #' with patients ordered according to PC of interest 
-#' # https://learnr.wordpress.com/2010/01/26/ggplot2-quick-heatmap-plotting/
-#' simpleCache(allMPCAString, assignToVariable = "mPCAALL")
-#' simpleCache(top10MPCAString, assignToVariable = "mPCATop10")
-#' simpleCache("rsEnrichmentTop10")
-#' simpleCache("rsEnrichment")
-#' 
-#' rsEnrichmentTop10[, rsIndex := 1:nrow(rsEnrichmentTop10)]
-#' rsEnrichment[, rsIndex := 1:nrow(rsEnrichment)]
-#' 
-#' # getting appropriate region
-#' pc2 = rsEnrichment[order(PC2, decreasing = TRUE), ]
-#' # GRList[[pc1_top10$rsIndex[1]]] # most enriched region set
-#' rsMethylHeatmap(methylData = bigSharedC$methylProp, 
-#'                 coordGR =  MIRA:::dtToGr(bigSharedC$coordinates), 
-#'                 regionSet = GRList[[pc2$rsIndex[2]]], 
-#'                 pcaData = mPCAallC, 
-#'                 pc = "PC2")
-#' 
-#' 
-#' 
-#' 
-#' # getting PC scores for all data (including NBM which were not used in PCA)
-#' 
-#' hist(stat5MData[, 30])
+# functions to visualize results of PCRSA, relevant regions, and variation in the dataset
+# 
 
-#' @param methylData
-#' @param coordGR coordinates for methylation loci in methylData. (chromosome, start, end)
+#' Look at methylation in regions of interest across samples, 
+#' with samples ordered according to PC of interest 
+#'
+#' @param methylData DNA methylation levels (0 to 1) in matrix or data.frame. 
+#' Rows are cytosines. Columns are samples.
+#' @param mCoord a GRanges object or data frame with coordinates 
+#' for the cytosines included in the PCA. Coordinates should be in the 
+#' same order as the methylation data and loadings. If a data.frame, 
+#' must have chr and start columns. If end is included, start 
+#' and end should be the same. Start coordinate will be used for calculations.
 #' @param regionSet 
-#' @param pcaData The principal component scores for the samples 
+#' @param pcScores The principal component scores for the samples 
 #' (ie transformed methylation data). Must have subject_ID as row names,
 #' These same subject_IDs must be column names of methylData
-#' @param pc The principal component used to order the samples in the heatmap
-# library(ComplexHeatmap)
-#' @export
-rsMethylHeatmap <- function(methylData, coordGR, regionSet, pcaData, pc="PC1", ...) {
+#' @param orderByPC PC to order samples by (order rows of heatmap by PC score, 
+#' from high to low score)
+#  library(ComplexHeatmap)
+#'
+rsMethylHeatmap <- function(methylData, mCoord, regionSet, pcScores, orderByPC="PC1", ...) {
+    
+    
+    # test for appropriateness of inputs/right format
+    if (is(mCoord, "GRanges")) {
+        coordGR = mCoord
+    } else if (is(mCoord, "data.frame")) {
+        # UPDATE: does the work on data.frames that are not data.tables?
+        coordGR = MIRA:::dtToGr(coordinateDT)
+    } else {
+        error("mCoord should be a data.frame or GRanges object.")
+    }
     
     # PCA object must have subject_ID as row.names (corresponding 
     # to column names of methylData)
-    if (sum(row.names(pcaData) %in% colnames(methylData)) < 2) {
+    if (sum(row.names(pcScores) %in% colnames(methylData)) < 2) {
         error(MIRA:::cleanws("Sample names on pca data (row names) 
                       must match sample names on methylation
                              (column names)"))
@@ -64,7 +57,7 @@ rsMethylHeatmap <- function(methylData, coordGR, regionSet, pcaData, pc="PC1", .
     # reducedValsPCA = centeredPCAMeth %*% pcaData$rotation
     # reducedValsPCA = pcaData$x
     # pcaData must have subject_ID as row name
-    thisRSMData = thisRSMData[names(sort(pcaData[, pc])), ]
+    thisRSMData = thisRSMData[names(sort(pcScores[, orderByPC], decreasing = TRUE)), ]
     message(paste0("Number of cytosines: ", ncol(thisRSMData)))
     message(paste0("Number of regions: ", length(unique(queryHits(olList)))))
     ComplexHeatmap::Heatmap(thisRSMData, cluster_rows = FALSE, cluster_columns = FALSE, ...)# ,
@@ -76,16 +69,21 @@ rsMethylHeatmap <- function(methylData, coordGR, regionSet, pcaData, pc="PC1", .
 #' Heatmap of enrichment scores across PCs
 #' A visualization of the enrichment data.table.
 #' 
-#' @param rsEnrichment
+#' @param rsScores a data.table with scores for each 
+#' region set from main PCRSA function. 
+#' Each row is a region set. Columns are PCs and info on region set overlap
+#' with DNA methylation data. Should be in the same order as GRList (the list of 
+#' region sets used to create it.)
 #' @param PCsToAnnotate A character vector with principal components to 
-#' include in the plot, eg c("PC1", "PC2")
+#' include. eg c("PC1", "PC2")
 #' @param orderByPC PC to order by (decreasing order) in heatmap
 #
-# @example enrichmentHeatmap = rsEnrichHeatmap(rsEnrichment, PCsToAnnotate=paste0("PC", 1:10), orderByPC = "PC2")
-#' @export
-rsEnrichHeatmap <- function(rsEnrichment, PCsToAnnotate=paste0("PC", 1:5),
+# @example enrichmentHeatmap = rsEnrichHeatmap(rsScores, PCsToAnnotate=paste0("PC", 1:10), orderByPC = "PC2")
+
+rsEnrichHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
                             orderByPC="PC1", rsNameCol = "rsNames", topX = 20) {
     
+    rsEnrichment = rsScores
     # so by reference operations will not affect original object
     rsEn = data.table::copy(rsEnrichment)
     
@@ -127,14 +125,26 @@ rsEnrichHeatmap <- function(rsEnrichment, PCsToAnnotate=paste0("PC", 1:5),
 
 #' create pdf with multiple heatmap plots (number = length(PCsToRankBy)). 
 #' Plot i will be ranked by PCsToRankBy[i]. 
+#' 
+#' @param rsScores a data.table with scores for each 
+#' region set from main PCRSA function. 
+#' Each row is a region set. Columns are PCs and info on region set overlap
+#' with DNA methylation data. Should be in the same order as GRList (the list of 
+#' region sets used to create it.)
+#' @param PCsToRankBy
+#' @param PCsToInclude
+#' @param fileName
+#' 
 #' # see https://github.com/jokergoo/ComplexHeatmap/issues/110
-#' @export
-comparePCHeatmap <- function(rsEnrichment, PCsToRankBy=paste0("PC", 1:5), PCsToInclude=paste0("PC", 1:10), fileName=NULL) {
+#' 
+comparePCHeatmap <- function(rsScores, PCsToRankBy=paste0("PC", 1:5), PCsToInclude=paste0("PC", 1:10), fileName=NULL) {
+    rsEnrichment = rsScores
+    
     if (!is.null(fileName)) {
         grDevices::pdf(file = fileName, width = 11, height = 8.5 * length(PCsToRankBy))
         grid.newpage()
         for (i in seq_along(PCsToRankBy)) {
-            multiHM = grid.grabExpr(draw(rsEnrichHeatmap(rsEnrichment = rsEnrichment, PCsToAnnotate = PCsToInclude,
+            multiHM = grid.grabExpr(draw(rsEnrichHeatmap(rsScores = rsEnrichment, PCsToAnnotate = PCsToInclude,
                                                          orderByPC = PCsToRankBy[i], rsNameCol = "rsName", topX = 40)))
             
             pushViewport(viewport(y = unit((8.5*length(PCsToRankBy))-(i-1)*8.5, "in"), height = unit(8, "in"), just = "top"))
@@ -150,15 +160,6 @@ comparePCHeatmap <- function(rsEnrichment, PCsToRankBy=paste0("PC", 1:5), PCsToI
     # multiColPlots = marrangeGrob(plotList, ncol = 2, nrow = 2)
 }
 
-#' Heatmap of average loading score for individual regions across PCs.
-#' For a single region set.
-#' @param
-
-regionPCHeatmap <- function() {
-    
-}
-
-
 
 # looking at methylation level data at individual cytosines ordered by PC 
 # only looking at regions with high average loading scores
@@ -167,24 +168,46 @@ regionPCHeatmap <- function() {
 #' raw methylation at top enriched regions for a single region set and single PC.
 #' Patients are ordered by PC score for given PC
 #' #' TODO: deal with bug when nrow(highVariable) = 1
-#' @param loadingMat
+#' @param loadingMat matrix of loadings (the coefficients of 
+#' the linear combination that defines each PC). One named column for each PC.
+#' One row for each original dimension/variable (should be same order 
+#' as original data/mCoord). The x$rotation output of prcomp().
 #' @param loadingThreshold Only select regions with average 
 #' loading at least this high. Based on loading values from orderByPC.
-#' @param pcScores
-#' @param coordinateDT
-#' @param methylData
-#' @param GRList
-#' @param orderByPC PC to order patients by (order rows of heatmap by PC score)
+#' @param pcScores The principal component scores for the samples
+#'  (ie transformed methylation data). The $x output of prcomp() but must 
+#' have subject_ID as row names.
+#' These same subject_IDs must be column names of methylData.
+#' @param mCoord a GRanges object or data frame with coordinates 
+#' for the cytosines included in the PCA. Coordinates should be in the 
+#' same order as the methylation data and loadings. If a data.frame, 
+#' must have chr and start columns. If end is included, start 
+#' and end should be the same. Start coordinate will be used for calculations.
+#' @param methylData DNA methylation levels (0 to 1) in matrix or data.frame. 
+#' Rows are cytosines. Columns are samples.
+#' @param GRList GRangesList object. Each list item is 
+#' a distinct region set (regions that correspond to 
+#' the same biological annotation).
+#' @param orderByPC PC to order samples by (order rows of heatmap by PC score, 
+#' from high to low score)
 #' REMOVE: rsInd 
 #' @param topXRegions max number of regions to plot, avoids excessively large 
 #' plots which can be hard to load. Number of regions on plot will be less
 #' than or equal to topXRegions (less than if there are not that many regions
 #' total). 50 is arbitrary 
-#' @export
+
 methylAlongPC <- function (loadingMat, loadingThreshold, 
-                           pcScores, coordinateDT, methylData, 
+                           pcScores, mCoord, methylData, 
                            GRList, orderByPC, 
                            topXRegions=50) {
+    
+    if (is(mCoord, "GRanges")) {
+        coordinateDT = MIRA:::grToDt(mCoord)
+    } else if (is(mCoord, "data.frame")) {
+        coordinateDT = mCoord
+    } else {
+        error("mCoord should be a data.frame or GRanges object.")
+    }
     
     
     # PCA object must have subject_ID as row.names (corresponding 
@@ -209,20 +232,17 @@ methylAlongPC <- function (loadingMat, loadingThreshold,
         
         length(regionSet)
         # if no overlap, will return NULL
-        regionLoadAv = averageByRegion(loadingMat = mPCA$rotation, 
-                                       coordinateDT = bigSharedC$coordinates, 
+        regionLoadAv = averageByRegion(loadingMat = loadingMat, 
+                                       mCoord = coordinateDT, 
                                        GRList = regionSet, 
                                        PCsToAnnotate = orderByPC)
         
         #if (!is.null(regionLoadAv)) {
             
-            # finding a suitable threshold for "high" average loading score
-            # loadingMeans = apply(X = abs(mPCATop10$rotation[, PCsToAnnotate]), 2, mean)
-            # getting 95th percentile for each PC
-            # loadingXPerc = apply(abs(mPCA$rotation[, PCsToAnnotate]), 2, function(x) quantile(x, 0.95))
-            loadingXPerc = quantile(abs(mPCA$rotation[, orderByPC]), loadingThreshold)
+            # find threshold for these loadings
+            loadingXPerc = quantile(abs(loadingMat[, orderByPC]), loadingThreshold)
             
-            # hist(mPCATop10$rotation[, "PC1"])
+            # hist(loadingMat[, "PC1"])
             highVariable = regionLoadAv[get(orderByPC) > loadingXPerc, .(chr, start, end, score=get(orderByPC))]
             
             # reducing to top X regions so plot won't be too large
@@ -244,7 +264,7 @@ methylAlongPC <- function (loadingMat, loadingThreshold,
                 multiHM = grid.grabExpr(draw(rsMethylHeatmap(methylData = methylData, 
                                                              coordGR = MIRA:::dtToGr(coordinateDT), 
                                                              regionSet = regionSet, 
-                                                             pcaData = pcScores, 
+                                                             pcScores = pcScores, 
                                                              pc = orderByPC, column_title= regionSetName))) # use_raster=TRUE, raster_device="jpeg")
                 pushViewport(viewport(y = unit((8.5*nRSToPlot)-(i-1)*8.5, "in"), height = unit(8, "in"), just = "top"))
                 grid.draw(multiHM)
@@ -269,23 +289,44 @@ methylAlongPC <- function (loadingMat, loadingThreshold,
 
 #' plot individual region scores/percentiles across PCs for a single region set
 #' One plot for each region set
-#' @param loadingMat
-#' @param coordinateDT
-#' @param GRList
+#' @param loadingMat matrix of loadings (the coefficients of 
+#' the linear combination that defines each PC). One named column for each PC.
+#' One row for each original dimension/variable (should be same order 
+#' as original data/mCoord). The x$rotation output of prcomp().
+#' @param mCoord a GRanges object or data frame with coordinates 
+#' for the cytosines included in the PCA. Coordinates should be in the 
+#' same order as the methylation data and loadings. If a data.frame, 
+#' must have chr and start columns. If end is included, start 
+#' and end should be the same. Start coordinate will be used for calculations.
+#' @param GRList GRangesList object. Each list item is 
+#' a distinct region set (regions that correspond to 
+#' the same biological annotation).
 #' @param rsNames
-#' @param PCsToAnnotate
-#' @export
-regionQuantileByPC <- function(loadingMat, coordinateDT, GRList, 
+#' @param PCsToAnnotate A character vector with principal components to 
+#' include. eg c("PC1", "PC2")
+#' @param maxRegionsToPlot
+#' @param cluster_rows
+#' 
+regionQuantileByPC <- function(loadingMat, mCoord, GRList, 
                                rsNames, PCsToAnnotate=paste0("PC", 1:5),
                                maxRegionsToPlot = 8000, cluster_rows = TRUE) {
+    
+    if (is(mCoord, "GRanges")) {
+        coordinateDT = MIRA:::grToDt(mCoord)
+    } else if (is(mCoord, "data.frame")) {
+        coordinateDT = mCoord
+    } else {
+        error("mCoord should be a data.frame or GRanges object.")
+    }
+    
     
     for (i in seq_along(GRList)) { # loop through top region sets
         
         # rsIndex = sort.int(rsEnrichment$PC2, index.return = TRUE, decreasing = TRUE)$ix[6]
         regionSet = GRList[[i]]
         
-
-        rsRegionAverage = averageByRegion(loadingMat = mPCA$rotation, coordinateDT = bigSharedC$coordinates, 
+    
+        rsRegionAverage = averageByRegion(loadingMat = loadingMat, mCoord =coordinateDT, 
                                           GRList = regionSet, PCsToAnnotate = PCsToAnnotate,
                                           returnQuantile = TRUE)
         # ranking in terms of percentiles in case there were different distributions of loading scores for each PC

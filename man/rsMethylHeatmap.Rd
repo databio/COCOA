@@ -2,46 +2,28 @@
 % Please edit documentation in R/visualization.R
 \name{rsMethylHeatmap}
 \alias{rsMethylHeatmap}
-\title{# functions to visualize results of PCRSA, relevant regions, and variation in the dataset}
+\title{Look at methylation in regions of interest across samples, 
+with samples ordered according to PC of interest}
 \usage{
-rsMethylHeatmap(methylData, coordGR, regionSet, pcaData, pc = "PC1", ...)
+rsMethylHeatmap(methylData, coordGR, regionSet, pcScores, orderByPC = "PC1",
+  ...)
 }
 \arguments{
+\item{methylData}{DNA methylation levels (0 to 1) in matrix or data.frame. 
+Rows are cytosines. Columns are samples.}
+
 \item{coordGR}{coordinates for methylation loci in methylData. (chromosome, start, end)}
 
 \item{regionSet}{}
 
-\item{pcaData}{The principal component scores for the samples 
+\item{pcScores}{The principal component scores for the samples 
 (ie transformed methylation data). Must have subject_ID as row names,
 These same subject_IDs must be column names of methylData}
 
-\item{pc}{The principal component used to order the samples in the heatmap}
+\item{orderByPC}{PC to order samples by (order rows of heatmap by PC score, 
+from high to low score)}
 }
 \description{
-#' Function to look at methylation in regions of interest across patients, 
-#' with patients ordered according to PC of interest 
-# https://learnr.wordpress.com/2010/01/26/ggplot2-quick-heatmap-plotting/
-simpleCache(allMPCAString, assignToVariable = "mPCAALL")
-simpleCache(top10MPCAString, assignToVariable = "mPCATop10")
-simpleCache("rsEnrichmentTop10")
-simpleCache("rsEnrichment")
-}
-\details{
-rsEnrichmentTop10[, rsIndex := 1:nrow(rsEnrichmentTop10)]
-rsEnrichment[, rsIndex := 1:nrow(rsEnrichment)]
-
-# getting appropriate region
-pc2 = rsEnrichment[order(PC2, decreasing = TRUE), ]
-# GRList[[pc1_top10$rsIndex[1]]] # most enriched region set
-rsMethylHeatmap(methylData = bigSharedC$methylProp, 
-                coordGR =  MIRA:::dtToGr(bigSharedC$coordinates), 
-                regionSet = GRList[[pc2$rsIndex[2]]], 
-                pcaData = mPCAallC, 
-                pc = "PC2")
-
-
-
-# getting PC scores for all data (including NBM which were not used in PCA)
-
-hist(stat5MData[, 30])
+Look at methylation in regions of interest across samples, 
+with samples ordered according to PC of interest
 }

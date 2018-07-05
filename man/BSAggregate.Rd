@@ -41,7 +41,9 @@ uncontiguous, and resulting in 1 row per *region group*.}
 
 \item{returnSD}{Whether the standard deviation of the columns of interest 
 should be returned. Standard deviation for rows that overlap with region set
-and also for rows that do not overlap with region set.}
+and also for rows that do not overlap with region set.
+
+export}
 }
 \description{
 BSaggregate -- Aggregate a BSDT across regions or region groups,

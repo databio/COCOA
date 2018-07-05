@@ -6,7 +6,20 @@
 One plot for each region set}
 \usage{
 regionQuantileByPC(loadingMat, coordinateDT, GRList, rsNames,
-  PCsToAnnotate = paste0("PC", 1:5))
+  PCsToAnnotate = paste0("PC", 1:5), maxRegionsToPlot = 8000,
+  cluster_rows = TRUE)
+}
+\arguments{
+\item{loadingMat}{matrix of loadings (the coefficients of 
+the linear combination that defines each PC). One named column for each PC.
+One row for each original dimension/variable (should be same order 
+as original data/mCoord). The x$rotation output of prcomp().}
+
+\item{GRList}{GRangesList object. Each list item is 
+a distinct region set (regions that correspond to 
+the same biological annotation).}
+
+\item{cluster_rows}{}
 }
 \description{
 plot individual region scores/percentiles across PCs for a single region set

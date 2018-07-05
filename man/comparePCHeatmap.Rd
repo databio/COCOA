@@ -3,14 +3,15 @@
 \name{comparePCHeatmap}
 \alias{comparePCHeatmap}
 \title{create pdf with multiple heatmap plots (number = length(PCsToRankBy)). 
-Plot i will be ranked by PCsToRankBy[i]. 
-# see https://github.com/jokergoo/ComplexHeatmap/issues/110}
+Plot i will be ranked by PCsToRankBy[i].}
 \usage{
 comparePCHeatmap(rsEnrichment, PCsToRankBy = paste0("PC", 1:5),
   PCsToInclude = paste0("PC", 1:10), fileName = NULL)
 }
+\arguments{
+\item{fileName}{# see https://github.com/jokergoo/ComplexHeatmap/issues/110}
+}
 \description{
 create pdf with multiple heatmap plots (number = length(PCsToRankBy)). 
-Plot i will be ranked by PCsToRankBy[i]. 
-# see https://github.com/jokergoo/ComplexHeatmap/issues/110
+Plot i will be ranked by PCsToRankBy[i].
 }

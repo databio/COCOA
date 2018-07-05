@@ -13,9 +13,11 @@ cpgOLMetrics(dataDT, regionGR, metrics = c("mean", "sd"),
   columnMeans = NULL, alsoNonOLMet = TRUE)
 }
 \arguments{
-\item{dataDT}{should have chr, start, end columns as well
-as columns to get metrics of, 
-eg (PC1, PC2) or could be DNA methylation}
+\item{dataDT}{a data.table with chr, start, end columns as well
+as columns to get metrics of eg (PC1, PC2). All columns
+except chr, start, and end will be considered 
+columns to get the metrics from so no unnecessary columns should be
+included.}
 
 \item{alsoNonOLMet}{also include same metrics
 for non overlapping CpGs}

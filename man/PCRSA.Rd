@@ -6,9 +6,11 @@
 \alias{PCRSA-package}
 \title{Principal Component Region Set Analysis (PCRSA)}
 \description{
-Purpose of PCRSA/description.
-package to annotate PCA components of DNA methylation data
-based on region set enrichment
+A method for annotating principal components of DNA methylation data 
+with region sets. A region set is a set of genomic regions that share 
+a biological annotation. PCRSA can identify biologically meaningful 
+sources of variation along the PCs, increasing interpretability of the PCs 
+and understanding of variation in the data.
 }
 \references{
 \url{http://github.com/databio}

@@ -10,6 +10,10 @@ percentCOverlap(coordGR, GRList)
 \arguments{
 \item{coordGR}{GenomicRanges object with coordinates for cytosines 
 included in the PCA.}
+
+\item{GRList}{GRangesList object. Each list item is 
+a distinct region set (regions that correspond to 
+the same biological annotation).}
 }
 \value{
 Total number of cytosines from methylation data that overlapped with

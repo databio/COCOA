@@ -10,10 +10,28 @@ methylAlongPC(loadingMat, loadingThreshold, pcScores, coordinateDT, methylData,
   GRList, orderByPC, topXRegions = 50)
 }
 \arguments{
+\item{loadingMat}{matrix of loadings (the coefficients of 
+the linear combination that defines each PC). One named column for each PC.
+One row for each original dimension/variable (should be same order 
+as original data/mCoord). The x$rotation output of prcomp().}
+
 \item{loadingThreshold}{Only select regions with average 
 loading at least this high. Based on loading values from orderByPC.}
 
-\item{orderByPC}{PC to order patients by (order rows of heatmap by PC score)
+\item{pcScores}{The principal component scores for the samples
+ (ie transformed methylation data). The $x output of prcomp() but must 
+have subject_ID as row names.
+These same subject_IDs must be column names of methylData.}
+
+\item{methylData}{DNA methylation levels (0 to 1) in matrix or data.frame. 
+Rows are cytosines. Columns are samples.}
+
+\item{GRList}{GRangesList object. Each list item is 
+a distinct region set (regions that correspond to 
+the same biological annotation).}
+
+\item{orderByPC}{PC to order samples by (order rows of heatmap by PC score, 
+from high to low score)
 REMOVE: rsInd}
 
 \item{topXRegions}{max number of regions to plot, avoids excessively large 

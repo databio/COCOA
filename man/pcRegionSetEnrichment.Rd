@@ -6,7 +6,14 @@
 analysis for many region sets}
 \usage{
 pcRegionSetEnrichment(loadingMat, coordinateDT, GRList,
-  PCsToAnnotate = c("PC1", "PC2"), permute = TRUE)
+  PCsToAnnotate = c("PC1", "PC2"), scoringMetric = "meanDiff",
+  permute = TRUE)
+}
+\arguments{
+\item{loadingMat}{matrix of loadings (the coefficients of 
+the linear combination that defines each PC). One named column for each PC.
+One row for each original dimension/variable (should be same order 
+as original data/mCoord). The x$rotation output of prcomp().}
 }
 \value{
 data.table of results, one row for each region set. 

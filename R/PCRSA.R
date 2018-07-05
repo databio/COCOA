@@ -1,9 +1,11 @@
 # PACKAGE DOCUMENTATION
 #' Principal Component Region Set Analysis (PCRSA)
 #' 
-#' Purpose of PCRSA/description.
-#' package to annotate PCA components of DNA methylation data
-#' based on region set enrichment
+#'A method for annotating principal components of DNA methylation data 
+#'with region sets. A region set is a set of genomic regions that share 
+#'a biological annotation. PCRSA can identify biologically meaningful 
+#'sources of variation along the PCs, increasing interpretability of the PCs 
+#'and understanding of variation in the data. 
 #'
 #' @docType package
 #' @name PCRSA
@@ -17,12 +19,12 @@
 #'             theme_classic xlab ylab geom_hline ylim scale_color_discrete
 #'             scale_x_discrete scale_fill_brewer scale_color_manual
 #'             scale_color_brewer
+#' @importFrom ComplexHeatmap Heatmap
 #' @import BiocGenerics S4Vectors IRanges
 #' @importFrom data.table ":=" setDT data.table setkey fread setnames 
 #'             setcolorder rbindlist setattr setorder copy is.data.table
 #' @importFrom Biobase sampleNames
 #' @importFrom stats lm coefficients poly
-#' @importFrom bsseq getCoverage getMeth
 #' @importFrom methods is
 NULL
 
@@ -45,19 +47,42 @@ if (getRversion() >= "2.15.1") {
 #' Function to aggregate PCA loading weights over a given region set
 #' and then get p value for each PC based on a permutation
 #' 
-#' @param loadingMat 
+#' @param loadingMat matrix of loadings (the coefficients of 
+#' the linear combination that defines each PC). One named column for each PC.
+#' One row for each original dimension/variable (should be same order 
+#' as original data/mCoord). The x$rotation output of prcomp().
+#' @param mCoord a GRanges object or data frame with coordinates 
+#' for the cytosines included in the PCA. Coordinates should be in the 
+#' same order as the methylation data and loadings. If a data.frame, 
+#' must have chr and start columns. If end is included, start 
+#' and end should be the same. Start coordinate will be used for calculations.
 #' @param regionSet A genomic ranges object with regions corresponding
 #' to the same biological annotation.
-#' #UPDATE: make sure only aggregating PCsToAnnotate to save time
-#' # permute=TRUE is deprecated and that code chunk is not up to date
-#' @param metric Scoring metric. Mean difference ("meanDiff") or just a simple
-#' average of the loading values with no normalization ("raw").
+# #UPDATE: make sure only aggregating PCsToAnnotate to save time
+#' @param metric Scoring metric. "raw" is a simple
+#' average of the loading values with no normalization (recommended). With
+#' "raw" score, be cautious in interpretation for
+#'  region sets with low number of regions.
+#' Mean difference ("meanDiff") is also supported but is skewed toward 
+#' ranking large region sets highly.
 #' @param pcLoadAv The average absolute loading value for each PC. Will
 #' significantly speed up computation if this is given.
-#' @export
+#' @return
+#' 
 
-aggregateLoadings <- function(loadingMat, coordinateDT, regionSet, 
-                  PCsToAnnotate = c("PC1", "PC2"), permute=FALSE, metric="meanDiff", pcLoadAv=NULL) {
+aggregateLoadings <- function(loadingMat, mCoord, regionSet, 
+                  PCsToAnnotate = c("PC1", "PC2"), metric="raw", pcLoadAv=NULL) {
+    # UPDATE: take out permutations
+    permute = FALSE
+    
+    if (is(mCoord, "GRanges")) {
+        coordinateDT = MIRA:::grToDt(mCoord)
+    } else if (is(mCoord, "data.frame")) {
+        coordinateDT = mCoord
+    } else {
+        error("mCoord should be a data.frame or GRanges object.")
+    }
+    
     
     numOfRegions = length(regionSet)
     totalCpGs = nrow(loadingMat)
@@ -163,13 +188,29 @@ aggregateLoadings <- function(loadingMat, coordinateDT, regionSet,
 
 
 
-#' Wrapper function to do PCA region set enrichment 
-#' analysis for many region sets
+#' Do PCRSA for many region sets
 #'
-#' For parallel processing, region sets are split up between the cores
-#' @param loadingMat
-#' @param 
-#' @return data.table of results, one row for each region set. 
+#' @param loadingMat matrix of loadings (the coefficients of 
+#' the linear combination that defines each PC). One named column for each PC.
+#' One row for each original dimension/variable (should be same order 
+#' as original data/mCoord). The x$rotation output of prcomp().
+#' @param mCoord a GRanges object or data frame with coordinates 
+#' for the cytosines included in the PCA. Coordinates should be in the 
+#' same order as the methylation data and loadings. If a data.frame, 
+#' must have chr and start columns. If end is included, start 
+#' and end should be the same. Start coordinate will be used for calculations.
+#' @param GRList GRangesList object. Each list item is 
+#' a distinct region set to test (region set: regions that correspond to 
+#' the same biological annotation).
+#' @param PCsToAnnotate A character vector with principal components to 
+#' include. eg c("PC1", "PC2")
+#' @param scoringMetric Scoring metric. "raw" is a simple
+#' average of the loading values with no normalization (recommended). With
+#' "raw" score, be cautious in interpretation for
+#'  region sets with low number of regions.
+#' Mean difference ("meanDiff") is also supported but is skewed toward 
+#' ranking large region sets highly.
+#' @return data.frame of results, one row for each region set. 
 #' One column for each PC in PCsToAnnotate
 #' with average loading score for that PC for a given region set. 
 #' rsName column has region set name.
@@ -179,34 +220,73 @@ aggregateLoadings <- function(loadingMat, coordinateDT, regionSet,
 #' column has total number of regions. 
 #' @export
 
-pcRegionSetEnrichment <- function(loadingMat, coordinateDT, GRList, 
-                  PCsToAnnotate = c("PC1", "PC2"), scoringMetric = "meanDiff", permute=TRUE) {
+pcRegionSetEnrichment <- function(loadingMat, mCoord, GRList, 
+                  PCsToAnnotate = c("PC1", "PC2"), scoringMetric = "raw") {
  
+    if (is(mCoord, "GRanges")) {
+        coordinateDT = MIRA:::grToDt(mCoord)
+    } else if (is(mCoord, "data.frame")) {
+        coordinateDT = mCoord
+    } else {
+        error("mCoord should be a data.frame or GRanges object.")
+    }
+    
+    
     # apply over the list of region sets
     resultsList = MIRA:::lapplyAlias(GRList, 
                               function(x) aggregateLoadings(loadingMat=loadingMat, 
-                                                            coordinateDT=coordinateDT, 
+                                                            mCoord=coordinateDT, 
                                                             regionSet=x, 
                                                             PCsToAnnotate = PCsToAnnotate,
-                                                            metric = scoringMetric,
-                                                            permute=permute))
+                                                            metric = scoringMetric))
     resultsDT = do.call(rbind, resultsList) 
     row.names(resultsDT) = row.names(GRList)
     
-    return(resultsDT)
+    resultsDF = as.data.frame(resultsDT)
+    return(resultsDF)
 }    
 
 
 
-#' function to create profile that indicates enrichment 
+#' Function to create "meta-region" loading profile that indicates enrichment 
 #' of cytosines with high loading values in region set but not in
-#' surrounding genome
+#' surrounding genome. All regions in a given region set 
+#' are combined into a single aggregate profile.
 #'
-#' A wrapper of BSAggregate that first bins regions and then aggregates
-#' each bin across a set of regions, individually.
 #'
-pcEnrichmentProfile = function(loadingMat, coordinateDT, GRList,
+#' @param loadingMat matrix of loadings (the coefficients of 
+#' the linear combination that defines each PC). One named column for each PC.
+#' One row for each original dimension/variable (should be same order 
+#' as original data/mCoord). The x$rotation output of prcomp().
+#' @param mCoord a GRanges object or data frame with coordinates 
+#' for the cytosines included in the PCA. Coordinates should be in the 
+#' same order as the methylation data and loadings. If a data.frame, 
+#' must have chr and start columns. If end is included, start 
+#' and end should be the same. Start coordinate will be used for calculations.
+#' @param GRList GRangesList object. Each list item is 
+#' a distinct region set (regions that correspond to 
+#' the same biological annotation).
+#' @param PCsToAnnotate A character vector with principal components to 
+#' include. eg c("PC1", "PC2")
+#' @param binNum Number of bins to split the regions into when
+#' making the aggregate loading profile. More bins will
+#' give a higher resolution but perhaps more noisy profile. 
+#' @return A list of data.tables each data.table for
+#' a separate region set. The data table has the binned loading profile,
+#' one row per bin.
+#' 
+#' @export
+
+pcEnrichmentProfile = function(loadingMat, mCoord, GRList,
                     PCsToAnnotate = c("PC1", "PC2"), binNum = 25) {
+    
+    if (is(mCoord, "GRanges")) {
+        coordinateDT = MIRA:::grToDt(mCoord)
+    } else if (is(mCoord, "data.frame")) {
+        coordinateDT = mCoord
+    } else {
+        error("mCoord should be a data.frame or GRanges object.")
+    }
     
     
     loadingDT = as.data.table(abs(loadingMat))
@@ -283,17 +363,19 @@ BSBinAggregate = function(BSDT, rangeDT, binCount, minReads = 500,
 
 #' modification of BSAggregate to just return mean per region
 #' averageByRegion(BSDT = BSDT, regionsGRL, jCommand = MIRA:::buildJ(cols = "methylProp", "mean"))
-#' @param loadingMat matrix of loading values. One named column for each PC and
-#' rows are the original dimensions/variables. The $rotation output of prcomp.
-#' @param GRList a single region set as a GRangesList. If regionSet is a GRanges
-#' object, this can be made with the command: GRangesList(regionSet)
+#' @param loadingMat matrix of loadings (the coefficients of 
+#' the linear combination that defines each PC). One named column for each PC.
+#' One row for each original dimension/variable (should be same order 
+#' as original data/mCoord). The x$rotation output of prcomp().
+#' @param regionSet A GRanges object with regions corresponding
+#' to the same biological annotation.
 #' @return a data.table with region coordinates and average loading 
 #' values for each region. Has columns chr, start, end, and a column for each
 #' PC in PCsToAnnotate. Regions are not in order along the rows of the data.table.
 #' 
 # Devel note: I could add a column for how many cytosines are in each region 
 #' @export
-averageByRegion <- function(loadingMat, coordinateDT, GRList, PCsToAnnotate = c("PC1", "PC2"), returnQuantile=FALSE) {
+averageByRegion <- function(loadingMat, coordinateDT, regionSet, PCsToAnnotate = c("PC1", "PC2"), returnQuantile=FALSE) {
     
     # old parameters of BSAggregate
     excludeGR = NULL
@@ -305,6 +387,7 @@ averageByRegion <- function(loadingMat, coordinateDT, GRList, PCsToAnnotate = c(
     byRegionGroup = FALSE
     
     # reformating parameters and assigning new names
+    GRList = regionSet
     regionsGRL = GRList
     loadingDT = as.data.table(abs(loadingMat))
     # linking coordinates to loading values, has columns chr start, PCsToAnnotate
@@ -483,18 +566,18 @@ averageByRegion <- function(loadingMat, coordinateDT, GRList, PCsToAnnotate = c(
 }
 
 
-#' different scoring metrics
-#' remniscent of LOLA: 
-#' support (number of regions, for us regions that have at least 1 cytosine and can be scored)
-#' mean loading value (or could do ratio of peak to surrounding regions)
-#' signal to noise ratio, how big is peak compared to noise of surrounding area
-#' with SNR, even a small peak could have a high SNR
+# different scoring metrics
+# remniscent of LOLA: 
+# support (number of regions, for us regions that have at least 1 cytosine and can be scored)
+# mean loading value (or could do ratio of peak to surrounding regions)
+# signal to noise ratio, how big is peak compared to noise of surrounding area
+# with SNR, even a small peak could have a high SNR
 
-#' @param loadingProf
-loadingProfileSNR = function() {
-    # magnitude of the peak divided by standard deviation of 
-    # noise (signal in surrounding areas)
-}
+# @param loadingProf
+# loadingProfileSNR = function() {
+#     # magnitude of the peak divided by standard deviation of 
+#     # noise (signal in surrounding areas)
+# }
 
 
 # support is just number of regions from each input region set that overlap at all with
@@ -536,7 +619,7 @@ loadingProfileSNR = function() {
 #' should be returned. Standard deviation for rows that overlap with region set
 #' and also for rows that do not overlap with region set.
 #'
-#' @export
+#' export
 BSAggregate = function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL.length = NULL, splitFactor=NULL, keepCols=NULL, 
                        sumCols=NULL, jExpr=NULL, byRegionGroup=FALSE, keep.na=FALSE, returnSD=FALSE) {
     
@@ -676,29 +759,44 @@ BSAggregate = function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL.length = NUL
 #' the correlation of original PCs with ordering from subset of cytosines?
 #' @param regionSet The region set to subset by. Only loading values for
 #' cytosines in these regions will be used to make a PC score.
-#' @param pca The pca data. Output from prcomp().
+#' @param mPCA The pca data. Output from prcomp() of DNA methylation data. 
+#' Should have 
+#' mPCA$rotation with PCA loadings, mPCA$x with PC scores and 
+#' mPCA$center with values used to center DNA methylation.
 #' @param methylData DNA methylation levels in matrix or data.frame. 
 #' Rows are cytosines. Columns are 
 #' samples.
-#' @param coordinateDT One row per cytosine coordinate, corresponding to
-#' a row of methylMat. Columns are chr, start, end.   
+#' @param mCoord a GRanges object or data frame with coordinates 
+#' for the cytosines included in the PCA. Coordinates should be in the 
+#' same order as the methylation data and loadings. If a data.frame, 
+#' must have chr and start columns. If end is included, start 
+#' and end should be the same. Start coordinate will be used for calculations.
 #' @param returnCor Option to return correlation between these scores and
 #' original PC scores. 
 #' 
 #' @return a score for each patient from only loading values for cytosines in 
 #' regionSet. If returnCor = TRUE, returns a correlation score for scores from
 #' each PCofInterest with scores from a subset of loading values for that PC.
-#' @export
+#' 
 
-pcFromSubset <- function(regionSet, pca, methylData, coordinateDT, PCofInterest="PC1", returnCor=FALSE) {
+pcFromSubset <- function(regionSet, mPCA, methylData, mCoord, PCofInterest="PC1", returnCor=FALSE) {
     
     # test for appropriateness of inputs/right format
+    if (is(mCoord, "GRanges")) {
+        coordGR = mCoord
+    } else if (is(mCoord, "data.frame")) {
+        # UPDATE: does the work on data.frames that are not data.tables?
+        coordGR = MIRA:::dtToGr(coordinateDT)
+    } else {
+        error("mCoord should be a data.frame or GRanges object.")
+    }
+    
     
     # get subset of loading values
    #  subsetInd = 
     newColNames <- paste0(PCofInterest, "_subset")
     
-    coordGR = MIRA:::dtToGr(coordinateDT)
+    
     olList = findOverlaps(query = regionSet, subject = coordGR)
     # regionHitInd = sort(unique(queryHits(olList)))
     cytosineHitInd = sort(unique(subjectHits(olList)))
@@ -709,17 +807,17 @@ pcFromSubset <- function(regionSet, pca, methylData, coordinateDT, PCofInterest=
     # reducedValsPCA = pcaData$x
     # use subset of loading values on subset of DNA methylation values
     # getting PC scores manually so artificial PCs will be included (PC1m4 and PC1p3)
-    centeringSubset = pca$center[cytosineHitInd]
+    centeringSubset = mPCA$center[cytosineHitInd]
     centeredMeth = t(apply(thisRSMData, 1, function(x) x - centeringSubset)) # center first 
-    reducedValsPCA = centeredMeth %*% pca$rotation[cytosineHitInd, PCofInterest]
+    reducedValsPCA = centeredMeth %*% mPCA$rotation[cytosineHitInd, PCofInterest]
     colnames(reducedValsPCA) <- newColNames
     # pcaValDF = as.data.frame(reducedValsPCA)
     
     
     # optional calculate correlation
     if (returnCor) {
-        # plot(reducedValsPCA[, PCofInterest], pca$x[, PCofInterest])
-        corMat = cor(reducedValsPCA[, newColNames], pca$x[, PCofInterest])
+        # plot(reducedValsPCA[, PCofInterest],mPCA$x[, PCofInterest])
+        corMat = cor(reducedValsPCA[, newColNames],mPCA$x[, PCofInterest])
         # only correlation between subset and matching PC, not with other PCs
         mainCor = diag(corMat)
         names(mainCor) <- PCofInterest
@@ -739,19 +837,31 @@ pcFromSubset <- function(regionSet, pca, methylData, coordinateDT, PCofInterest=
 
 #' Determine what percent of cytosines in region sets overlap.
 #' Slightly different than percent overlap of region sets.
-#' @param coordGR GenomicRanges object with coordinates for cytosines 
-#' included in the PCA.
-#' @param GRList
+#' @param mCoord a GRanges object or data frame with coordinates 
+#' for the cytosines included in the PCA. Coordinates should be in the 
+#' same order as the methylation data and loadings. If a data.frame, 
+#' must have chr and start columns. If end is included, start 
+#' and end should be the same. Start coordinate will be used for calculations.
+#' @param GRList GRangesList object. Each list item is 
+#' a distinct region set (regions that correspond to 
+#' the same biological annotation).
 #' @return Total number of cytosines from methylation data that overlapped with
 #' each region set. Also the percent of cytosines that overlapped with
 #' other region set.
-#' @export
+#'
 
-percentCOverlap <- function(coordGR, GRList) {
+percentCOverlap <- function(mCoord, GRList) {
     
-    if (is.data.table(coordGR)) {
-        coordGR <- MIRA:::dtToGr(coordGR)
+    # test for appropriateness of inputs/right format
+    if (is(mCoord, "GRanges")) {
+        coordGR = mCoord
+    } else if (is(mCoord, "data.frame")) {
+        # UPDATE: does the work on data.frames that are not data.tables?
+        coordGR = MIRA:::dtToGr(coordinateDT)
+    } else {
+        error("mCoord should be a data.frame or GRanges object.")
     }
+    
     
     # overlap between each region set and methylation data to see 
     # which cytosines were covered by each region set
@@ -781,7 +891,7 @@ percentCOverlap <- function(coordGR, GRList) {
 
 #' A convenience function to easily get indices for
 #' the top region sets that were enriched for each PC. 
-#' For each PC, get index of original region sets but ordered by rsEnrichment
+#' For each PC, get index of original region sets but ordered by rsScores
 #' ranking for each PC. First number in a given column will be 
 #' original index of the region set ranked first for that PC. Second row for a
 #' column will be the original index of the region set that ranked second
@@ -790,38 +900,41 @@ percentCOverlap <- function(coordGR, GRList) {
 #' Use this function when you want to look at top region sets to make it 
 #' easier to get the original indices to select them from a list of region sets.
 #' 
-#' @param rsEnrichment Should be in the same order as GRList (the list of 
+#' @param rsScores a data.table with scores for each 
+#' region set from main PCRSA function. 
+#' Each row is a region set. Columns are PCs and info on region set overlap
+#' with DNA methylation data. Should be in the same order as GRList (the list of 
 #' region sets used to create it.)
-#' @param PCsToAnnotate PCs in rsEnrichment for which you want
+#' @param PCsToAnnotate PCs in rsScores for which you want
 #' the indices of the original region sets
 #' @return A data.table with columns PCsToAnnotate. Each column has been 
 #' ranked by enrichment score for region sets for that PC.
-#' Original indices for region sets that were used to create rsEnrichment
+#' Original indices for region sets that were used to create rsScores
 #' are given. 
 #' @export
 #' 
-rsRankingIndex <- function(rsEnrichment, PCsToAnnotate) {
-    
+rsRankingIndex <- function(rsScores, PCsToAnnotate) {
+    rsScores = as.data.table(rsScores) # UPDATE to not be data.table
     # so by references changes will not be a problem
-    rsEnrichment <- copy(rsEnrichment)
-    rsEnrichment[, rsIndex := 1:nrow(rsEnrichment)]
+    rsScores <- copy(rsScores)
+    rsScores[, rsIndex := 1:nrow(rsScores)]
     
-    PCsToAnnotate = PCsToAnnotate[PCsToAnnotate %in% colnames(rsEnrichment)]
+    PCsToAnnotate = PCsToAnnotate[PCsToAnnotate %in% colnames(rsScores)]
     
-    rsEnSortedInd = subset(rsEnrichment, select= PCsToAnnotate)
+    rsEnSortedInd = subset(rsScores, select= PCsToAnnotate)
     
     # then scores by each PC and make a column with the original index for sorted region sets
     # this object will be used to pull out region sets that were top hits for each PC
     for (i in seq_along(PCsToAnnotate)) {
         
         # -1 for decreasing order of scores
-        setorderv(rsEnrichment, cols = PCsToAnnotate[i], order=-1L)
+        setorderv(rsScores, cols = PCsToAnnotate[i], order=-1L)
         
-        rsEnSortedInd[, PCsToAnnotate[i] := rsEnrichment[, rsIndex]]
+        rsEnSortedInd[, PCsToAnnotate[i] := rsScores[, rsIndex]]
     }
     
     # reset order
-    # setorderv(rsEnrichment, cols = "rsIndex", order=1L)
+    # setorderv(rsScores, cols = "rsIndex", order=1L)
     return(rsEnSortedInd)
 }
 
@@ -837,9 +950,11 @@ rsRankingIndex <- function(rsEnrichment, PCsToAnnotate) {
 #' 
 #' Faster if given total average for each column of interest
 #' 
-#' @param dataDT should have chr, start, end columns as well
-#' as columns to get metrics of, 
-#' eg (PC1, PC2) or could be DNA methylation
+#' @param dataDT a data.table with chr, start, end columns as well
+#' as columns to get metrics of eg (PC1, PC2). All columns
+#' except chr, start, and end will be considered 
+#' columns to get the metrics from so no unnecessary columns should be
+#' included.
 #' @param alsoNonOLMet also include same metrics
 #' for non overlapping CpGs
 #' 
@@ -909,9 +1024,11 @@ cpgOLMetrics <- function(dataDT, regionGR, metrics=c("mean", "sd"), columnMeans=
 
 
 #' Wilcoxon rank sum test for a region set
-#' @param dataDT should have chr, start, end columns as well
-#' as columns to get metrics of, 
-#' eg (PC1, PC2) or could be DNA methylation
+#' @param dataDT a data.table with chr, start, end columns as well
+#' as columns to get metrics of eg (PC1, PC2). All columns
+#' except chr, start, and end will be considered 
+#' columns to get the metrics from so no unnecessary columns should be
+#' included.
 #' @param regionGR Region set, GenomicRanges object
 #' @param ... Additional parameters of wilcox.test function. See ?wilcox.test.
 #' For instance specify alternative hypothesis: alternative = "greater".

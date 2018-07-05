@@ -10,7 +10,10 @@ aggregateLoadings(loadingMat, coordinateDT, regionSet,
   pcLoadAv = NULL)
 }
 \arguments{
-\item{loadingMat}{}
+\item{loadingMat}{matrix of loadings (the coefficients of 
+the linear combination that defines each PC). One named column for each PC.
+One row for each original dimension/variable (should be same order 
+as original data/mCoord). The x$rotation output of prcomp().}
 
 \item{regionSet}{A genomic ranges object with regions corresponding
 to the same biological annotation.

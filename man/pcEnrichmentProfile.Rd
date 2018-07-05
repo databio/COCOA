@@ -2,14 +2,27 @@
 % Please edit documentation in R/PCRSA.R
 \name{pcEnrichmentProfile}
 \alias{pcEnrichmentProfile}
-\title{function to create profile that indicates enrichment 
+\title{Function to create "meta-region" loading profile that indicates enrichment 
 of cytosines with high loading values in region set but not in
-surrounding genome}
+surrounding genome. All regions in a given region set 
+are combined into a single aggregate profile.}
 \usage{
 pcEnrichmentProfile(loadingMat, coordinateDT, GRList, PCsToAnnotate = c("PC1",
   "PC2"), binNum = 25)
 }
+\arguments{
+\item{loadingMat}{matrix of loadings (the coefficients of 
+the linear combination that defines each PC). One named column for each PC.
+One row for each original dimension/variable (should be same order 
+as original data/mCoord). The x$rotation output of prcomp().}
+
+\item{GRList}{GRangesList object. Each list item is 
+a distinct region set (regions that correspond to 
+the same biological annotation).}
+}
 \description{
-A wrapper of BSAggregate that first bins regions and then aggregates
-each bin across a set of regions, individually.
+Function to create "meta-region" loading profile that indicates enrichment 
+of cytosines with high loading values in region set but not in
+surrounding genome. All regions in a given region set 
+are combined into a single aggregate profile.
 }
