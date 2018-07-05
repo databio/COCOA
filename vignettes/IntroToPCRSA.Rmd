@@ -11,41 +11,50 @@ vignette: >
 ---
 
 
+This vignette begins after PCA has been performed on DNA methlyation data.
+
 # Inputs
 
-1. PCA loadings.
+1. PCA loadings (prcomp()$rotation).
 2. Region sets (normally a database of region sets).
+
+In this vignette, we will use a small number of region sets to demonstrate
+how to use the PCRSA functions. For actual use, PCRSA should be done with
+a large number of region sets.
 
 # Running PCRSA
 
 First, we load the example data and required packages:
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
-# library(PCRSA)
+library(PCRSA)
 library(data.table)
 library(GenomicRanges)
-# data()
-# data()
-
+library(ggplot2)
+data("esr1_chr1")
+data("gata3_chr1")
+data("nrf1_chr1")
+data("atf3_chr1")
+data("brcaLoadings1")
+data("brcaCoord1")
 ```
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 # prepare data
-# GRList 
-# rsName
+GRList = GRangesList(esr1_chr1, gata3_chr1, nrf1_chr1, atf3_chr1) 
+rsName = c("esr1_chr1", "gata3_chr1", "nrf1_chr1", "atf3_chr1")
 ```
 
 Now we test how much each region set is associated with each principal component:
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
-# PCsToAnnotate = paste0("PC", 1:4)
-# rsEnrichment = pcRegionSetEnrichment(loadingMat=allMPCAWeights, 
-                                             # coordinateDT = coordinates, 
-                                             # GRList=GRList, 
-                                             # PCsToAnnotate = PCsToAnnotate, 
-                                             # scoringMetric="raw")
-# rsEnrichment$rsName = rsName
-# rsEnrichment$rsDescription = rsDescription
+PCsToAnnotate = paste0("PC", 1:4)
+rsEnrichment = pcRegionSetEnrichment(loadingMat=brcaLoadings1, 
+                                              mCoord = brcaCoord1, 
+                                              GRList=GRList, 
+                                              PCsToAnnotate = PCsToAnnotate, 
+                                              scoringMetric="raw")
+rsEnrichment$rsName = rsName
 ```
 
 We can see whether variability along the PC is specific to the region of 
@@ -53,30 +62,30 @@ interest by comparing it to the surrounding genome. To do this we will
 calculate the average loadings of a wide area surrounding the regions of interest.
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
-# wideGRList = lapply(GRList, resize, width = 14000, fix="center")
-# pcProf = pcEnrichmentProfile(loadingMat = mPCA$rotation, coordinateDT = coordinateDT,
-                                 # GRList=wideGRList, PCsToAnnotate = PCsToAnnotate,
-                                 # binNum = 21)
+wideGRList = lapply(GRList, resize, width = 14000, fix="center")
+loadProfile = pcEnrichmentProfile(loadingMat = brcaLoadings1, mCoord = brcaCoord1,
+                                 GRList=wideGRList, PCsToAnnotate = PCsToAnnotate,
+                                 binNum = 21)
 ```
 
 We will normalize the result for each PC so we can better compare them.
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 # average loading value from each PC to normalize so PCs can be compared with each other
-avLoad = apply(X = loadingMat[, PCsToAnnotate_mrLP], MARGIN = 2, FUN = function(x) mean(abs(x)))
+avLoad = apply(X = loadingMat[, PCsToAnnotate], MARGIN = 2, FUN = function(x) mean(abs(x)))
 
 # normalize
-# pcP = lapply(pcP, FUN = function(x) t(apply(X = x, MARGIN = 1, FUN = function(y) y - c(0, avLoad))))
-pcP = lapply(pcP, FUN = function(x) x[, mapply(FUN = function(y, z) get(y) - z, y=PCsToAnnotate_mrLP, z = avLoad)])
-pcP = lapply(pcP, FUN = function(x) data.table(regionGroupID=1:nrow(x), x))
+# loadProfile = lapply(loadProfile, FUN = function(x) t(apply(X = x, MARGIN = 1, FUN = function(y) y - c(0, avLoad))))
+loadProfile = lapply(loadProfile, FUN = function(x) x[, mapply(FUN = function(y, z) get(y) - z, y=PCsToAnnotate, z = avLoad)])
+loadProfile = lapply(loadProfile, FUN = function(x) data.table(regionGroupID=1:nrow(x), x))
 
 # for the plot scale
-maxVal = max(sapply(pcP, FUN = function(x) max(x[, .SD, .SDcols=PCsToAnnotate_mrLP])))
-minVal = min(sapply(pcP, FUN = function(x) min(x[, .SD, .SDcols=PCsToAnnotate_mrLP])))
+maxVal = max(sapply(loadProfile, FUN = function(x) max(x[, .SD, .SDcols=PCsToAnnotate])))
+minVal = min(sapply(loadProfile, FUN = function(x) min(x[, .SD, .SDcols=PCsToAnnotate])))
 # convert to long format for plots
-pcP = lapply(X = pcP, FUN = function(x) tidyr::gather(data = x, key = "PC", value="loading_value", PCsToAnnotate_mrLP))
-pcP = lapply(X = pcP, as.data.table)
-pcP = lapply(pcP, function(x) x[, PC := factor(PC, levels = PCsToAnnotate_mrLP)])
+loadProfile = lapply(X = loadProfile, FUN = function(x) tidyr::gather(data = x, key = "PC", value="loading_value", PCsToAnnotate))
+loadProfile = lapply(X = loadProfile, as.data.table)
+loadProfile = lapply(loadProfile, function(x) x[, PC := factor(PC, levels = PCsToAnnotate)])
 ```
 
 Let's look at the plots!
@@ -84,30 +93,28 @@ Let's look at the plots!
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 wrapper <- function(x, ...) paste(strwrap(x, ...), collapse = "\n") 
 profilePList = list()
-for (i in seq_along(pcP)) {
+for (i in seq_along(loadProfile)) {
     
-    thisRS = pcP[[i]]
+    thisRS = loadProfile[[i]]
     
 
     
     profilePList[[i]] = ggplot(data = thisRS, mapping = aes(x =regionGroupID , y = loading_value)) + 
         geom_line() + ylim(c(minVal, maxVal)) + facet_wrap(facets = "PC") + 
-        ggtitle(label = wrapper(rsNames[i], width=30)) + xlab("Genome around Region Set, 14 kb") + 
+        ggtitle(label = wrapper(rsName[i], width=30)) + xlab("Genome around Region Set, 14 kb") + 
         ylab("Normalized Loading Value") + 
         theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank())
     profilePList[[i]]
-    # plot(pcP[[i]]$PC1, type="l") + title(rsNames[i])
+    # plot(loadProfile[[i]]$PC1, type="l") + title(rsNames[i])
     # 
     
     #xLabels = xAxisForRegionPlots2()
     
 }
 profilePList[[1]]
-
-multiProfileP = marrangeGrob(profilePList, ncol = 2, nrow = 2)
-ggsave(filename = paste0(Sys.getenv("PLOTS"), plotSubdir,
-                        "/metaRegionLoadingProfiles", 
-                         inputID, ".pdf"), plot = multiProfileP, device = "pdf", limitsize = FALSE)
+profilePList[[2]]
+profilePList[[3]]
+profilePList[[4]]
 ```
 
 
