@@ -32,15 +32,15 @@ rsMethylHeatmap <- function(methylData, mCoord, regionSet, pcScores, orderByPC="
         coordGR = mCoord
     } else if (is(mCoord, "data.frame")) {
         # UPDATE: does the work on data.frames that are not data.tables?
-        coordGR = MIRA:::dtToGr(coordinateDT)
+        coordGR = dtToGr(coordinateDT)
     } else {
-        error("mCoord should be a data.frame or GRanges object.")
+        stop("mCoord should be a data.frame or GRanges object.")
     }
     
     # PCA object must have subject_ID as row.names (corresponding 
     # to column names of methylData)
     if (sum(row.names(pcScores) %in% colnames(methylData)) < 2) {
-        error(MIRA:::cleanws("Sample names on pca data (row names) 
+        stop(cleanws("Sample names on pca data (row names) 
                       must match sample names on methylation
                              (column names)"))
     }
@@ -202,18 +202,18 @@ methylAlongPC <- function (loadingMat, loadingThreshold,
                            topXRegions=50) {
     
     if (is(mCoord, "GRanges")) {
-        coordinateDT = MIRA:::grToDt(mCoord)
+        coordinateDT = grToDt(mCoord)
     } else if (is(mCoord, "data.frame")) {
         coordinateDT = mCoord
     } else {
-        error("mCoord should be a data.frame or GRanges object.")
+        stop("mCoord should be a data.frame or GRanges object.")
     }
     
     
     # PCA object must have subject_ID as row.names (corresponding 
     # to column names of methylData)
     if (sum(row.names(pcScores) %in% colnames(methylData)) < 2) {
-        error(MIRA:::cleanws("Sample names on pca data (row names) 
+        stop(cleanws("Sample names on pca data (row names) 
                              must match sample names on methylation
                              (column names)"))
     }
@@ -256,13 +256,13 @@ methylAlongPC <- function (loadingMat, loadingThreshold,
             
             nrow(regionLoadAv)
             if (nrow(highVariable) > 1) {
-                regionSet = MIRA:::dtToGr(highVariable)
+                regionSet = dtToGr(highVariable)
                 
                 
                 # text(paste0(pc1$rsDescription[i], ":", pc1$rsName[i]))
                 # gives error if nrow(highVariable = 1) (happened for PC2)
                 multiHM = grid.grabExpr(draw(rsMethylHeatmap(methylData = methylData, 
-                                                             coordGR = MIRA:::dtToGr(coordinateDT), 
+                                                             coordGR = dtToGr(coordinateDT), 
                                                              regionSet = regionSet, 
                                                              pcScores = pcScores, 
                                                              pc = orderByPC, column_title= regionSetName))) # use_raster=TRUE, raster_device="jpeg")
@@ -312,11 +312,11 @@ regionQuantileByPC <- function(loadingMat, mCoord, GRList,
                                maxRegionsToPlot = 8000, cluster_rows = TRUE) {
     
     if (is(mCoord, "GRanges")) {
-        coordinateDT = MIRA:::grToDt(mCoord)
+        coordinateDT = grToDt(mCoord)
     } else if (is(mCoord, "data.frame")) {
         coordinateDT = mCoord
     } else {
-        error("mCoord should be a data.frame or GRanges object.")
+        stop("mCoord should be a data.frame or GRanges object.")
     }
     
     

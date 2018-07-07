@@ -14,4 +14,4 @@ or locally after downloading/cloning the source code:
 install.packages("path/to/PCRSA/directory", repos=NULL, type="source")
 
 ## Learning How to Use PCRSA
-A vignette is included with the package. More examples and documentation will be added. 
+A vignette is included with the package that shows how to use the main PCRSA functions. More examples and documentation will be added.

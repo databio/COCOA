@@ -72,7 +72,7 @@ We will normalize the result for each PC so we can better compare them.
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 # average loading value from each PC to normalize so PCs can be compared with each other
-avLoad = apply(X = loadingMat[, PCsToAnnotate], MARGIN = 2, FUN = function(x) mean(abs(x)))
+avLoad = apply(X = brcaLoadings1[, PCsToAnnotate], MARGIN = 2, FUN = function(x) mean(abs(x)))
 
 # normalize
 # loadProfile = lapply(loadProfile, FUN = function(x) t(apply(X = x, MARGIN = 1, FUN = function(y) y - c(0, avLoad))))
@@ -117,4 +117,4 @@ profilePList[[3]]
 profilePList[[4]]
 ```
 
-
+These plots show that Esr1 and Gata3 binding regions are variable compared to the surrounding genome while Nrf1 and Atf3 are not.  
