@@ -1,6 +1,11 @@
+# Unit tests
 
+library(PCRSA)
 library(data.table)
 library(GenomicRanges)
+
+context("Unit tests for PCRSA.")
+
 
 # generate synthetic data
 # coordinateDT: positions of cytosines
@@ -29,6 +34,12 @@ regionSet2 = data.table(chr = c("chr1", "chr1", "chr1", "chr2", "chr2"),
                                      end = c(1400, 1700, 3800, 4100, 4700))
 regionSet2 = MIRA:::dtToGr(regionSet2)
 
+# package data to use for tests
+data("brcaCoord1")
+data("brcaLoadings1")
+data("esr1_chr1")
+data("gata3_chr1")
+
 # running the tests
 
 
@@ -39,4 +50,38 @@ regionSet2 = MIRA:::dtToGr(regionSet2)
 # cpgOLMetrics
 dataDT = cbind(coordinateDT, as.data.frame(loadingMat))
 cpgOLMetrics(dataDT=dataDT, regionGR = regionSet1, metrics = c("mean", "sd"), alsoNonOLMet = TRUE)
+
+
+test_that("aggregateLoadings", {
+    
+    aggregateLoadings(loadingMat = , 
+                      mCoord = , 
+                      regionSet = , 
+                      PCsToAnnotate = , 
+                      metric = , 
+                      pcLoadAv = )
+    expect_equal()
+    
+})
+
+test_that("", {
+    
+    expect_equal()
+    
+})
+
+test_that("", {
+    
+    expect_equal()
+    
+})
+
+test_that("", {
+    
+    expect_equal()
+    
+})
+
+######################### Visualization functions #############################
+
 
