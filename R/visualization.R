@@ -22,6 +22,7 @@
 #' These same subject_IDs must be column names of methylData
 #' @param orderByPC PC to order samples by (order rows of heatmap by PC score, 
 #' from high to low score)
+#' @param ...
 #  library(ComplexHeatmap)
 #'
 rsMethylHeatmap <- function(methylData, mCoord, regionSet, pcScores, orderByPC="PC1", ...) {
@@ -32,7 +33,7 @@ rsMethylHeatmap <- function(methylData, mCoord, regionSet, pcScores, orderByPC="
         coordGR = mCoord
     } else if (is(mCoord, "data.frame")) {
         # UPDATE: does the work on data.frames that are not data.tables?
-        coordGR = dtToGr(coordinateDT)
+        coordGR = dtToGr(mCoord)
     } else {
         stop("mCoord should be a data.frame or GRanges object.")
     }
@@ -77,6 +78,8 @@ rsMethylHeatmap <- function(methylData, mCoord, regionSet, pcScores, orderByPC="
 #' @param PCsToAnnotate A character vector with principal components to 
 #' include. eg c("PC1", "PC2")
 #' @param orderByPC PC to order by (decreasing order) in heatmap
+#' @param rsNameCol
+#' @param topX
 #
 # @example enrichmentHeatmap = rsEnrichHeatmap(rsScores, PCsToAnnotate=paste0("PC", 1:10), orderByPC = "PC2")
 
@@ -234,7 +237,7 @@ methylAlongPC <- function (loadingMat, loadingThreshold,
         # if no overlap, will return NULL
         regionLoadAv = averageByRegion(loadingMat = loadingMat, 
                                        mCoord = coordinateDT, 
-                                       GRList = regionSet, 
+                                       regionSet = regionSet, 
                                        PCsToAnnotate = orderByPC)
         
         #if (!is.null(regionLoadAv)) {
@@ -327,7 +330,7 @@ regionQuantileByPC <- function(loadingMat, mCoord, GRList,
         
     
         rsRegionAverage = averageByRegion(loadingMat = loadingMat, mCoord =coordinateDT, 
-                                          GRList = regionSet, PCsToAnnotate = PCsToAnnotate,
+                                          regionSet = regionSet, PCsToAnnotate = PCsToAnnotate,
                                           returnQuantile = TRUE)
         # ranking in terms of percentiles in case there were different distributions of loading scores for each PC
         

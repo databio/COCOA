@@ -399,6 +399,11 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
 #' the linear combination that defines each PC). One named column for each PC.
 #' One row for each original dimension/variable (should be same order 
 #' as original data/mCoord). The x$rotation output of prcomp().
+#' @param mCoord a GRanges object or data frame with coordinates 
+#' for the cytosines included in the PCA. Coordinates should be in the 
+#' same order as the methylation data and loadings. If a data.frame, 
+#' must have chr and start columns. If end is included, start 
+#' and end should be the same. Start coordinate will be used for calculations.
 #' @param regionSet A GRanges object with regions corresponding
 #' to the same biological annotation.
 #' @return a data.table with region coordinates and average loading 
@@ -407,7 +412,18 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
 #' 
 # Devel note: I could add a column for how many cytosines are in each region 
 
-averageByRegion <- function(loadingMat, coordinateDT, regionSet, PCsToAnnotate = c("PC1", "PC2"), returnQuantile=FALSE) {
+averageByRegion <- function(loadingMat, mCoord, regionSet, PCsToAnnotate = c("PC1", "PC2"), returnQuantile=FALSE) {
+    
+    
+    
+    if (is(mCoord, "GRanges")) {
+        coordinateDT <- grToDt(mCoord)
+    } else if (is(mCoord, "data.frame")) {
+        coordinateDT <- mCoord
+    } else {
+        stop("mCoord should be a data.frame or GRanges object.")
+    }
+    
     
     # old parameters of BSAggregate
     excludeGR <- NULL
