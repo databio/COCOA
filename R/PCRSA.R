@@ -1024,8 +1024,9 @@ cpgOLMetrics <- function(dataDT, regionGR, metrics=c("mean", "sd"), columnMeans=
     # gets metrics for all columns except chr, start, end
     testCols <- colnames(dataDT)[!(colnames(dataDT) %in% c("chr", "start", "end"))] 
     
-    jExpr <- buildJ(testCols, rep(metrics, length(testCols)),
-                          newColNames = paste0(rep(testCols, each=2), "_", metrics))
+    jExpr <- buildJ(cols=rep(testCols, each=length(metrics)), 
+                    funcs=rep(metrics, length(testCols)),
+                    newColNames = paste0(rep(testCols, each=length(metrics)), "_", metrics))
     
     # getting the metrics
     olMetrics <- as.data.frame(dataDT[olCpG, eval(parse(text=jExpr))])

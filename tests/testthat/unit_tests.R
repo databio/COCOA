@@ -52,7 +52,6 @@ data("gata3_chr1")
 
 # cpgOLMetrics
 dataDT = cbind(coordinateDT, as.data.frame(loadingMat))
-# cpgOLMetrics(dataDT=dataDT, regionGR = regionSet1, metrics = c("mean", "sd"), alsoNonOLMet = TRUE)
 
 
 # making test data for Wilcoxon rank sum test
@@ -82,7 +81,8 @@ test_that("aggregateLoadings and scoring metrics", {
                    rsWResults$mean_region_size))
     
     # same test for Wilcoxon but with aggregateLoadings (absolute value
-    # of loadings will be taken)
+    # of loadings will be taken), "greater" alternate hypothesis is used in
+    # aggregateLoadings
     rsWResults = PCRSA:::aggregateLoadings(loadingMat = loadingMatW, 
                       mCoord = coordinateDTW, 
                       regionSet = regionSetW, 
@@ -99,17 +99,61 @@ test_that("aggregateLoadings and scoring metrics", {
     
     
     
-    # test raw scoring method
-    # aggregateLoadings(loadingMat = , 
-    #                   mCoord = , 
-    #                   regionSet = , 
-    #                   PCsToAnnotate = , 
-    #                   metric = , 
-    #                   pcLoadAv = )
-    # expect_equal()
-    # 
-    
+    # test raw scoring method, average first within region, then
+    # between regions
+    rawRes = PCRSA:::aggregateLoadings(loadingMat = loadingMatW, 
+                              mCoord = coordinateDTW, 
+                              regionSet = regionSetW, 
+                              PCsToAnnotate = c("PC2", "PC3"), 
+                              metric = "raw")
+    PC2R = mean(c(2, mean(c(0, 1))))
+    PC3R = mean(c(8, mean(c(6, 5))))
+    expect_equal(c(PC2R, PC3R, 3, 2, 2, mean(width(regionSetW))), 
+                 c(rawRes$PC2, rawRes$PC3, rawRes$cytosine_coverage, 
+                   rawRes$region_coverage, 
+                   rawRes$total_region_number, 
+                   rawRes$mean_region_size))
+
+
     # test mean difference scoring method
+    PC2Num = mean(c(2, 0, 1)) - mean(c(1, 2, 3, 4))
+    PC3Num = mean(c(8, 6, 5)) - mean(c(7, 4, 3, 10))
+    # see doi: 10.1186/s13040-015-0059-z
+    # pooled variance times normalization factor for size of each set
+    PC2Denom = sqrt((sd(c(2, 0, 1))^2 + sd(c(1, 2, 3, 4))^2) / 2) * sqrt(1/3 - 1/4)
+    PC3Denom = sqrt((sd(c(8, 6, 5))^2 + sd(c(7, 4, 3, 10))^2) / 2) * sqrt(1/3 - 1/4)
+    
+    PC2MD = PC2Num / PC2Denom
+    PC3MD = PC3Num / PC3Denom
+    mdRes = PCRSA:::aggregateLoadings(loadingMat = loadingMatW, 
+                                       mCoord = coordinateDTW, 
+                                       regionSet = regionSetW, 
+                                       PCsToAnnotate = c("PC2", "PC3"), 
+                                       metric = "meanDiff")
+    expect_equal(c(PC2MD, PC3MD, 3, 2, 2, mean(width(regionSetW))), 
+                 c(mdRes$PC2, mdRes$PC3, mdRes$cytosine_coverage, 
+                   mdRes$region_coverage, 
+                   mdRes$total_region_number, 
+                   mdRes$mean_region_size))
+    
+    ########## testing cpgOLMetrics, used for meanDiff scoring method #######
+    olMetrics = PCRSA:::cpgOLMetrics(dataDT=dataDTW, 
+                 regionGR = regionSetW, 
+                 metrics = c("mean", "sd"), 
+                 alsoNonOLMet = TRUE)
+    
+    PC2Met = data.table(t(c(mean(c(-2, 0, 1)), sd(c(-2, 0, 1)), 
+                   mean(c(-1, 2:4)), sd(c(-1, 2:4)), 3, 2, 2, 151)))
+    PC2Met = cbind("PC2", PC2Met)
+    colnames(PC2Met) <- colnames(olMetrics)
+    expect_equal(olMetrics[1, ], PC2Met)
+    
+    PC3Met = data.table(t(c(mean(c(8, 6, 5)), sd(c(8, 6, 5)), 
+                            mean(c(7, 4, 3, 10)), sd(c(7, 4, 3, 10)), 3, 2, 2, 151)))
+    PC3Met = cbind("PC3", PC3Met)
+    colnames(PC3Met) <- colnames(olMetrics)
+    expect_equal(olMetrics[2, ], PC3Met)
+    
 })
 
 # test_that("", {
