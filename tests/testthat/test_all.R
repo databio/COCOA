@@ -113,7 +113,24 @@ test_that("aggregateLoadings and scoring metrics", {
                    rawRes$region_coverage, 
                    rawRes$total_region_number, 
                    rawRes$mean_region_size))
-
+    
+    ########### test raw_CpG scoring method ################
+    # this is a mean of CpG loading values just like "raw" but instead
+    # of averaging within regions then averaging regions together, this 
+    # method does the simple average of all CpGs within the region set
+    rawResCpG = PCRSA:::aggregateLoadings(loadingMat = loadingMatW, 
+                                       mCoord = coordinateDTW, 
+                                       regionSet = regionSetW, 
+                                       PCsToAnnotate = c("PC2", "PC3"), 
+                                       metric = "raw_CpG")
+    PC2RC = mean(c(2, 0, 1))
+    PC3RC = mean(c(8, 6, 5))
+    expect_equal(c(PC2RC, PC3RC, 3, 2, 2, mean(width(regionSetW))), 
+                 c(rawResCpG$PC2, rawResCpG$PC3, rawResCpG$cytosine_coverage, 
+                   rawResCpG$region_coverage, 
+                   rawResCpG$total_region_number, 
+                   rawResCpG$mean_region_size))
+    
 
     # test mean difference scoring method
     PC2Num = mean(c(2, 0, 1)) - mean(c(1, 2, 3, 4))
