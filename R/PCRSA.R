@@ -255,6 +255,14 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
 #' "mean_region_size" has average region size (average of all regions,
 #' not just those that overlap a cytosine).
 #' 
+#' @examples 
+#' data("brcaCoord1")
+#' data("brcaLoadings1")
+#' data("esr1_chr1")
+#' data("nrf1_chr1")
+#' GRList = GRangesList(esr1_chr1, nrf1_chr1)
+#' pcRegionSetEnrichment(loadingMat=brcaLoadings1, mCoord=brcaCoord1, GRList=GRList, PCsToAnnotate=c("PC1", "PC2"), scoringMetric="raw")
+
 #' 
 #' @export
 
@@ -267,6 +275,13 @@ pcRegionSetEnrichment <- function(loadingMat, mCoord, GRList,
         coordinateDT <- mCoord
     } else {
         stop("mCoord should be a data.frame or GRanges object.")
+    }
+    
+    # should be GRangesList
+    if (is(GRList, "GRanges")) {
+        GRList <- GRangesList(GRList)
+    } else if (!is(GRList, "GRangesList")) {
+        stop("GRList should be a GRangesList object.")
     }
     
     
@@ -313,11 +328,19 @@ pcRegionSetEnrichment <- function(loadingMat, mCoord, GRList,
 #' a separate region set. The data table has the binned loading profile,
 #' one row per bin.
 #' 
+#' @examples 
+#' data("brcaCoord1")
+#' data("brcaLoadings1")
+#' data("esr1_chr1")
+#' data("nrf1_chr1")
+#' GRList = GRangesList(esr1_chr1, nrf1_chr1)
+#' pcEnrichmentProfile(loadingMat=brcaLoadings1, mCoord=brcaCoord1, GRList=GRList, PCsToAnnotate=c("PC1", "PC2"), binNum=25)
 #' @export
 
 pcEnrichmentProfile = function(loadingMat, mCoord, GRList,
                     PCsToAnnotate = c("PC1", "PC2"), binNum = 25) {
     
+    # checks for correct input
     if (is(mCoord, "GRanges")) {
         coordinateDT <- grToDt(mCoord)
     } else if (is(mCoord, "data.frame")) {
@@ -325,6 +348,13 @@ pcEnrichmentProfile = function(loadingMat, mCoord, GRList,
     } else {
         stop("mCoord should be a data.frame or GRanges object.")
     }
+    
+    # should be GRangesList
+    if (is(GRList, "GRanges")) {
+        GRList <- GRangesList(GRList)
+    } else if (!is(GRList, "GRangesList")) {
+        stop("GRList should be a GRanges or GRangesList object.")
+    } 
     
     
     loadingDT <- as.data.table(abs(loadingMat))

@@ -81,9 +81,9 @@ rsMethylHeatmap <- function(methylData, mCoord, regionSet, pcScores, orderByPC="
 #' @param rsNameCol
 #' @param topX
 #
-# @example enrichmentHeatmap <- rsEnrichHeatmap(rsScores, PCsToAnnotate=paste0("PC", 1:10), orderByPC = "PC2")
+# @example scoreHeatmap <- rsScoreHeatmap(rsScores, PCsToAnnotate=paste0("PC", 1:10), orderByPC = "PC2")
 
-rsEnrichHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
+rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
                             orderByPC="PC1", rsNameCol = "rsNames", topX = 20) {
     
     rsEnrichment <- rsScores
@@ -96,13 +96,16 @@ rsEnrichHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
         stop("Please check format of PC names in PCsToAnnotate.")
     }
      
-    rsEn <- rsEn[, c(PCsToAnnotate, rsNameCol), with = FALSE] # apparently erases row names
-    
+    rsEn <- rsEn[, c(PCsToAnnotate, rsNameCol)] # apparently erases row names
+
     
     # how to deal with NA?
     
     # number of region sets tested
     rsNum <- nrow(rsEn)
+    
+    # convert to data.table to do some data.table operations
+    rsEn = as.data.table(rsEn)
     
     for (i in seq_along(PCsToAnnotate)) {
         # first convert to rank
@@ -147,7 +150,7 @@ comparePCHeatmap <- function(rsScores, PCsToRankBy=paste0("PC", 1:5), PCsToInclu
         grDevices::pdf(file = fileName, width = 11, height = 8.5 * length(PCsToRankBy))
         grid.newpage()
         for (i in seq_along(PCsToRankBy)) {
-            multiHM <- grid.grabExpr(draw(rsEnrichHeatmap(rsScores = rsEnrichment, PCsToAnnotate = PCsToInclude,
+            multiHM <- grid.grabExpr(draw(rsScoreHeatmap(rsScores = rsEnrichment, PCsToAnnotate = PCsToInclude,
                                                          orderByPC = PCsToRankBy[i], rsNameCol = "rsName", topX = 40)))
             
             pushViewport(viewport(y = unit((8.5*length(PCsToRankBy))-(i-1)*8.5, "in"), height = unit(8, "in"), just = "top"))
@@ -158,7 +161,7 @@ comparePCHeatmap <- function(rsScores, PCsToRankBy=paste0("PC", 1:5), PCsToInclu
     }
     
     # multiColPlots <- marrangeGrob(grobs = plotList, ncol = 1, nrow = 1)
-    # ggsave(filename <- paste0(Sys.getenv("PLOTS"), "rsEnrichHeatmap.pdf"), plot = multiColPlots, device = "pdf")
+    # ggsave(filename <- paste0(Sys.getenv("PLOTS"), "rsScoreHeatmap.pdf"), plot = multiColPlots, device = "pdf")
     # gridextra
     # multiColPlots <- marrangeGrob(plotList, ncol = 2, nrow = 2)
 }
