@@ -243,12 +243,19 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
 #' ranking large region sets highly.
 #' @return data.frame of results, one row for each region set. 
 #' One column for each PC in PCsToAnnotate
-#' with average loading score for that PC for a given region set. 
-#' rsName column has region set name.
-#' rsDescription has a description for each region set. 
-#' column has number of cytosines that overlapped with the given region set.
-#' column has number of regions that overlapped with any cytosines.
-#' column has total number of regions. 
+#' with score for that PC for a given region set (specific score depends
+#' on "scoringMetric" parameter). 
+#' Rows will be in the same order as region sets in GRList 
+#' and will be named if GRList was named
+#' "cytosine_coverage" column has number of cytosines that 
+#' overlapped with the given region set.
+#' "region_coverage" column has number of regions 
+#' that overlapped with any cytosines.
+#' "total_region_number" column has total number of regions. 
+#' "mean_region_size" has average region size (average of all regions,
+#' not just those that overlap a cytosine).
+#' 
+#' 
 #' @export
 
 pcRegionSetEnrichment <- function(loadingMat, mCoord, GRList, 
