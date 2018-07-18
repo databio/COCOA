@@ -992,7 +992,7 @@ percentCOverlap <- function(mCoord, GRList) {
 #' region sets used to create it.)
 #' @param PCsToAnnotate PCs in rsScores for which you want
 #' the indices of the original region sets
-#' @return A data.table with columns PCsToAnnotate. Each column has been 
+#' @return A data.frame with columns PCsToAnnotate. Each column has been 
 #' ranked by enrichment score for region sets for that PC.
 #' Original indices for region sets that were used to create rsScores
 #' are given. 
@@ -1020,7 +1020,7 @@ rsRankingIndex <- function(rsScores, PCsToAnnotate) {
     
     # reset order
     # setorderv(rsScores, cols = "rsIndex", order=1L)
-    return(rsEnSortedInd)
+    return(as.data.frame(rsEnSortedInd))
 }
 
 #################### Metric functions ########################################
