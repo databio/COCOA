@@ -30,10 +30,10 @@ rsMethylHeatmap <- function(methylData, mCoord, regionSet, pcScores, orderByPC="
     
     # test for appropriateness of inputs/right format
     if (is(mCoord, "GRanges")) {
-        coordGR = mCoord
+        coordGR <- mCoord
     } else if (is(mCoord, "data.frame")) {
         # UPDATE: does the work on data.frames that are not data.tables?
-        coordGR = dtToGr(mCoord)
+        coordGR <- dtToGr(mCoord)
     } else {
         stop("mCoord should be a data.frame or GRanges object.")
     }
@@ -49,16 +49,16 @@ rsMethylHeatmap <- function(methylData, mCoord, regionSet, pcScores, orderByPC="
     
     
     # coordGR =
-    olList = findOverlaps(regionSet, coordGR)
-    # regionHitInd = sort(unique(queryHits(olList)))
-    cytosineHitInd = sort(unique(subjectHits(olList)))
-    thisRSMData = t(methylData[cytosineHitInd, ])
-    subject_ID = row.names(thisRSMData)
-    # centeredPCAMeth = t(apply(t(methylData), 1, function(x) x - pcaData$center)) # center first 
-    # reducedValsPCA = centeredPCAMeth %*% pcaData$rotation
-    # reducedValsPCA = pcaData$x
+    olList <- findOverlaps(regionSet, coordGR)
+    # regionHitInd <- sort(unique(queryHits(olList)))
+    cytosineHitInd <- sort(unique(subjectHits(olList)))
+    thisRSMData <- t(methylData[cytosineHitInd, ])
+    subject_ID <- row.names(thisRSMData)
+    # centeredPCAMeth <- t(apply(t(methylData), 1, function(x) x - pcaData$center)) # center first 
+    # reducedValsPCA <- centeredPCAMeth %*% pcaData$rotation
+    # reducedValsPCA <- pcaData$x
     # pcaData must have subject_ID as row name
-    thisRSMData = thisRSMData[names(sort(pcScores[, orderByPC], decreasing = TRUE)), ]
+    thisRSMData <- thisRSMData[names(sort(pcScores[, orderByPC], decreasing = TRUE)), ]
     message(paste0("Number of cytosines: ", ncol(thisRSMData)))
     message(paste0("Number of regions: ", length(unique(queryHits(olList)))))
     ComplexHeatmap::Heatmap(thisRSMData, cluster_rows = FALSE, cluster_columns = FALSE, ...)# ,
@@ -81,28 +81,28 @@ rsMethylHeatmap <- function(methylData, mCoord, regionSet, pcScores, orderByPC="
 #' @param rsNameCol
 #' @param topX
 #
-# @example enrichmentHeatmap = rsEnrichHeatmap(rsScores, PCsToAnnotate=paste0("PC", 1:10), orderByPC = "PC2")
+# @example enrichmentHeatmap <- rsEnrichHeatmap(rsScores, PCsToAnnotate=paste0("PC", 1:10), orderByPC = "PC2")
 
 rsEnrichHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
                             orderByPC="PC1", rsNameCol = "rsNames", topX = 20) {
     
-    rsEnrichment = rsScores
+    rsEnrichment <- rsScores
     # so by reference operations will not affect original object
-    rsEn = data.table::copy(rsEnrichment)
+    rsEn <- data.table::copy(rsEnrichment)
     
     # only ones you have data for
-    PCsToAnnotate = PCsToAnnotate[PCsToAnnotate %in% colnames(rsEn)]
+    PCsToAnnotate <- PCsToAnnotate[PCsToAnnotate %in% colnames(rsEn)]
     if (length(PCsToAnnotate) == 0) {
         stop("Please check format of PC names in PCsToAnnotate.")
     }
      
-    rsEn = rsEn[, c(PCsToAnnotate, rsNameCol), with = FALSE] # apparently erases row names
+    rsEn <- rsEn[, c(PCsToAnnotate, rsNameCol), with = FALSE] # apparently erases row names
     
     
     # how to deal with NA?
     
     # number of region sets tested
-    rsNum = nrow(rsEn)
+    rsNum <- nrow(rsEn)
     
     for (i in seq_along(PCsToAnnotate)) {
         # first convert to rank
@@ -115,10 +115,10 @@ rsEnrichHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
     
     # heatmap of the centered ranks
     setorderv(rsEn, orderByPC, order = -1L) # back to first order
-    rowNames =  rsEn[, get(rsNameCol)] # redefined/reordered later
+    rowNames <-  rsEn[, get(rsNameCol)] # redefined/reordered later
     row.names(rsEn) <- rowNames
     rsEn[, c(rsNameCol) := NULL]
-    rsEn = as.matrix(rsEn)
+    rsEn <- as.matrix(rsEn)
     row.names(rsEn) <- rowNames
     Heatmap(rsEn[1:topX, ], cluster_rows = FALSE, cluster_columns = FALSE, show_row_names = TRUE, row_names_max_width = unit(100000, "mm"))
     
@@ -141,13 +141,13 @@ rsEnrichHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
 #' # see https://github.com/jokergoo/ComplexHeatmap/issues/110
 #' 
 comparePCHeatmap <- function(rsScores, PCsToRankBy=paste0("PC", 1:5), PCsToInclude=paste0("PC", 1:10), fileName=NULL) {
-    rsEnrichment = rsScores
+    rsEnrichment <- rsScores
     
     if (!is.null(fileName)) {
         grDevices::pdf(file = fileName, width = 11, height = 8.5 * length(PCsToRankBy))
         grid.newpage()
         for (i in seq_along(PCsToRankBy)) {
-            multiHM = grid.grabExpr(draw(rsEnrichHeatmap(rsScores = rsEnrichment, PCsToAnnotate = PCsToInclude,
+            multiHM <- grid.grabExpr(draw(rsEnrichHeatmap(rsScores = rsEnrichment, PCsToAnnotate = PCsToInclude,
                                                          orderByPC = PCsToRankBy[i], rsNameCol = "rsName", topX = 40)))
             
             pushViewport(viewport(y = unit((8.5*length(PCsToRankBy))-(i-1)*8.5, "in"), height = unit(8, "in"), just = "top"))
@@ -157,10 +157,10 @@ comparePCHeatmap <- function(rsScores, PCsToRankBy=paste0("PC", 1:5), PCsToInclu
         dev.off()
     }
     
-    # multiColPlots = marrangeGrob(grobs = plotList, ncol = 1, nrow = 1)
-    # ggsave(filename = paste0(Sys.getenv("PLOTS"), "rsEnrichHeatmap.pdf"), plot = multiColPlots, device = "pdf")
+    # multiColPlots <- marrangeGrob(grobs = plotList, ncol = 1, nrow = 1)
+    # ggsave(filename <- paste0(Sys.getenv("PLOTS"), "rsEnrichHeatmap.pdf"), plot = multiColPlots, device = "pdf")
     # gridextra
-    # multiColPlots = marrangeGrob(plotList, ncol = 2, nrow = 2)
+    # multiColPlots <- marrangeGrob(plotList, ncol = 2, nrow = 2)
 }
 
 
@@ -205,9 +205,9 @@ methylAlongPC <- function (loadingMat, loadingThreshold,
                            topXRegions=50) {
     
     if (is(mCoord, "GRanges")) {
-        coordinateDT = grToDt(mCoord)
+        coordinateDT <- grToDt(mCoord)
     } else if (is(mCoord, "data.frame")) {
-        coordinateDT = mCoord
+        coordinateDT <- mCoord
     } else {
         stop("mCoord should be a data.frame or GRanges object.")
     }
@@ -224,18 +224,18 @@ methylAlongPC <- function (loadingMat, loadingThreshold,
     
     
     # number of region sets to plot
-    nRSToPlot = length(GRList)
-    rsNames = names(GRList)
+    nRSToPlot <- length(GRList)
+    rsNames <- names(GRList)
   
         
     # once for each plot/region set
     for (i in seq_along(GRList)) { # loop through top region sets
-        regionSet = GRList[[i]] 
-        regionSetName = rsNames[i]
+        regionSet <- GRList[[i]] 
+        regionSetName <- rsNames[i]
         
         length(regionSet)
         # if no overlap, will return NULL
-        regionLoadAv = averageByRegion(loadingMat = loadingMat, 
+        regionLoadAv <- averageByRegion(loadingMat = loadingMat, 
                                        mCoord = coordinateDT, 
                                        regionSet = regionSet, 
                                        PCsToAnnotate = orderByPC)
@@ -243,28 +243,28 @@ methylAlongPC <- function (loadingMat, loadingThreshold,
         #if (!is.null(regionLoadAv)) {
             
             # find threshold for these loadings
-            loadingXPerc = quantile(abs(loadingMat[, orderByPC]), loadingThreshold)
+            loadingXPerc <- quantile(abs(loadingMat[, orderByPC]), loadingThreshold)
             
             # hist(loadingMat[, "PC1"])
-            highVariable = regionLoadAv[get(orderByPC) > loadingXPerc, .(chr, start, end, score=get(orderByPC))]
+            highVariable <- regionLoadAv[get(orderByPC) > loadingXPerc, .(chr, start, end, score=get(orderByPC))]
             
             # reducing to top X regions so plot won't be too large
             if (nrow(highVariable) > topXRegions) {
                 highVariable[, rowIndex :=  1:nrow(highVariable)]
-                tmp = highVariable[order(score, decreasing = TRUE), ]
-                tmp = tmp[1:50,]
-                tmp = tmp[order(rowIndex, decreasing = FALSE), ]
-                highVariable = highVariable[tmp$rowIndex, ]
+                tmp <- highVariable[order(score, decreasing = TRUE), ]
+                tmp <- tmp[1:50,]
+                tmp <- tmp[order(rowIndex, decreasing = FALSE), ]
+                highVariable <- highVariable[tmp$rowIndex, ]
             }
             
             nrow(regionLoadAv)
             if (nrow(highVariable) > 1) {
-                regionSet = dtToGr(highVariable)
+                regionSet <- dtToGr(highVariable)
                 
                 
                 # text(paste0(pc1$rsDescription[i], ":", pc1$rsName[i]))
                 # gives error if nrow(highVariable = 1) (happened for PC2)
-                multiHM = grid.grabExpr(draw(rsMethylHeatmap(methylData = methylData, 
+                multiHM <- grid.grabExpr(draw(rsMethylHeatmap(methylData = methylData, 
                                                              coordGR = dtToGr(coordinateDT), 
                                                              regionSet = regionSet, 
                                                              pcScores = pcScores, 
@@ -315,9 +315,9 @@ regionQuantileByPC <- function(loadingMat, mCoord, GRList,
                                maxRegionsToPlot = 8000, cluster_rows = TRUE) {
     
     if (is(mCoord, "GRanges")) {
-        coordinateDT = grToDt(mCoord)
+        coordinateDT <- grToDt(mCoord)
     } else if (is(mCoord, "data.frame")) {
-        coordinateDT = mCoord
+        coordinateDT <- mCoord
     } else {
         stop("mCoord should be a data.frame or GRanges object.")
     }
@@ -325,11 +325,11 @@ regionQuantileByPC <- function(loadingMat, mCoord, GRList,
     
     for (i in seq_along(GRList)) { # loop through top region sets
         
-        # rsIndex = sort.int(rsEnrichment$PC2, index.return = TRUE, decreasing = TRUE)$ix[6]
-        regionSet = GRList[[i]]
+        # rsIndex <- sort.int(rsEnrichment$PC2, index.return = TRUE, decreasing = TRUE)$ix[6]
+        regionSet <- GRList[[i]]
         
     
-        rsRegionAverage = averageByRegion(loadingMat = loadingMat, mCoord =coordinateDT, 
+        rsRegionAverage <- averageByRegion(loadingMat = loadingMat, mCoord =coordinateDT, 
                                           regionSet = regionSet, PCsToAnnotate = PCsToAnnotate,
                                           returnQuantile = TRUE)
         # ranking in terms of percentiles in case there were different distributions of loading scores for each PC
@@ -337,7 +337,7 @@ regionQuantileByPC <- function(loadingMat, mCoord, GRList,
         # if there are too many regions, don't plot because the attempt to cluster
         # will cause a memory error
         if (nrow(rsRegionAverage) <= maxRegionsToPlot) {
-            multiHM = grid.grabExpr(draw(Heatmap(matrix = as.matrix(rsRegionAverage[, PCsToAnnotate, with=FALSE]), column_title = rsNames[i], 
+            multiHM <- grid.grabExpr(draw(Heatmap(matrix = as.matrix(rsRegionAverage[, PCsToAnnotate, with=FALSE]), column_title = rsNames[i], 
                                                  cluster_rows = cluster_rows,
                                                  cluster_columns = FALSE, name = "Percentile of Loading Scores in PC"))) # use_raster=TRUE, raster_device="jpeg")
             pushViewport(viewport(y = unit((8.5*length(GRList))-(i-1) * 8.5, "in"), height = unit(8, "in"), just = "top"))
