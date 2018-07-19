@@ -352,6 +352,13 @@ pcEnrichmentProfile = function(loadingMat, mCoord, GRList,
     # should be GRangesList
     if (is(GRList, "GRanges")) {
         GRList <- GRangesList(GRList)
+    } else if (is(GRList, "list")) {
+        #making sure each list item is a GRanges object
+        if (all(sapply(X = GRList, function(x) is(x, "GRanges")))) {
+            GRList <- GRangesList(GRList)
+        } else {
+            stop("GRList should be a GRanges or GRangesList object.")
+        }
     } else if (!is(GRList, "GRangesList")) {
         stop("GRList should be a GRanges or GRangesList object.")
     } 
