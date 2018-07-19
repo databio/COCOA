@@ -5,7 +5,7 @@
 \title{modification of BSAggregate to just return mean per region
 averageByRegion(BSDT = BSDT, regionsGRL, jCommand = MIRA:::buildJ(cols = "methylProp", "mean"))}
 \usage{
-averageByRegion(loadingMat, coordinateDT, regionSet, PCsToAnnotate = c("PC1",
+averageByRegion(loadingMat, mCoord, regionSet, PCsToAnnotate = c("PC1",
   "PC2"), returnQuantile = FALSE)
 }
 \arguments{
@@ -13,6 +13,12 @@ averageByRegion(loadingMat, coordinateDT, regionSet, PCsToAnnotate = c("PC1",
 the linear combination that defines each PC). One named column for each PC.
 One row for each original dimension/variable (should be same order 
 as original data/mCoord). The x$rotation output of prcomp().}
+
+\item{mCoord}{a GRanges object or data frame with coordinates 
+for the cytosines included in the PCA. Coordinates should be in the 
+same order as the methylation data and loadings. If a data.frame, 
+must have chr and start columns. If end is included, start 
+and end should be the same. Start coordinate will be used for calculations.}
 
 \item{regionSet}{A GRanges object with regions corresponding
 to the same biological annotation.}

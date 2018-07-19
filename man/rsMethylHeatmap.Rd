@@ -26,6 +26,8 @@ These same subject_IDs must be column names of methylData}
 
 \item{orderByPC}{PC to order samples by (order rows of heatmap by PC score, 
 from high to low score)}
+
+\item{...}{}
 }
 \description{
 Look at methylation in regions of interest across samples, 
