@@ -1,7 +1,16 @@
-# functions to visualize results of PCRSA, relevant regions, and variation in the dataset
+################################################################################
+# functions to visualize results of PCRSA, relevant regions, 
+# and variation in the dataset
+###############################################################################
+# Some imported functions:
 # data.table: copy, :=, setorder
 # MIRA: dtToGr
 # ComplexHeatmap
+###
+# plotting functions to be exported:
+# rsScoreHeatmap (heatmap of top region sets (rows) by PCs (cols), ordered by one PC), uses ComplexHeatmap
+# rsMethylHeatmap (raw methylation along PC), uses ComplexHeatmap
+# regionQuantileByPC?
 
 # functions to visualize results of PCRSA, relevant regions, and variation in the dataset
 # 
@@ -22,10 +31,11 @@
 #' These same subject_IDs must be column names of methylData
 #' @param orderByPC PC to order samples by (order rows of heatmap by PC score, 
 #' from high to low score)
-#' @param ...
+#' @param ... optional parameters for ComplexHeatmap::Heatmap()
 #  library(ComplexHeatmap)
 #'
-rsMethylHeatmap <- function(methylData, mCoord, regionSet, pcScores, orderByPC="PC1", ...) {
+rsMethylHeatmap <- function(methylData, mCoord, regionSet, 
+                            pcScores, orderByPC="PC1", ...) {
     
     
     # test for appropriateness of inputs/right format
@@ -78,17 +88,20 @@ rsMethylHeatmap <- function(methylData, mCoord, regionSet, pcScores, orderByPC="
 #' @param PCsToAnnotate A character vector with principal components to 
 #' include. eg c("PC1", "PC2")
 #' @param orderByPC PC to order by (decreasing order) in heatmap
-#' @param rsNameCol
-#' @param topX
+#' @param rsNameCol character. Name of the column in rsScores that has the
+#' names/identifiers for the region sets so this information can be included 
+#' in the plot.
+#' @param topX Number of top region sets to include in the heatmap
 #
-# @example scoreHeatmap <- rsScoreHeatmap(rsScores, PCsToAnnotate=paste0("PC", 1:10), orderByPC = "PC2")
+# @examples scoreHeatmap <- rsScoreHeatmap(rsScores, 
+#           PCsToAnnotate=paste0("PC", 1:10), orderByPC = "PC2")
 
 rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
-                            orderByPC="PC1", rsNameCol = "rsNames", topX = 20) {
+                            orderByPC="PC1", rsNameCol = "rsName", topX = 20) {
     
     rsEnrichment <- rsScores
     # so by reference operations will not affect original object
-    rsEn <- data.table::copy(rsEnrichment)
+    rsEn <- as.data.table(data.table::copy(rsEnrichment))
     
     # only ones you have data for
     PCsToAnnotate <- PCsToAnnotate[PCsToAnnotate %in% colnames(rsEn)]
@@ -123,35 +136,43 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
     rsEn[, c(rsNameCol) := NULL]
     rsEn <- as.matrix(rsEn)
     row.names(rsEn) <- rowNames
-    Heatmap(rsEn[1:topX, ], cluster_rows = FALSE, cluster_columns = FALSE, show_row_names = TRUE, row_names_max_width = unit(100000, "mm"))
+    Heatmap(rsEn[1:topX, ], cluster_rows = FALSE, cluster_columns = FALSE, 
+            show_row_names = TRUE, row_names_max_width = unit(100000, "mm"))
     
 }
 
 
 
 #' create pdf with multiple heatmap plots (number = length(PCsToRankBy)). 
-#' Plot i will be ranked by PCsToRankBy[i]. 
+#' Plot i will be ranked by PCsToRankBy[i]. A wrapper for rsScoreHeatmap
 #' 
 #' @param rsScores a data.table with scores for each 
 #' region set from main PCRSA function. 
 #' Each row is a region set. Columns are PCs and info on region set overlap
 #' with DNA methylation data. Should be in the same order as GRList (the list of 
 #' region sets used to create it.)
-#' @param PCsToRankBy
+#' @param PCsToRankBy PC to order by (decreasing order) in heatmap. One 
+#' heatmap for each PC in PCsToRankBy. 
 #' @param PCsToInclude
 #' @param fileName
 #' 
 #' # see https://github.com/jokergoo/ComplexHeatmap/issues/110
 #' 
-comparePCHeatmap <- function(rsScores, PCsToRankBy=paste0("PC", 1:5), PCsToInclude=paste0("PC", 1:10), fileName=NULL) {
+comparePCHeatmap <- function(rsScores, PCsToRankBy=paste0("PC", 1:5), 
+                             PCsToInclude=paste0("PC", 1:10), fileName=NULL) {
     rsEnrichment <- rsScores
     
     if (!is.null(fileName)) {
-        grDevices::pdf(file = fileName, width = 11, height = 8.5 * length(PCsToRankBy))
+        grDevices::pdf(file = fileName, 
+                       width = 11, 
+                       height = 8.5 * length(PCsToRankBy))
         grid.newpage()
         for (i in seq_along(PCsToRankBy)) {
-            multiHM <- grid.grabExpr(draw(rsScoreHeatmap(rsScores = rsEnrichment, PCsToAnnotate = PCsToInclude,
-                                                         orderByPC = PCsToRankBy[i], rsNameCol = "rsName", topX = 40)))
+            multiHM <- grid.grabExpr(draw(rsScoreHeatmap(rsScores = rsEnrichment, 
+                                                         PCsToAnnotate = PCsToInclude,
+                                                         orderByPC = PCsToRankBy[i], 
+                                                         rsNameCol = "rsName", 
+                                                         topX = 40)))
             
             pushViewport(viewport(y = unit((8.5*length(PCsToRankBy))-(i-1)*8.5, "in"), height = unit(8, "in"), just = "top"))
             grid.draw(multiHM)
@@ -196,7 +217,6 @@ comparePCHeatmap <- function(rsScores, PCsToRankBy=paste0("PC", 1:5), PCsToInclu
 #' the same biological annotation).
 #' @param orderByPC PC to order samples by (order rows of heatmap by PC score, 
 #' from high to low score)
-#' REMOVE: rsInd 
 #' @param topXRegions max number of regions to plot, avoids excessively large 
 #' plots which can be hard to load. Number of regions on plot will be less
 #' than or equal to topXRegions (less than if there are not that many regions
@@ -310,8 +330,11 @@ methylAlongPC <- function (loadingMat, loadingThreshold,
 #' @param rsNames
 #' @param PCsToAnnotate A character vector with principal components to 
 #' include. eg c("PC1", "PC2")
-#' @param maxRegionsToPlot
-#' @param cluster_rows
+#' @param maxRegionsToPlot how many top regions from region set to include
+#' in heatmap. Including too many may slow down computation and increase memory
+#' use.
+#' @param cluster_rows Boolean, whether to cluster rows or not (may 
+#' increase computation time significantly for large number of rows)
 #' 
 regionQuantileByPC <- function(loadingMat, mCoord, GRList, 
                                rsNames, PCsToAnnotate=paste0("PC", 1:5),
@@ -328,7 +351,6 @@ regionQuantileByPC <- function(loadingMat, mCoord, GRList,
     
     for (i in seq_along(GRList)) { # loop through top region sets
         
-        # rsIndex <- sort.int(rsEnrichment$PC2, index.return = TRUE, decreasing = TRUE)$ix[6]
         regionSet <- GRList[[i]]
         
     

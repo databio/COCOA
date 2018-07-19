@@ -6,7 +6,7 @@
 A visualization of the enrichment data.table.}
 \usage{
 rsScoreHeatmap(rsScores, PCsToAnnotate = paste0("PC", 1:5),
-  orderByPC = "PC1", rsNameCol = "rsNames", topX = 20)
+  orderByPC = "PC1", rsNameCol = "rsName", topX = 20)
 }
 \arguments{
 \item{rsScores}{a data.table with scores for each 
@@ -19,6 +19,12 @@ region sets used to create it.)}
 include. eg c("PC1", "PC2")}
 
 \item{orderByPC}{PC to order by (decreasing order) in heatmap}
+
+\item{rsNameCol}{character. Name of the column in rsScores that has the
+names/identifiers for the region sets so this information can be included 
+in the plot.}
+
+\item{topX}{Number of top region sets to include in the heatmap}
 }
 \description{
 Heatmap of enrichment scores across PCs

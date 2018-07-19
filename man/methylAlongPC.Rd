@@ -37,8 +37,7 @@ a distinct region set (regions that correspond to
 the same biological annotation).}
 
 \item{orderByPC}{PC to order samples by (order rows of heatmap by PC score, 
-from high to low score)
-REMOVE: rsInd}
+from high to low score)}
 
 \item{topXRegions}{max number of regions to plot, avoids excessively large 
 plots which can be hard to load. Number of regions on plot will be less
