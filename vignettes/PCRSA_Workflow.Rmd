@@ -1,13 +1,13 @@
 ---
-    title: "PCRSA Workflow"
+title: "PCRSA Workflow"
 author: "John Lawson"
 date: "`r Sys.Date()`"
 output: 
-    BiocStyle::html_document
+  BiocStyle::html_document
 vignette: >
-    %\VignetteIndexEntry{PCRSA Workflow}
-%\VignetteEngine{knitr::rmarkdown}
-%\VignetteEncoding{UTF-8}
+  %\VignetteIndexEntry{PCRSA Workflow}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 ---
     
     
