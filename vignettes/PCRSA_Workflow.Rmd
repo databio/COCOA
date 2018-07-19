@@ -18,6 +18,7 @@ large objects in memory.
 # Inputs
 
 1. PCA loadings (prcomp()$rotation).
+2. Genomic coordinates associated with PCA loadings.
 2. Region sets (normally a database of region sets).
 
 To begin, let's load the necessary packages:
@@ -30,7 +31,7 @@ library(GenomicRanges)
 library(ggplot2)
 ```
 
-## Input 1: PCA Results
+## Input 1: PCA Loadings and Genomic Coordinates
 
 First, we need the results from PCA of the DNA methylation data. We will also need the genomic coordinates for each cytosine in the DNA methylation data. As one way of doing this, we could store the methlylation level matrix and the coordinates as items in a named list called "methylData". The first item in the list -- "coordinates" -- would be a GRanges object with coordinates for the cytosines (or alternatively a data.frame with "chr" and "start" columns). The second item in the list -- "methylProp" -- would be a matrix of the methylation levels, with cytosines as rows (same order as "coordinates") and samples as columns. We will assume that structure for the following code.   
 
@@ -45,7 +46,7 @@ mPCA = prcomp(x = t(methylData$methylProp), center = TRUE, scale. = FALSE)
 
 Besides the PCA results, we need region sets. Normally we should use PCRSA with a large collection of region sets. The collection of region sets can come from anywhere but we will use the LOLA region set databases which include region sets from public sources such as the ENCODE, Roadmap Epigenomics, and Cistrome Projects. Documentation on LOLA here: (http://bioconductor.org/packages/release/bioc/html/LOLA.html). Let's load the LOLA databases (this may take a minute): 
     
-    ```{r, eval=FALSE, message=FALSE, warning=FALSE}
+```{r, eval=FALSE, message=FALSE, warning=FALSE}
 # reading in the region sets
 # load LOLA database
 lolaPath <- paste0("path/to/LOLACore/genomeVersion/") 
