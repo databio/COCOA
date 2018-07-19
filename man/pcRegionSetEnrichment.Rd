@@ -36,13 +36,27 @@ ranking large region sets highly.}
 \value{
 data.frame of results, one row for each region set. 
 One column for each PC in PCsToAnnotate
-with average loading score for that PC for a given region set. 
-rsName column has region set name.
-rsDescription has a description for each region set. 
-column has number of cytosines that overlapped with the given region set.
-column has number of regions that overlapped with any cytosines.
-column has total number of regions.
+with score for that PC for a given region set (specific score depends
+on "scoringMetric" parameter). 
+Rows will be in the same order as region sets in GRList 
+and will be named if GRList was named
+"cytosine_coverage" column has number of cytosines that 
+overlapped with the given region set.
+"region_coverage" column has number of regions 
+that overlapped with any cytosines.
+"total_region_number" column has total number of regions. 
+"mean_region_size" has average region size (average of all regions,
+not just those that overlap a cytosine).
 }
 \description{
 Do PCRSA for many region sets
+}
+\examples{
+data("brcaCoord1")
+data("brcaLoadings1")
+data("esr1_chr1")
+data("nrf1_chr1")
+GRList = GRangesList(esr1_chr1, nrf1_chr1)
+pcRegionSetEnrichment(loadingMat=brcaLoadings1, mCoord=brcaCoord1, GRList=GRList, PCsToAnnotate=c("PC1", "PC2"), scoringMetric="raw")
+
 }

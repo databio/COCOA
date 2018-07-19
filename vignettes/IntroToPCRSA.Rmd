@@ -16,11 +16,10 @@ This vignette begins after PCA has been performed on DNA methlyation data.
 # Inputs
 
 1. PCA loadings (prcomp()$rotation).
-2. Region sets (normally a database of region sets).
+2. Genomic coordinates associated with PCA loadings.
+3. Region sets (normally a database of region sets).
 
-In this vignette, we will use a small number of region sets to demonstrate
-how to use the PCRSA functions. For actual use, PCRSA should be done with
-a large number of region sets.
+PCA loadings were derived from PCA of 450k DNA methylation microarrays for 657 breast cancer patients from The Cancer Genome Atlas (TCGA-BRCA, https://portal.gdc.cancer.gov/). The PCA was done with all autosomal chromosomes but only loadings and coordinates for cytosines in chromosome 1 are included to minimize memory requirements. `brcaLoadings1` has chr1 loadings and corresponding coordinates are in `brcaCoord1`. In this vignette, we will use a small number of region sets to demonstrate how to use the PCRSA functions. For actual use, PCRSA should be done with a large number of region sets. Publicly available collections of region sets can be found online (eg http://databio.org/regiondb).
 
 # Running PCRSA
 
@@ -58,7 +57,7 @@ rsEnrichment$rsName = rsName
 ```
 
 We can see whether variability along the PC is specific to the region of 
-interest by comparing it to the surrounding genome. To do this we will 
+interest by comparing the region of interest to the surrounding genome. To do this we will 
 calculate the average loadings of a wide area surrounding the regions of interest.
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}

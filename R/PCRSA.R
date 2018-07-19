@@ -352,6 +352,13 @@ pcEnrichmentProfile = function(loadingMat, mCoord, GRList,
     # should be GRangesList
     if (is(GRList, "GRanges")) {
         GRList <- GRangesList(GRList)
+    } else if (is(GRList, "list")) {
+        #making sure each list item is a GRanges object
+        if (all(sapply(X = GRList, function(x) is(x, "GRanges")))) {
+            GRList <- GRangesList(GRList)
+        } else {
+            stop("GRList should be a GRanges or GRangesList object.")
+        }
     } else if (!is(GRList, "GRangesList")) {
         stop("GRList should be a GRanges or GRangesList object.")
     } 
@@ -710,9 +717,9 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL.length = NU
     
     # Assert that regionsGRL is a GRL.
     # If regionsGRL is given as a GRanges, we convert to GRL
-    if( "GRanges" %in% class(regionsGRL)) {
+    if(is(regionsGRL, "GRanges")) {
         regionsGRL <- GRangesList(regionsGRL)
-    } else if (! "GRangesList" %in% class(regionsGRL)) {
+    } else if (!is(regionsGRL, "GRangesList")) {
         stop("regionsGRL is not a GRanges or GRangesList object")
     }
     
@@ -1200,10 +1207,10 @@ BSAggregate_RGenomeUtils = function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL
     
     # Assert that regionsGRL is a GRL.
     # If regionsGRL is given as a GRanges, we convert to GRL
-    if( "GRanges" %in% class(regionsGRL)) {
-        regionsGRL <- GRangesList(regionsGRL)
-    } else if (! "GRangesList" %in% class(regionsGRL)) {
-        stop("regionsGRL is not a GRanges or GRangesList object")
+    if (is(regionsGRL, "GRanges")) {
+        regionsGRL <- GRangesList(regionsGRL);
+    } else if (!is(regionsGRL, "GRangesList")) {
+        stop("regionsGRL is not a GRanges or GRangesList object");
     }
     
     if(! is.null(excludeGR)) {

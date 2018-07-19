@@ -44,3 +44,11 @@ of cytosines with high loading values in region set but not in
 surrounding genome. All regions in a given region set 
 are combined into a single aggregate profile.
 }
+\examples{
+data("brcaCoord1")
+data("brcaLoadings1")
+data("esr1_chr1")
+data("nrf1_chr1")
+GRList = GRangesList(esr1_chr1, nrf1_chr1)
+pcEnrichmentProfile(loadingMat=brcaLoadings1, mCoord=brcaCoord1, GRList=GRList, PCsToAnnotate=c("PC1", "PC2"), binNum=25)
+}

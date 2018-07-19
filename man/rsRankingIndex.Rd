@@ -23,7 +23,7 @@ region sets used to create it.)}
 the indices of the original region sets}
 }
 \value{
-A data.table with columns PCsToAnnotate. Each column has been 
+A data.frame with columns PCsToAnnotate. Each column has been 
 ranked by enrichment score for region sets for that PC.
 Original indices for region sets that were used to create rsScores
 are given.
