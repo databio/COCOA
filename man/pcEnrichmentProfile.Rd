@@ -8,7 +8,7 @@ surrounding genome. All regions in a given region set
 are combined into a single aggregate profile.}
 \usage{
 pcEnrichmentProfile(loadingMat, mCoord, GRList, PCsToAnnotate = c("PC1",
-  "PC2"), binNum = 25)
+  "PC2"), binNum = 25, verbose = TRUE)
 }
 \arguments{
 \item{loadingMat}{matrix of loadings (the coefficients of 
@@ -32,6 +32,9 @@ include. eg c("PC1", "PC2")}
 \item{binNum}{Number of bins to split the regions into when
 making the aggregate loading profile. More bins will
 give a higher resolution but perhaps more noisy profile.}
+
+\item{verbose}{A boolean. Whether progress of the function should be shown, one
+bar for each region set completed.}
 }
 \value{
 A list of data.tables each data.table for

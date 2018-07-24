@@ -5,7 +5,7 @@
 \title{Do PCRSA for many region sets}
 \usage{
 pcRegionSetEnrichment(loadingMat, mCoord, GRList, PCsToAnnotate = c("PC1",
-  "PC2"), scoringMetric = "raw")
+  "PC2"), scoringMetric = "raw", verbose = TRUE)
 }
 \arguments{
 \item{loadingMat}{matrix of loadings (the coefficients of 
@@ -32,6 +32,9 @@ average of the loading values with no normalization (recommended). With
  region sets with low number of regions.
 Mean difference ("meanDiff") is also supported but is skewed toward 
 ranking large region sets highly.}
+
+\item{verbose}{A boolean. Whether progress of the function should be shown, one
+bar for each region set completed.}
 }
 \value{
 data.frame of results, one row for each region set. 

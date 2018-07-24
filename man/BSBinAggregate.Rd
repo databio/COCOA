@@ -5,7 +5,8 @@
 \title{Produced originally for binning Ewing RRBS data across various region sets}
 \usage{
 BSBinAggregate(BSDT, rangeDT, binCount, minReads = 500,
-  byRegionGroup = TRUE, splitFactor = NULL, PCsToAnnotate = PCsToAnnotate)
+  byRegionGroup = TRUE, splitFactor = NULL, PCsToAnnotate = PCsToAnnotate,
+  verbose = FALSE)
 }
 \arguments{
 \item{rangeDT}{A data table with the sets of regions to be binned, 
@@ -16,6 +17,10 @@ with columns named start, end}
 \item{minReads}{Filter out bins with fewer than X reads before returning.}
 
 \item{byRegionGroup}{Pass along to binCount (see ?binCount)}
+
+\item{verbose}{A boolean. Whether progress of the function should be shown, one
+bar indicates the region set is completed. Useful when using 
+BSBinAggregate with 'apply' to do many region sets at a time.}
 }
 \description{
 Produced originally for binning Ewing RRBS data across various region sets

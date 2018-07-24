@@ -6,7 +6,7 @@
 and then get p value for each PC based on a permutation}
 \usage{
 aggregateLoadings(loadingMat, mCoord, regionSet, PCsToAnnotate = c("PC1",
-  "PC2"), metric = "raw", pcLoadAv = NULL)
+  "PC2"), metric = "raw", pcLoadAv = NULL, verbose = FALSE)
 }
 \arguments{
 \item{loadingMat}{matrix of loadings (the coefficients of 
@@ -32,6 +32,10 @@ ranking large region sets highly.}
 
 \item{pcLoadAv}{The average absolute loading value for each PC. Will
 significantly speed up computation if this is given.}
+
+\item{verbose}{A boolean. Whether progress of the function should be shown, one
+bar indicates the region set is completed. Useful when using 
+aggregateLoadings with 'apply' to do many region sets at a time.}
 }
 \value{
 

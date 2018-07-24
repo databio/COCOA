@@ -33,6 +33,7 @@
 #' from high to low score)
 #' @param ... optional parameters for ComplexHeatmap::Heatmap()
 #  library(ComplexHeatmap)
+#'@return A heatmap of DNA methylation levels in regions of interest (regionSet).
 #'
 rsMethylHeatmap <- function(methylData, mCoord, regionSet, 
                             pcScores, orderByPC="PC1", ...) {
@@ -78,7 +79,7 @@ rsMethylHeatmap <- function(methylData, mCoord, regionSet,
 
 
 #' Heatmap of enrichment scores across PCs
-#' A visualization of the enrichment data.table.
+#' A visualization of the enrichment data.frame.
 #' 
 #' @param rsScores a data.table with scores for each 
 #' region set from main PCRSA function. 
@@ -92,6 +93,9 @@ rsMethylHeatmap <- function(methylData, mCoord, regionSet,
 #' names/identifiers for the region sets so this information can be included 
 #' in the plot.
 #' @param topX Number of top region sets to include in the heatmap
+#' @return A heatmap of region set scores across. Each row is a region set,
+#' each column is a PC. The color corresponds to a region set's relative
+#' rank for a given PC out of all tested region sets.
 #
 # @examples scoreHeatmap <- rsScoreHeatmap(rsScores, 
 #           PCsToAnnotate=paste0("PC", 1:10), orderByPC = "PC2")

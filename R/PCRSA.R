@@ -73,11 +73,16 @@ if (getRversion() >= "2.15.1") {
 #' ranking large region sets highly.
 #' @param pcLoadAv The average absolute loading value for each PC. Will
 #' significantly speed up computation if this is given.
+#' @param verbose A boolean. Whether progress of the function should be shown, one
+#' bar indicates the region set is completed. Useful when using 
+#' aggregateLoadings with 'apply' to do many region sets at a time.
+
 #' @return
 #' 
 
 aggregateLoadings <- function(loadingMat, mCoord, regionSet, 
-                  PCsToAnnotate = c("PC1", "PC2"), metric="raw", pcLoadAv=NULL) {
+                  PCsToAnnotate = c("PC1", "PC2"), metric="raw", pcLoadAv=NULL,
+                  verbose=FALSE) {
     # UPDATE: take out permutations
     permute <- FALSE
     
@@ -212,7 +217,9 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
     
     
     # cpgOLMetrics() # make sure it works with no overlap
-    
+    if (verbose) {
+        message("|")
+    }
         
         return(results)
     }
@@ -241,6 +248,8 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
 #'  region sets with low number of regions.
 #' Mean difference ("meanDiff") is also supported but is skewed toward 
 #' ranking large region sets highly.
+#' @param verbose A boolean. Whether progress of the function should be shown, one
+#' bar for each region set completed.
 #' @return data.frame of results, one row for each region set. 
 #' One column for each PC in PCsToAnnotate
 #' with score for that PC for a given region set (specific score depends
@@ -267,7 +276,12 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
 #' @export
 
 pcRegionSetEnrichment <- function(loadingMat, mCoord, GRList, 
-                  PCsToAnnotate = c("PC1", "PC2"), scoringMetric = "raw") {
+                  PCsToAnnotate = c("PC1", "PC2"), scoringMetric = "raw",
+                  verbose=TRUE) {
+    
+    if (!(any(c(is(loadingMat, "matrix"), is(loadingMat, "data.frame"))))) {
+        warning("loadingMat should be a matrix or data.frame.")
+    }
  
     if (is(mCoord, "GRanges")) {
         coordinateDT <- grToDt(mCoord)
@@ -291,7 +305,8 @@ pcRegionSetEnrichment <- function(loadingMat, mCoord, GRList,
                                                             mCoord=coordinateDT, 
                                                             regionSet=x, 
                                                             PCsToAnnotate = PCsToAnnotate,
-                                                            metric = scoringMetric))
+                                                            metric = scoringMetric, 
+                                                            verbose=verbose))
     resultsDT <- do.call(rbind, resultsList) 
     row.names(resultsDT) <- row.names(GRList)
     
@@ -323,7 +338,9 @@ pcRegionSetEnrichment <- function(loadingMat, mCoord, GRList,
 #' include. eg c("PC1", "PC2")
 #' @param binNum Number of bins to split the regions into when
 #' making the aggregate loading profile. More bins will
-#' give a higher resolution but perhaps more noisy profile. 
+#' give a higher resolution but perhaps more noisy profile.
+#' @param verbose A boolean. Whether progress of the function should be shown, one
+#' bar for each region set completed. 
 #' @return A list of data.tables each data.table for
 #' a separate region set. The data table has the binned loading profile,
 #' one row per bin.
@@ -338,7 +355,12 @@ pcRegionSetEnrichment <- function(loadingMat, mCoord, GRList,
 #' @export
 
 pcEnrichmentProfile = function(loadingMat, mCoord, GRList,
-                    PCsToAnnotate = c("PC1", "PC2"), binNum = 25) {
+                    PCsToAnnotate = c("PC1", "PC2"), binNum = 25,
+                    verbose=TRUE) {
+    
+    if (!(any(c(is(loadingMat, "matrix"), is(loadingMat, "data.frame"))))) {
+        warning("loadingMat should be a matrix or data.frame.")
+    }
     
     # checks for correct input
     if (is(mCoord, "GRanges")) {
@@ -400,17 +422,20 @@ makeSymmetric <- function(prof) {
 #' @param binCount Number of bins across the region
 #' @param byRegionGroup Pass along to binCount (see ?binCount)
 #' @param minReads Filter out bins with fewer than X reads before returning.
+#' @param verbose A boolean. Whether progress of the function should be shown, one
+#' bar indicates the region set is completed. Useful when using 
+#' BSBinAggregate with 'apply' to do many region sets at a time.
 BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500, 
                           byRegionGroup = TRUE, 
                           splitFactor = NULL,
-                          PCsToAnnotate=PCsToAnnotate) {
+                          PCsToAnnotate=PCsToAnnotate, verbose=FALSE) {
     if (! "data.table" %in% class(rangeDT)) {
     stop("rangeDT must be a data.table")
 }
     seqnamesColName <- "seqnames"  # default column name
     if (! "seqnames" %in% colnames(rangeDT)) {
         if ("chr" %in% colnames(rangeDT)) {
-            message("seqnames column name set to: chr")
+            # message("seqnames column name set to: chr")
             seqnamesColName <- "chr"
         } else {
             # Got neither.
@@ -418,10 +443,10 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
         }
     }
     
-    message("Binning...")
+    # message("Binning...")
     binnedDT <- rangeDT[, MIRA::binRegion(start, end, binCount, get(seqnamesColName))]
     binnedGR <- sapply(split(binnedDT, binnedDT$binID), dtToGr)
-    message("Aggregating...")
+    # message("Aggregating...")
     
     # RGenomeUtils::BSAggregate
     binnedBSDT <- BSAggregate_RGenomeUtils(BSDT, 
@@ -433,6 +458,10 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
     # if (byRegionGroup) {
     #     binnedBSDT <- binnedBSDT[readCount > minReads,]
     # }
+    if (verbose) {
+        message("|")
+    }
+    
     return(binnedBSDT)
 }
 
@@ -516,11 +545,11 @@ averageByRegion <- function(loadingMat, mCoord, regionSet, PCsToAnnotate = c("PC
     regionsGR <- unlist(regionsGRL)
     
     if (is.null(regionsGRL.length)) {
-        if (length(regionsGRL) > 100) {
-            message(cleanws("BSAggregate: Calculating sizes. You can speed this
-                            up by supplying a regionsGRL.length vector..."),
-                    appendLF = FALSE)
-        }
+        # if (length(regionsGRL) > 100) {
+        #     message(cleanws("BSAggregate: Calculating sizes. You can speed this
+        #                     up by supplying a regionsGRL.length vector..."),
+        #             appendLF = FALSE)
+        # }
         regionsGRL.length <- sapply(regionsGRL, length)
         # message("Done counting regionsGRL lengths.");
     }
@@ -745,11 +774,11 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL.length = NU
     regionsGR <- unlist(regionsGRL)
     
     if(is.null(regionsGRL.length)) {
-        if (length(regionsGRL) > 100) {
-            message("BSAggregate: Calculating sizes. You can speed this up by supplying a regionsGRL.length vector...", appendLF=FALSE)
-        }
+        # if (length(regionsGRL) > 100) {
+        #     message("BSAggregate: Calculating sizes. You can speed this up by supplying a regionsGRL.length vector...", appendLF=FALSE)
+        # }
         regionsGRL.length <- sapply(regionsGRL, length)
-        message("Done counting regionsGRL lengths.")
+        # message("Done counting regionsGRL lengths.")
     }
     
     # Build a table to keep track of which regions belong to which group
@@ -763,7 +792,7 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL.length = NU
     setkey(region2group, regionID)
     
     
-    message("Finding overlaps...")
+    # message("Finding overlaps...")
     fo <- findOverlaps(query = bsgr[[1]], subject = regionsGR)
     
     ### use info from findOverlaps to see how many individual
@@ -776,7 +805,7 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL.length = NU
     # Gut check:
     # stopifnot(all(elementMetadata(bsgr[[1]])$readCount == BSDT$readCount))
     
-    message("Setting regionIDs...")
+    # message("Setting regionIDs...")
     BSDT <- BSDT[queryHits(fo),] #restrict the table to CpGs in any region.
     
     if (NROW(BSDT) < 1) {
@@ -795,7 +824,7 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL.length = NU
         funcs <- c(rep("sum", length(sumCols)), rep("unique", length(keepCols)))
         jExpr <- buildJ(cols, funcs)
     }
-    message("jExpr: ", jExpr)
+    # message("jExpr: ", jExpr)
     
     # Define aggregation column. aggregate by region or by region group?
     if (byRegionGroup) {
@@ -812,7 +841,7 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL.length = NU
     }
     
     # Now actually do the aggregate:
-    message("Combining...")
+    # message("Combining...")
     bsCombined <- BSDT[,eval(parse(text=jExpr)), by=eval(parse(text=byString))]
     setkey(bsCombined, regionID)
     # Now aggregate across groups.
@@ -1235,11 +1264,11 @@ BSAggregate_RGenomeUtils = function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL
     regionsGR <- unlist(regionsGRL)
     
     if(is.null(regionsGRL.length)) {
-        if (length(regionsGRL) > 100) {
-            message("BSAggregate: Calculating sizes. You can speed this up by supplying a regionsGRL.length vector...", appendLF=FALSE)
-        }
+        # if (length(regionsGRL) > 100) {
+        #     message("BSAggregate: Calculating sizes. You can speed this up by supplying a regionsGRL.length vector...", appendLF=FALSE)
+        # }
         regionsGRL.length <- sapply(regionsGRL, length)
-        message("Done counting regionsGRL lengths.")
+        # message("Done counting regionsGRL lengths.")
     }
     
     # Build a table to keep track of which regions belong to which group
@@ -1253,14 +1282,14 @@ BSAggregate_RGenomeUtils = function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL
     setkey(region2group, regionID)
     
     
-    message("Finding overlaps...")
+    # message("Finding overlaps...")
     fo <- findOverlaps(bsgr[[1]], regionsGR)
     
     setkey(BSDT, chr, start)
     # Gut check:
     # stopifnot(all(elementMetadata(bsgr[[1]])$readCount == BSDT$readCount))
     
-    message("Setting regionIDs...")
+    # message("Setting regionIDs...")
     BSDT <- BSDT[queryHits(fo),] #restrict the table to CpGs in any region.
     
     if (NROW(BSDT) < 1) {
@@ -1279,7 +1308,7 @@ BSAggregate_RGenomeUtils = function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL
         funcs <- c(rep("sum", length(sumCols)), rep("unique", length(keepCols)))
         jExpr <- buildJ(cols, funcs)
     }
-    message("jExpr: ", jExpr)
+    # message("jExpr: ", jExpr)
     
     # Define aggregation column. aggregate by region or by region group?
     if (byRegionGroup) {
@@ -1296,7 +1325,7 @@ BSAggregate_RGenomeUtils = function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL
     }
     
     # Now actually do the aggregate:
-    message("Combining...")
+    # message("Combining...")
     bsCombined <- BSDT[,eval(parse(text=jExpr)), by=eval(parse(text=byString))]
     setkey(bsCombined, regionID)
     # Now aggregate across groups.
