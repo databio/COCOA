@@ -22,6 +22,9 @@ and end should be the same. Start coordinate will be used for calculations.}
 \item{regionSet}{A GRanges object with regions corresponding
 to the same biological annotation.}
 
+\item{PCsToAnnotate}{A character vector with principal components to 
+include. eg c("PC1", "PC2")}
+
 \item{returnQuantile}{Boolean. If FALSE, return region averages. If TRUE,
 for each region, return the quantile of that region's average value
 based on the distribution of individual cytosine values}

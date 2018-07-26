@@ -6,7 +6,7 @@
 can cytosines from a region set reproduce PC ordering and how high is 
 the correlation of original PCs with ordering from subset of cytosines?}
 \usage{
-pcFromSubset(regionSet, mPCA, methylData, mCoord, PCofInterest = "PC1",
+pcFromSubset(regionSet, mPCA, methylData, mCoord, pc = "PC1",
   returnCor = FALSE)
 }
 \arguments{
@@ -28,12 +28,12 @@ same order as the methylation data and loadings. If a data.frame,
 must have chr and start columns. If end is included, start 
 and end should be the same. Start coordinate will be used for calculations.}
 
-\item{returnCor}{Option to return correlation between these scores and
-original PC scores.}
-
 \item{pc}{A character object with PCs of interest (eg "PC1"). Loadings from
 this PC will be used to generate new PC scores based on only loadings
 that overlap with regionSet. Can be multiple PCs.}
+
+\item{returnCor}{Option to return correlation between these scores and
+original PC scores.}
 }
 \value{
 a score for each patient from only loading values for cytosines in 

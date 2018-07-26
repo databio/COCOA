@@ -514,6 +514,8 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
 #' and end should be the same. Start coordinate will be used for calculations.
 #' @param regionSet A GRanges object with regions corresponding
 #' to the same biological annotation.
+#' @param PCsToAnnotate A character vector with principal components to 
+#' include. eg c("PC1", "PC2")
 #' @param returnQuantile Boolean. If FALSE, return region averages. If TRUE,
 #' for each region, return the quantile of that region's average value
 #' based on the distribution of individual cytosine values
@@ -948,7 +950,7 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL.length = NU
 #' 
 
 pcFromSubset <- function(regionSet, mPCA, methylData, mCoord, 
-                         PCofInterest="PC1", returnCor=FALSE) {
+                         pc="PC1", returnCor=FALSE) {
     
     # test for appropriateness of inputs/right format
     if (is(mCoord, "GRanges")) {
