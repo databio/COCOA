@@ -33,8 +33,9 @@ average of the loading values with no normalization (recommended). With
 Mean difference ("meanDiff") is also supported but is skewed toward 
 ranking large region sets highly.}
 
-\item{verbose}{A boolean. Whether progress of the function should be shown, one
-bar for each region set completed.}
+\item{verbose}{A boolean. Whether progress 
+of the function should be shown, one
+bar indicates the region set is completed.}
 }
 \value{
 data.frame of results, one row for each region set. 
@@ -59,7 +60,9 @@ data("brcaCoord1")
 data("brcaLoadings1")
 data("esr1_chr1")
 data("nrf1_chr1")
-GRList = GRangesList(esr1_chr1, nrf1_chr1)
-pcRegionSetEnrichment(loadingMat=brcaLoadings1, mCoord=brcaCoord1, GRList=GRList, PCsToAnnotate=c("PC1", "PC2"), scoringMetric="raw")
+GRList = GenomicRanges::GRangesList(esr1_chr1, nrf1_chr1)
+pcRegionSetEnrichment(loadingMat=brcaLoadings1, mCoord=brcaCoord1, 
+                      GRList=GRList, PCsToAnnotate=c("PC1", "PC2"), 
+                      scoringMetric="raw")
 
 }

@@ -2,8 +2,7 @@
 % Please edit documentation in R/PCRSA.R
 \name{averageByRegion}
 \alias{averageByRegion}
-\title{modification of BSAggregate to just return mean per region
-averageByRegion(BSDT = BSDT, regionsGRL, jCommand = MIRA:::buildJ(cols = "methylProp", "mean"))}
+\title{modification of BSAggregate to just return mean per region}
 \usage{
 averageByRegion(loadingMat, mCoord, regionSet, PCsToAnnotate = c("PC1",
   "PC2"), returnQuantile = FALSE)
@@ -22,6 +21,10 @@ and end should be the same. Start coordinate will be used for calculations.}
 
 \item{regionSet}{A GRanges object with regions corresponding
 to the same biological annotation.}
+
+\item{returnQuantile}{Boolean. If FALSE, return region averages. If TRUE,
+for each region, return the quantile of that region's average value
+based on the distribution of individual cytosine values}
 }
 \value{
 a data.table with region coordinates and average loading 
@@ -30,5 +33,4 @@ PC in PCsToAnnotate. Regions are not in order along the rows of the data.table.
 }
 \description{
 modification of BSAggregate to just return mean per region
-averageByRegion(BSDT = BSDT, regionsGRL, jCommand = MIRA:::buildJ(cols = "methylProp", "mean"))
 }

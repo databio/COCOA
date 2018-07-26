@@ -25,7 +25,8 @@
 #' same order as the methylation data and loadings. If a data.frame, 
 #' must have chr and start columns. If end is included, start 
 #' and end should be the same. Start coordinate will be used for calculations.
-#' @param regionSet 
+#' @param regionSet A genomic ranges object with regions corresponding
+#' to the same biological annotation.
 #' @param pcScores The principal component scores for the samples 
 #' (ie transformed methylation data). Must have subject_ID as row names,
 #' These same subject_IDs must be column names of methylData
@@ -33,7 +34,7 @@
 #' from high to low score)
 #' @param ... optional parameters for ComplexHeatmap::Heatmap()
 #  library(ComplexHeatmap)
-#'@return A heatmap of DNA methylation levels in regions of interest (regionSet).
+#' @return A heatmap of DNA methylation levels in regions of interest (regionSet).
 #'
 rsMethylHeatmap <- function(methylData, mCoord, regionSet, 
                             pcScores, orderByPC="PC1", ...) {
@@ -157,8 +158,12 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
 #' region sets used to create it.)
 #' @param PCsToRankBy PC to order by (decreasing order) in heatmap. One 
 #' heatmap for each PC in PCsToRankBy. 
-#' @param PCsToInclude
-#' @param fileName
+#' @param PCsToInclude A character vector with names of PCs that 
+#' should be present in the heatmap.
+#' @param fileName A character vector. All plots from this function will
+#' be saved to a single pdf. fileName should give the name of that file.
+#' By default, it will be saved in the working directory but filename
+#' can also include the a file path to save the plot in another directory
 #' 
 #' # see https://github.com/jokergoo/ComplexHeatmap/issues/110
 #' 
@@ -178,7 +183,9 @@ comparePCHeatmap <- function(rsScores, PCsToRankBy=paste0("PC", 1:5),
                                                          rsNameCol = "rsName", 
                                                          topX = 40)))
             
-            pushViewport(viewport(y = unit((8.5*length(PCsToRankBy))-(i-1)*8.5, "in"), height = unit(8, "in"), just = "top"))
+            pushViewport(viewport(y = unit((8.5 * length(PCsToRankBy)) -
+                                               (i - 1) * 8.5, "in"), 
+                                  height = unit(8, "in"), just = "top"))
             grid.draw(multiHM)
             popViewport()
         }
@@ -270,10 +277,15 @@ methylAlongPC <- function (loadingMat, loadingThreshold,
         #if (!is.null(regionLoadAv)) {
             
             # find threshold for these loadings
-            loadingXPerc <- quantile(abs(loadingMat[, orderByPC]), loadingThreshold)
+            loadingXPerc <- quantile(abs(loadingMat[, orderByPC]), 
+                                     loadingThreshold)
             
             # hist(loadingMat[, "PC1"])
-            highVariable <- regionLoadAv[get(orderByPC) > loadingXPerc, .(chr, start, end, score=get(orderByPC))]
+            highVariable <- regionLoadAv[get(orderByPC) > loadingXPerc, 
+                                         .(chr, 
+                                           start, 
+                                           end, 
+                                           score=get(orderByPC))]
             
             # reducing to top X regions so plot won't be too large
             if (nrow(highVariable) > topXRegions) {
@@ -295,17 +307,17 @@ methylAlongPC <- function (loadingMat, loadingThreshold,
                                                              coordGR = dtToGr(coordinateDT), 
                                                              regionSet = regionSet, 
                                                              pcScores = pcScores, 
-                                                             pc = orderByPC, column_title= regionSetName))) # use_raster=TRUE, raster_device="jpeg")
-                pushViewport(viewport(y = unit((8.5*nRSToPlot)-(i-1)*8.5, "in"), height = unit(8, "in"), just = "top"))
+                                                             pc = orderByPC, 
+                                                             column_title= regionSetName))) # use_raster=TRUE, raster_device="jpeg")
+                pushViewport(viewport(y = unit((8.5 * nRSToPlot) - 
+                                                   (i - 1) * 8.5, "in"), 
+                                      height = unit(8, "in"), 
+                                      just = "top"))
                 grid.draw(multiHM)
                 popViewport()
-                # 
-                #                 name = paste0(pc1$rsDescription[i], " : ", pc1$rsName[i]), 
-                #                 column_title = paste0(pc1$rsDescription[i], " : ", pc1$rsName[i]),
-                #                 column_title_side = "top",
-                #                 column_title_gp = gpar(fontsize = 14))
-                #                 # column_title = paste0(pc1$rsDescription[i], " : ", pc1$rsName[i]))
-            
+                # column_title = paste0(pc1$rsDescription[i], " : ", pc1$rsName[i]),
+                # column_title_side = "top",
+                # column_title_gp = gpar(fontsize = 14))
             
             
         }
@@ -331,7 +343,8 @@ methylAlongPC <- function (loadingMat, loadingThreshold,
 #' @param GRList GRangesList object. Each list item is 
 #' a distinct region set (regions that correspond to 
 #' the same biological annotation).
-#' @param rsNames
+#' @param rsNames character vector. Names of the region sets in the same
+#' order as GRList. For use as a title for each heatmap.
 #' @param PCsToAnnotate A character vector with principal components to 
 #' include. eg c("PC1", "PC2")
 #' @param maxRegionsToPlot how many top regions from region set to include
@@ -358,10 +371,13 @@ regionQuantileByPC <- function(loadingMat, mCoord, GRList,
         regionSet <- GRList[[i]]
         
     
-        rsRegionAverage <- averageByRegion(loadingMat = loadingMat, mCoord =coordinateDT, 
-                                          regionSet = regionSet, PCsToAnnotate = PCsToAnnotate,
+        rsRegionAverage <- averageByRegion(loadingMat = loadingMat, 
+                                           mCoord =coordinateDT, 
+                                          regionSet = regionSet, 
+                                          PCsToAnnotate = PCsToAnnotate,
                                           returnQuantile = TRUE)
-        # ranking in terms of percentiles in case there were different distributions of loading scores for each PC
+        # ranking in terms of percentiles in case there were different 
+        # distributions of loading scores for each PC
         
         # if there are too many regions, don't plot because the attempt to cluster
         # will cause a memory error

@@ -23,6 +23,9 @@ and end should be the same. Start coordinate will be used for calculations.}
 \item{regionSet}{A genomic ranges object with regions corresponding
 to the same biological annotation.}
 
+\item{PCsToAnnotate}{A character vector with principal components to 
+include. eg c("PC1", "PC2")}
+
 \item{metric}{Scoring metric. "raw" is a simple
 average of the loading values with no normalization (recommended). With
 "raw" score, be cautious in interpretation for
@@ -33,12 +36,21 @@ ranking large region sets highly.}
 \item{pcLoadAv}{The average absolute loading value for each PC. Will
 significantly speed up computation if this is given.}
 
-\item{verbose}{A boolean. Whether progress of the function should be shown, one
+\item{verbose}{A boolean. Whether progress 
+of the function should be shown, one
 bar indicates the region set is completed. Useful when using 
 aggregateLoadings with 'apply' to do many region sets at a time.}
 }
 \value{
-
+a data.table with one row and the following 
+columns: one column for each item of PCsToAnnotate with name given
+by the item which have scores for each PC, cytosine_coverage which
+has number of cytosines that overlapped with regionSet,
+region_coverage which has number of regions from regionSet
+that overlapped any cytosines, total_region_number that has
+number of regions in regionSet, mean_region_size that has average
+size in base pairs of regions in regionSet, the average is based on
+all regions in regionSet and not just ones that overlap.
 }
 \description{
 Function to aggregate PCA loading weights over a given region set

@@ -33,8 +33,9 @@ include. eg c("PC1", "PC2")}
 making the aggregate loading profile. More bins will
 give a higher resolution but perhaps more noisy profile.}
 
-\item{verbose}{A boolean. Whether progress of the function should be shown, one
-bar for each region set completed.}
+\item{verbose}{A boolean. Whether progress 
+of the function should be shown, one
+bar indicates the region set is completed.}
 }
 \value{
 A list of data.tables each data.table for
@@ -52,6 +53,10 @@ data("brcaCoord1")
 data("brcaLoadings1")
 data("esr1_chr1")
 data("nrf1_chr1")
-GRList = GRangesList(esr1_chr1, nrf1_chr1)
-pcEnrichmentProfile(loadingMat=brcaLoadings1, mCoord=brcaCoord1, GRList=GRList, PCsToAnnotate=c("PC1", "PC2"), binNum=25)
+GRList = GenomicRanges::GRangesList(esr1_chr1, nrf1_chr1)
+pcEnrichmentProfile(loadingMat=brcaLoadings1, 
+                    mCoord=brcaCoord1, 
+                    GRList=GRList, 
+                    PCsToAnnotate=c("PC1", "PC2"), 
+                    binNum=25)
 }

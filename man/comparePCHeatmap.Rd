@@ -18,7 +18,15 @@ region sets used to create it.)}
 \item{PCsToRankBy}{PC to order by (decreasing order) in heatmap. One 
 heatmap for each PC in PCsToRankBy.}
 
-\item{fileName}{# see https://github.com/jokergoo/ComplexHeatmap/issues/110}
+\item{PCsToInclude}{A character vector with names of PCs that 
+should be present in the heatmap.}
+
+\item{fileName}{A character vector. All plots from this function will
+be saved to a single pdf. fileName should give the name of that file.
+By default, it will be saved in the working directory but filename
+can also include the a file path to save the plot in another directory
+
+# see https://github.com/jokergoo/ComplexHeatmap/issues/110}
 }
 \description{
 create pdf with multiple heatmap plots (number = length(PCsToRankBy)). 

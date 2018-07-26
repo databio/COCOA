@@ -25,6 +25,9 @@ and end should be the same. Start coordinate will be used for calculations.}
 a distinct region set (regions that correspond to 
 the same biological annotation).}
 
+\item{rsNames}{character vector. Names of the region sets in the same
+order as GRList. For use as a title for each heatmap.}
+
 \item{PCsToAnnotate}{A character vector with principal components to 
 include. eg c("PC1", "PC2")}
 

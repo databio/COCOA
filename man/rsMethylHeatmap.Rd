@@ -18,7 +18,8 @@ same order as the methylation data and loadings. If a data.frame,
 must have chr and start columns. If end is included, start 
 and end should be the same. Start coordinate will be used for calculations.}
 
-\item{regionSet}{}
+\item{regionSet}{A genomic ranges object with regions corresponding
+to the same biological annotation.}
 
 \item{pcScores}{The principal component scores for the samples 
 (ie transformed methylation data). Must have subject_ID as row names,
@@ -28,6 +29,9 @@ These same subject_IDs must be column names of methylData}
 from high to low score)}
 
 \item{...}{optional parameters for ComplexHeatmap::Heatmap()}
+}
+\value{
+A heatmap of DNA methylation levels in regions of interest (regionSet).
 }
 \description{
 Look at methylation in regions of interest across samples, 

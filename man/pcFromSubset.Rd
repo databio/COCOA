@@ -30,11 +30,15 @@ and end should be the same. Start coordinate will be used for calculations.}
 
 \item{returnCor}{Option to return correlation between these scores and
 original PC scores.}
+
+\item{pc}{A character object with PCs of interest (eg "PC1"). Loadings from
+this PC will be used to generate new PC scores based on only loadings
+that overlap with regionSet. Can be multiple PCs.}
 }
 \value{
 a score for each patient from only loading values for cytosines in 
 regionSet. If returnCor = TRUE, returns a correlation score for scores from
-each PCofInterest with scores from a subset of loading values for that PC.
+each "pc" with scores from a subset of loading values for that PC.
 }
 \description{
 Function to see how representative the cytosines in a region set are:
