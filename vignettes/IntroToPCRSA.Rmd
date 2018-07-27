@@ -10,10 +10,13 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
+# Purpose
 
-This vignette begins after PCA has been performed on DNA methlyation data.
+Principal Component Region Set Analysis (PCRSA) is a method for understanding variation among samples with PCA. PCA reduces dimensions of the data and summarizes important features of data in a new set of dimensions called principal components (PCs). Currently, PCRSA is for understanding DNA methylation data (although it can potentially be used for other types of data like ATACseq). PCA is commonly used for DNA methylation data but the PCs are hard to interpret. PCRSA can annotate PCs with region sets, giving insight into variation in the data. A region set is a set of genomic regions that share a biological annotation. This includes transcription factor (TF) binding regions (eg from ChIP-seq), regions with a certain histone modification (eg ChIP-seq) or chromatin accessibility regions (eg DNase/ATAC-seq). Since DNA methylation can correlate with TF binding and with certain histone modifications, finding a region set to have variation in DNA methylation along the PC axis could also imply functional variation of the TF/histone modification/chromatin accessibility along the PC axis. By annotating PCs with region sets, you can identify meaningful sources of variation in your data, increasing your understanding of the epigenetic variation and the biological entity you are studying.  
 
 # Inputs
+
+This vignette begins after PCA has been performed on DNA methlyation data. There are three main inputs:
 
 1. PCA loadings (prcomp()$rotation).
 2. Genomic coordinates associated with PCA loadings.
@@ -56,9 +59,7 @@ rsEnrichment = pcRegionSetEnrichment(loadingMat=brcaLoadings1,
 rsEnrichment$rsName = rsName
 ```
 
-We can see whether variability along the PC is specific to the region of 
-interest by comparing the region of interest to the surrounding genome. To do this we will 
-calculate the average loadings of a wide area surrounding the regions of interest.
+We can see whether variability along the PC is specific to the region of interest by comparing the region of interest to the surrounding genome. To do this, we will calculate the average loadings of a wide area surrounding the regions of interest.
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 wideGRList = lapply(GRList, resize, width = 14000, fix="center")
@@ -74,7 +75,6 @@ We will normalize the result for each PC so we can better compare them.
 avLoad = apply(X = brcaLoadings1[, PCsToAnnotate], MARGIN = 2, FUN = function(x) mean(abs(x)))
 
 # normalize
-# loadProfile = lapply(loadProfile, FUN = function(x) t(apply(X = x, MARGIN = 1, FUN = function(y) y - c(0, avLoad))))
 loadProfile = lapply(loadProfile, FUN = function(x) x[, mapply(FUN = function(y, z) get(y) - z, y=PCsToAnnotate, z = avLoad)])
 loadProfile = lapply(loadProfile, FUN = function(x) data.table(regionGroupID=1:nrow(x), x))
 
@@ -96,8 +96,6 @@ for (i in seq_along(loadProfile)) {
     
     thisRS = loadProfile[[i]]
     
-
-    
     profilePList[[i]] = ggplot(data = thisRS, mapping = aes(x =regionGroupID , y = loading_value)) + 
         geom_line() + ylim(c(minVal, maxVal)) + facet_wrap(facets = "PC") + 
         ggtitle(label = wrapper(rsName[i], width=30)) + xlab("Genome around Region Set, 14 kb") + 
@@ -116,4 +114,4 @@ profilePList[[3]]
 profilePList[[4]]
 ```
 
-These plots show that Esr1 and Gata3 binding regions are variable compared to the surrounding genome while Nrf1 and Atf3 are not.  
+These plots show that Esr1 and Gata3 binding regions are variable compared to the surrounding genome while Nrf1 and Atf3 are not. Some region sets may have an increased loading but no peak, for example some histone modification region sets like H3K27me3 or H3K9me3. This doesn't necessarily mean these regions are not relevant. It could just mean that there are larger blocks of variability around these histone modifications. The results from our four region sets suggest that Esr1 and Gata3 regions contribute to the variation along the PCs 1 and 3 (as well as perhaps 4), helping us understand the biological meaning of those PCs (at least partially estrogen receptor-related) and understand sources of variation in our data.

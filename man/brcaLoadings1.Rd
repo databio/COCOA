@@ -11,13 +11,14 @@ data(brcaLoadings1)
 \description{
 This object contains loadings
 for PCA of DNA methylation data.
-DNA methlyation data is from breast cancer
+DNA methlyation data is Illumina 450k 
+microarray data from breast cancer
 patients from The Cancer Genome Atlas
 (TCGA-BRCA, https://portal.gdc.cancer.gov/).
 Each row corresponds to one cytosine and
 the coordinates for these cytosines are
-in the object brcaCoords1. Only
-cytosines on chr1 are included to keep
+in the object brcaCoords1, (data("brcaCoords1")). 
+Only cytosines on chr1 are included to keep
 the example data small.
 }
 \keyword{datasets}

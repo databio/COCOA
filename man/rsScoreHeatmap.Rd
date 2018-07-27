@@ -3,10 +3,10 @@
 \name{rsScoreHeatmap}
 \alias{rsScoreHeatmap}
 \title{Heatmap of enrichment scores across PCs
-A visualization of the enrichment data.table.}
+A visualization of the enrichment data.frame.}
 \usage{
 rsScoreHeatmap(rsScores, PCsToAnnotate = paste0("PC", 1:5),
-  orderByPC = "PC1", rsNameCol = "rsNames", topX = 20)
+  orderByPC = "PC1", rsNameCol = "rsName", topX = 20)
 }
 \arguments{
 \item{rsScores}{a data.table with scores for each 
@@ -19,8 +19,19 @@ region sets used to create it.)}
 include. eg c("PC1", "PC2")}
 
 \item{orderByPC}{PC to order by (decreasing order) in heatmap}
+
+\item{rsNameCol}{character. Name of the column in rsScores that has the
+names/identifiers for the region sets so this information can be included 
+in the plot.}
+
+\item{topX}{Number of top region sets to include in the heatmap}
+}
+\value{
+A heatmap of region set scores across. Each row is a region set,
+each column is a PC. The color corresponds to a region set's relative
+rank for a given PC out of all tested region sets.
 }
 \description{
 Heatmap of enrichment scores across PCs
-A visualization of the enrichment data.table.
+A visualization of the enrichment data.frame.
 }

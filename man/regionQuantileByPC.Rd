@@ -25,10 +25,18 @@ and end should be the same. Start coordinate will be used for calculations.}
 a distinct region set (regions that correspond to 
 the same biological annotation).}
 
+\item{rsNames}{character vector. Names of the region sets in the same
+order as GRList. For use as a title for each heatmap.}
+
 \item{PCsToAnnotate}{A character vector with principal components to 
 include. eg c("PC1", "PC2")}
 
-\item{cluster_rows}{}
+\item{maxRegionsToPlot}{how many top regions from region set to include
+in heatmap. Including too many may slow down computation and increase memory
+use.}
+
+\item{cluster_rows}{Boolean, whether to cluster rows or not (may 
+increase computation time significantly for large number of rows)}
 }
 \description{
 plot individual region scores/percentiles across PCs for a single region set

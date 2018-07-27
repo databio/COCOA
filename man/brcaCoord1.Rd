@@ -11,8 +11,9 @@ data(brcaCoord1)
 }
 \description{
 Corresponds to 
-the rows of brcaLoadings1.
-DNA methlyation data is from breast cancer
+the rows of brcaLoadings1 and brcaMethylData1.
+DNA methlyation data is Illumina 450k 
+microarray data from breast cancer
 patients from The Cancer Genome Atlas
 (TCGA-BRCA, https://portal.gdc.cancer.gov/).
 Only cytosines on chr1 are included to keep

@@ -22,13 +22,15 @@
 #' @importFrom ComplexHeatmap Heatmap draw
 #' @import BiocGenerics S4Vectors IRanges
 #' @importFrom data.table ":=" setDT data.table setkey fread setnames 
-#'             setcolorder rbindlist setattr setorder copy is.data.table setorderv as.data.table
+#'             setcolorder rbindlist setattr setorder copy is.data.table 
+#'             setorderv as.data.table
 #' @importFrom Biobase sampleNames
 #' @importFrom stats lm coefficients poly wilcox.test ecdf
 #' @importFrom methods is
 #' @importFrom MIRA binRegion
 #' @importFrom tidyr gather
-#' @importFrom grid grid.newpage grid.grabExpr grid.draw popViewport pushViewport unit viewport
+#' @importFrom grid grid.newpage grid.grabExpr grid.draw popViewport 
+#'             pushViewport unit viewport
 #' @importFrom grDevices dev.off
 NULL
 
@@ -64,6 +66,8 @@ if (getRversion() >= "2.15.1") {
 #' and end should be the same. Start coordinate will be used for calculations.
 #' @param regionSet A genomic ranges object with regions corresponding
 #' to the same biological annotation.
+#' @param PCsToAnnotate A character vector with principal components to 
+#' include. eg c("PC1", "PC2")
 # #UPDATE: make sure only aggregating PCsToAnnotate to save time
 #' @param metric Scoring metric. "raw" is a simple
 #' average of the loading values with no normalization (recommended). With
@@ -73,11 +77,24 @@ if (getRversion() >= "2.15.1") {
 #' ranking large region sets highly.
 #' @param pcLoadAv The average absolute loading value for each PC. Will
 #' significantly speed up computation if this is given.
-#' @return
-#' 
+#' @param verbose A boolean. Whether progress 
+#' of the function should be shown, one
+#' bar indicates the region set is completed. Useful when using 
+#' aggregateLoadings with 'apply' to do many region sets at a time.
+
+#' @return a data.table with one row and the following 
+#' columns: one column for each item of PCsToAnnotate with name given
+#' by the item which have scores for each PC, cytosine_coverage which
+#' has number of cytosines that overlapped with regionSet,
+#' region_coverage which has number of regions from regionSet
+#' that overlapped any cytosines, total_region_number that has
+#' number of regions in regionSet, mean_region_size that has average
+#' size in base pairs of regions in regionSet, the average is based on
+#' all regions in regionSet and not just ones that overlap. 
 
 aggregateLoadings <- function(loadingMat, mCoord, regionSet, 
-                  PCsToAnnotate = c("PC1", "PC2"), metric="raw", pcLoadAv=NULL) {
+                  PCsToAnnotate = c("PC1", "PC2"), metric="raw", pcLoadAv=NULL,
+                  verbose=FALSE) {
     # UPDATE: take out permutations
     permute <- FALSE
     
@@ -98,7 +115,10 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
     loadingDT <- as.data.table(loadingMat)
     
     # reformat into data.table with chromosome location and weight
-    loadingDT <- data.table(coordinateDT, loadingDT[, PCsToAnnotate, with=FALSE])
+    # also restricting to PCsToAnnotate so unnecessary computations 
+    # are not done
+    loadingDT <- data.table(coordinateDT, 
+                            loadingDT[, PCsToAnnotate, with=FALSE])
     # naming does not work if only using one PC so add this line for that case
     setnames(loadingDT, c("chr", "start", PCsToAnnotate))
     
@@ -114,7 +134,8 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
     if (metric == "raw") {
         # previously used BSAggregate from RGenomeUtils but now using local, 
         # modified copy
-        loadAgMain <- BSAggregate(BSDT = loadingDT, regionsGRL = GRangesList(regionSet),
+        loadAgMain <- BSAggregate(BSDT = loadingDT, 
+                                  regionsGRL = GRangesList(regionSet),
                                  jExpr = aggrCommand,
                                  byRegionGroup = TRUE,
                                  splitFactor = NULL)
@@ -137,7 +158,7 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
         
         # average of loadings for all CpGs within region set
         loadMetrics <- cpgOLMetrics(dataDT=loadingDT, regionGR=regionSet, 
-                                   metrics="mean", columnMeans=NULL, 
+                                   metrics="mean", 
                                    alsoNonOLMet=FALSE)
         if (is.null(loadMetrics)) {
             results <- as.data.table(t(rep(NA, length(PCsToAnnotate))))
@@ -153,8 +174,12 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
             colnames(results) <- loadMetrics$testCol
             
             # add information about degree of overlap
-            results <- cbind(results, loadMetrics[1, .SD, .SDcols = c("cytosine_coverage", "region_coverage", 
-                                                                     "total_region_number", "mean_region_size")]) 
+            results <- cbind(results, 
+                             loadMetrics[1, .SD, 
+                                         .SDcols = c("cytosine_coverage", 
+                                                     "region_coverage", 
+                                                     "total_region_number", 
+                                                     "mean_region_size")]) 
         }
         
         
@@ -164,7 +189,7 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
         #     pcLoadAv <- apply(X = loadingDT[, PCsToAnnotate, with=FALSE], MARGIN = 2, FUN = mean)
         # }
         loadMetrics <- cpgOLMetrics(dataDT=loadingDT, regionGR=regionSet, 
-                                   metrics=c("mean", "sd"), columnMeans=NULL, 
+                                   metrics=c("mean", "sd"), 
                                    alsoNonOLMet=TRUE)
         if (is.null(loadMetrics)) {
             results <- as.data.table(t(rep(NA, length(PCsToAnnotate))))
@@ -212,7 +237,9 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
     
     
     # cpgOLMetrics() # make sure it works with no overlap
-    
+    if (verbose) {
+        message("|")
+    }
         
         return(results)
     }
@@ -241,6 +268,9 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
 #'  region sets with low number of regions.
 #' Mean difference ("meanDiff") is also supported but is skewed toward 
 #' ranking large region sets highly.
+#' @param verbose A boolean. Whether progress 
+#' of the function should be shown, one
+#' bar indicates the region set is completed.
 #' @return data.frame of results, one row for each region set. 
 #' One column for each PC in PCsToAnnotate
 #' with score for that PC for a given region set (specific score depends
@@ -260,14 +290,21 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
 #' data("brcaLoadings1")
 #' data("esr1_chr1")
 #' data("nrf1_chr1")
-#' GRList = GRangesList(esr1_chr1, nrf1_chr1)
-#' pcRegionSetEnrichment(loadingMat=brcaLoadings1, mCoord=brcaCoord1, GRList=GRList, PCsToAnnotate=c("PC1", "PC2"), scoringMetric="raw")
+#' GRList = GenomicRanges::GRangesList(esr1_chr1, nrf1_chr1)
+#' pcRegionSetEnrichment(loadingMat=brcaLoadings1, mCoord=brcaCoord1, 
+#'                       GRList=GRList, PCsToAnnotate=c("PC1", "PC2"), 
+#'                       scoringMetric="raw")
 
 #' 
 #' @export
 
 pcRegionSetEnrichment <- function(loadingMat, mCoord, GRList, 
-                  PCsToAnnotate = c("PC1", "PC2"), scoringMetric = "raw") {
+                  PCsToAnnotate = c("PC1", "PC2"), scoringMetric = "raw",
+                  verbose=TRUE) {
+    
+    if (!(any(c(is(loadingMat, "matrix"), is(loadingMat, "data.frame"))))) {
+        warning("loadingMat should be a matrix or data.frame.")
+    }
  
     if (is(mCoord, "GRanges")) {
         coordinateDT <- grToDt(mCoord)
@@ -291,7 +328,8 @@ pcRegionSetEnrichment <- function(loadingMat, mCoord, GRList,
                                                             mCoord=coordinateDT, 
                                                             regionSet=x, 
                                                             PCsToAnnotate = PCsToAnnotate,
-                                                            metric = scoringMetric))
+                                                            metric = scoringMetric, 
+                                                            verbose=verbose))
     resultsDT <- do.call(rbind, resultsList) 
     row.names(resultsDT) <- row.names(GRList)
     
@@ -323,7 +361,10 @@ pcRegionSetEnrichment <- function(loadingMat, mCoord, GRList,
 #' include. eg c("PC1", "PC2")
 #' @param binNum Number of bins to split the regions into when
 #' making the aggregate loading profile. More bins will
-#' give a higher resolution but perhaps more noisy profile. 
+#' give a higher resolution but perhaps more noisy profile.
+#' @param verbose A boolean. Whether progress 
+#' of the function should be shown, one
+#' bar indicates the region set is completed.
 #' @return A list of data.tables each data.table for
 #' a separate region set. The data table has the binned loading profile,
 #' one row per bin.
@@ -333,12 +374,21 @@ pcRegionSetEnrichment <- function(loadingMat, mCoord, GRList,
 #' data("brcaLoadings1")
 #' data("esr1_chr1")
 #' data("nrf1_chr1")
-#' GRList = GRangesList(esr1_chr1, nrf1_chr1)
-#' pcEnrichmentProfile(loadingMat=brcaLoadings1, mCoord=brcaCoord1, GRList=GRList, PCsToAnnotate=c("PC1", "PC2"), binNum=25)
+#' GRList = GenomicRanges::GRangesList(esr1_chr1, nrf1_chr1)
+#' pcEnrichmentProfile(loadingMat=brcaLoadings1, 
+#'                     mCoord=brcaCoord1, 
+#'                     GRList=GRList, 
+#'                     PCsToAnnotate=c("PC1", "PC2"), 
+#'                     binNum=25)
 #' @export
 
 pcEnrichmentProfile = function(loadingMat, mCoord, GRList,
-                    PCsToAnnotate = c("PC1", "PC2"), binNum = 25) {
+                    PCsToAnnotate = c("PC1", "PC2"), binNum = 25,
+                    verbose=TRUE) {
+    
+    if (!(any(c(is(loadingMat, "matrix"), is(loadingMat, "data.frame"))))) {
+        warning("loadingMat should be a matrix or data.frame.")
+    }
     
     # checks for correct input
     if (is(mCoord, "GRanges")) {
@@ -393,24 +443,35 @@ makeSymmetric <- function(prof) {
     return(symVec)
 }
 
-#' Produced originally for binning Ewing RRBS data across various region sets
-#'
-#' @param rangeDT A data table with the sets of regions to be binned, 
-#' with columns named start, end
-#' @param binCount Number of bins across the region
-#' @param byRegionGroup Pass along to binCount (see ?binCount)
-#' @param minReads Filter out bins with fewer than X reads before returning.
+# Produced originally for binning Ewing RRBS data across various region sets
+#
+# @param BSDT A data.table. For PCRSA, a data.table of loading values
+# with the PCs to be annotated. One column for the loadings of each PC
+# and also has columns with the coordinates for CpGs that the loadings
+# are for: chr (chromosome) and start column
+# @param rangeDT A data table with the sets of regions to be binned, 
+# with columns named start, end
+# @param binCount Number of bins across the region
+# @param byRegionGroup Pass along to binCount (see ?binCount)
+# @param minReads Filter out bins with fewer than X reads before returning.
+# @param PCsToAnnotate A character vector with principal components to 
+# analyze. eg c("PC1", "PC2")
+# @param verbose A boolean. Whether progress 
+# of the function should be shown, one
+# bar indicates the region set is completed.
+# useful when using BSBinAggregate with 'apply' to do many 
+# region sets at a time.
 BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500, 
                           byRegionGroup = TRUE, 
                           splitFactor = NULL,
-                          PCsToAnnotate=PCsToAnnotate) {
+                          PCsToAnnotate, verbose=FALSE) {
     if (! "data.table" %in% class(rangeDT)) {
     stop("rangeDT must be a data.table")
 }
     seqnamesColName <- "seqnames"  # default column name
     if (! "seqnames" %in% colnames(rangeDT)) {
         if ("chr" %in% colnames(rangeDT)) {
-            message("seqnames column name set to: chr")
+            # message("seqnames column name set to: chr")
             seqnamesColName <- "chr"
         } else {
             # Got neither.
@@ -418,10 +479,10 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
         }
     }
     
-    message("Binning...")
+    # message("Binning...")
     binnedDT <- rangeDT[, MIRA::binRegion(start, end, binCount, get(seqnamesColName))]
     binnedGR <- sapply(split(binnedDT, binnedDT$binID), dtToGr)
-    message("Aggregating...")
+    # message("Aggregating...")
     
     # RGenomeUtils::BSAggregate
     binnedBSDT <- BSAggregate_RGenomeUtils(BSDT, 
@@ -433,12 +494,15 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
     # if (byRegionGroup) {
     #     binnedBSDT <- binnedBSDT[readCount > minReads,]
     # }
+    if (verbose) {
+        message("|")
+    }
+    
     return(binnedBSDT)
 }
 
-#UPDATE docs and change coordinateDT to mCoord
 #' modification of BSAggregate to just return mean per region
-#' averageByRegion(BSDT = BSDT, regionsGRL, jCommand = MIRA:::buildJ(cols = "methylProp", "mean"))
+#' 
 #' @param loadingMat matrix of loadings (the coefficients of 
 #' the linear combination that defines each PC). One named column for each PC.
 #' One row for each original dimension/variable (should be same order 
@@ -450,13 +514,24 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
 #' and end should be the same. Start coordinate will be used for calculations.
 #' @param regionSet A GRanges object with regions corresponding
 #' to the same biological annotation.
+#' @param PCsToAnnotate A character vector with principal components to 
+#' include. eg c("PC1", "PC2")
+#' @param returnQuantile Boolean. If FALSE, return region averages. If TRUE,
+#' for each region, return the quantile of that region's average value
+#' based on the distribution of individual cytosine values
 #' @return a data.table with region coordinates and average loading 
 #' values for each region. Has columns chr, start, end, and a column for each
 #' PC in PCsToAnnotate. Regions are not in order along the rows of the data.table.
-#' 
+#'
+# @example averageByRegion(BSDT = BSDT, regionsGRL, 
+#          jCommand = MIRA:::buildJ(cols = "methylProp", "mean")) 
 # Devel note: I could add a column for how many cytosines are in each region 
 
-averageByRegion <- function(loadingMat, mCoord, regionSet, PCsToAnnotate = c("PC1", "PC2"), returnQuantile=FALSE) {
+averageByRegion <- function(loadingMat, 
+                            mCoord, 
+                            regionSet, 
+                            PCsToAnnotate = c("PC1", "PC2"), 
+                            returnQuantile=FALSE) {
     
     
     
@@ -516,11 +591,11 @@ averageByRegion <- function(loadingMat, mCoord, regionSet, PCsToAnnotate = c("PC
     regionsGR <- unlist(regionsGRL)
     
     if (is.null(regionsGRL.length)) {
-        if (length(regionsGRL) > 100) {
-            message(cleanws("BSAggregate: Calculating sizes. You can speed this
-                            up by supplying a regionsGRL.length vector..."),
-                    appendLF = FALSE)
-        }
+        # if (length(regionsGRL) > 100) {
+        #     message(cleanws("BSAggregate: Calculating sizes. You can speed this
+        #                     up by supplying a regionsGRL.length vector..."),
+        #             appendLF = FALSE)
+        # }
         regionsGRL.length <- sapply(regionsGRL, length)
         # message("Done counting regionsGRL lengths.");
     }
@@ -678,40 +753,40 @@ averageByRegion <- function(loadingMat, mCoord, regionSet, PCsToAnnotate = c("PC
 
 ###########################################################################
 
-# BSAggregate from RGenomeUtils
-#' BSaggregate -- Aggregate a BSDT across regions or region groups,
-#' for multiple samples at a time.
-#' This function is as BScombineByRegion, but can handle not only multiple
-#' samples in BSDT, but also simultaneously multiple region sets by passing
-#' a regionsGRL (GRangesList object).
-#' you can use jExpr to do other functions.
+#  BSAggregate from RGenomeUtils
+# BSaggregate -- Aggregate a BSDT across regions or region groups,
+# for multiple samples at a time.
+# This function is as BScombineByRegion, but can handle not only multiple
+# samples in BSDT, but also simultaneously multiple region sets by passing
+# a regionsGRL (GRangesList object).
+# you can use jExpr to do other functions.
 
-#' Given a bisulfite data table as input, with an identifier column for
-#' different samples; plus a GRanges objects with regions to aggregate.
-#'
-#' @param BSDT The bisulfite data.table (output from one of the parsing
-#' functions for methylation calls) that you wish to aggregate. It can
-#' be a combined table, with individual samples identified by column passed
-#' to splitFactor.
-#' @param regionsGRL Regions across which you want to aggregate. Should be 
-#' from a single region set. eg GRangesList(regionSet)
-#' @param excludeGR A GenomicRanges object with regions you want to 
-#' exclude from the aggregation function. These regions will be eliminated
-#' from the input table and not counted.
-#' @param jExpr You can pass a custom command in the j slot to data.table
-#' specifying which columns to aggregate, and which functions to use. You
-#' can use buildJ() to build a jExpr argument easily.
-#' @param byRegionGroup You can aggregate by regionID or by regionGroupID; 
-#' this reflects the regionsGRL that you pass; by default, BSAggregate will
-#' aggregate each region individually -- scores will then be contiguous, and
-#' the output is 1 row per region.
-#' Turn on this flag to aggregate across all region groups, making the result
-#' uncontiguous, and resulting in 1 row per *region group*.
-#' @param returnSD Whether the standard deviation of the columns of interest 
-#' should be returned. Standard deviation for rows that overlap with region set
-#' and also for rows that do not overlap with region set.
-#'
-#' export
+# Given a bisulfite data table as input, with an identifier column for
+# different samples; plus a GRanges objects with regions to aggregate.
+#
+# @param BSDT The bisulfite data.table (output from one of the parsing
+# functions for methylation calls) that you wish to aggregate. It can
+# be a combined table, with individual samples identified by column passed
+# to splitFactor.
+# @param regionsGRL Regions across which you want to aggregate. Should be 
+# from a single region set. eg GRangesList(regionSet)
+# @param excludeGR A GenomicRanges object with regions you want to 
+# exclude from the aggregation function. These regions will be eliminated
+# from the input table and not counted.
+# @param jExpr You can pass a custom command in the j slot to data.table
+# specifying which columns to aggregate, and which functions to use. You
+# can use buildJ() to build a jExpr argument easily.
+# @param byRegionGroup You can aggregate by regionID or by regionGroupID; 
+# this reflects the regionsGRL that you pass; by default, BSAggregate will
+# aggregate each region individually -- scores will then be contiguous, and
+# the output is 1 row per region.
+# Turn on this flag to aggregate across all region groups, making the result
+# uncontiguous, and resulting in 1 row per *region group*.
+# @param returnSD Whether the standard deviation of the columns of interest 
+# should be returned. Standard deviation for rows that overlap with region set
+# and also for rows that do not overlap with region set.
+#
+# 
 BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL.length = NULL, splitFactor=NULL, keepCols=NULL, 
                        sumCols=NULL, jExpr=NULL, byRegionGroup=FALSE, keep.na=FALSE, returnSD=FALSE) {
     
@@ -745,11 +820,11 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL.length = NU
     regionsGR <- unlist(regionsGRL)
     
     if(is.null(regionsGRL.length)) {
-        if (length(regionsGRL) > 100) {
-            message("BSAggregate: Calculating sizes. You can speed this up by supplying a regionsGRL.length vector...", appendLF=FALSE)
-        }
+        # if (length(regionsGRL) > 100) {
+        #     message("BSAggregate: Calculating sizes. You can speed this up by supplying a regionsGRL.length vector...", appendLF=FALSE)
+        # }
         regionsGRL.length <- sapply(regionsGRL, length)
-        message("Done counting regionsGRL lengths.")
+        # message("Done counting regionsGRL lengths.")
     }
     
     # Build a table to keep track of which regions belong to which group
@@ -763,7 +838,7 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL.length = NU
     setkey(region2group, regionID)
     
     
-    message("Finding overlaps...")
+    # message("Finding overlaps...")
     fo <- findOverlaps(query = bsgr[[1]], subject = regionsGR)
     
     ### use info from findOverlaps to see how many individual
@@ -776,7 +851,7 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL.length = NU
     # Gut check:
     # stopifnot(all(elementMetadata(bsgr[[1]])$readCount == BSDT$readCount))
     
-    message("Setting regionIDs...")
+    # message("Setting regionIDs...")
     BSDT <- BSDT[queryHits(fo),] #restrict the table to CpGs in any region.
     
     if (NROW(BSDT) < 1) {
@@ -795,7 +870,7 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL.length = NU
         funcs <- c(rep("sum", length(sumCols)), rep("unique", length(keepCols)))
         jExpr <- buildJ(cols, funcs)
     }
-    message("jExpr: ", jExpr)
+    # message("jExpr: ", jExpr)
     
     # Define aggregation column. aggregate by region or by region group?
     if (byRegionGroup) {
@@ -812,7 +887,7 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL.length = NU
     }
     
     # Now actually do the aggregate:
-    message("Combining...")
+    # message("Combining...")
     bsCombined <- BSDT[,eval(parse(text=jExpr)), by=eval(parse(text=byString))]
     setkey(bsCombined, regionID)
     # Now aggregate across groups.
@@ -863,15 +938,19 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL.length = NU
 #' same order as the methylation data and loadings. If a data.frame, 
 #' must have chr and start columns. If end is included, start 
 #' and end should be the same. Start coordinate will be used for calculations.
+#' @param pc A character object with PCs of interest (eg "PC1"). Loadings from
+#' this PC will be used to generate new PC scores based on only loadings
+#' that overlap with regionSet. Can be multiple PCs.
 #' @param returnCor Option to return correlation between these scores and
 #' original PC scores. 
 #' 
 #' @return a score for each patient from only loading values for cytosines in 
 #' regionSet. If returnCor = TRUE, returns a correlation score for scores from
-#' each PCofInterest with scores from a subset of loading values for that PC.
+#' each "pc" with scores from a subset of loading values for that PC.
 #' 
 
-pcFromSubset <- function(regionSet, mPCA, methylData, mCoord, PCofInterest="PC1", returnCor=FALSE) {
+pcFromSubset <- function(regionSet, mPCA, methylData, mCoord, 
+                         pc="PC1", returnCor=FALSE) {
     
     # test for appropriateness of inputs/right format
     if (is(mCoord, "GRanges")) {
@@ -886,7 +965,7 @@ pcFromSubset <- function(regionSet, mPCA, methylData, mCoord, PCofInterest="PC1"
     
     # get subset of loading values
    #  subsetInd = 
-    newColNames <- paste0(PCofInterest, "_subset")
+    newColNames <- paste0(pc, "_subset")
     
     
     olList <- findOverlaps(query = regionSet, subject = coordGR)
@@ -901,27 +980,27 @@ pcFromSubset <- function(regionSet, mPCA, methylData, mCoord, PCofInterest="PC1"
     # getting PC scores manually so artificial PCs will be included (PC1m4 and PC1p3)
     centeringSubset <- mPCA$center[cytosineHitInd]
     centeredMeth <- t(apply(thisRSMData, 1, function(x) x - centeringSubset)) # center first 
-    reducedValsPCA <- centeredMeth %*% mPCA$rotation[cytosineHitInd, PCofInterest]
+    reducedValsPCA <- centeredMeth %*% mPCA$rotation[cytosineHitInd, pc]
     colnames(reducedValsPCA) <- newColNames
     # pcaValDF <- as.data.frame(reducedValsPCA)
     
     
     # optional calculate correlation
     if (returnCor) {
-        # plot(reducedValsPCA[, PCofInterest],mPCA$x[, PCofInterest])
-        corMat <- cor(reducedValsPCA[, newColNames],mPCA$x[, PCofInterest])
+        # plot(reducedValsPCA[, pc],mPCA$x[, pc])
+        corMat <- cor(reducedValsPCA[, newColNames],mPCA$x[, pc])
         # only correlation between subset and matching PC, not with other PCs
         mainCor <- diag(corMat)
-        names(mainCor) <- PCofInterest
+        names(mainCor) <- pc
         return(mainCor)
-        # origPCCor <- cor(pca$x[, PCofInterest])
-        # subsetPCCor <- cor(reducedValsPCA[, PCofInterest])
+        # origPCCor <- cor(pca$x[, pc])
+        # subsetPCCor <- cor(reducedValsPCA[, pc])
         # Heatmap(corMat, cluster_columns = FALSE, cluster_rows = FALSE)
         # Heatmap(origPCCor, cluster_columns = FALSE, cluster_rows = FALSE)
         # Heatmap(subsetPCCor, cluster_columns = FALSE, cluster_rows = FALSE)
-        # Heatmap(pca$rotation[cytosineHitInd, PCofInterest])
+        # Heatmap(pca$rotation[cytosineHitInd, pc])
     } else {
-        colnames(reducedValsPCA) <- PCofInterest
+        colnames(reducedValsPCA) <- pc
         return(reducedValsPCA)
     }
     
@@ -1033,24 +1112,38 @@ rsRankingIndex <- function(rsScores, PCsToAnnotate) {
 #################### Metric functions ########################################
 # scores, metrics, or statistical tests
 
-#' Instead of averaging within regions first as BSAggregate does,
-#' this function does a simple average and standard deviation
-#'  for all CpGs that overlap
-#' with regions of a region set, also does average and 
-#' standard deviation for non overlapping CpGs. Created to 
-#' get metrics of loading values for each PC.
-#' 
-#' Faster if given total average for each column of interest
-#' 
-#' @param dataDT a data.table with chr, start, end columns as well
-#' as columns to get metrics of eg (PC1, PC2). All columns
-#' except chr, start, and end will be considered 
-#' columns to get the metrics from so no unnecessary columns should be
-#' included.
-#' @param alsoNonOLMet also include same metrics
-#' for non overlapping CpGs
-#' 
-cpgOLMetrics <- function(dataDT, regionGR, metrics=c("mean", "sd"), columnMeans=NULL, alsoNonOLMet=TRUE) {
+# Instead of averaging within regions first as BSAggregate does,
+# this function does a simple average and standard deviation
+#  for all CpGs that overlap
+# with regions of a region set, also does average and 
+# standard deviation for non overlapping CpGs. Created to 
+# get metrics of loading values for each PC.
+# 
+# Faster if given total average for each column of interest
+# 
+# @param dataDT a data.table with chr, start, end columns as well
+# as columns to get metrics of eg (PC1, PC2). All columns
+# except chr, start, and end will be considered 
+# columns to get the metrics from so no unnecessary columns should be
+# included.
+# @param regionGR GenomicRanges object. Metrics will be calculated on
+# only coordinates within this region set (and optionally separately
+# on those outside this region set with alsoNonOLMet parameter)
+# @param metrics character vector with the name of a function or functions
+# to calculate on selected cytosines. Function should only require one
+# input which should be the values of the cytosines.
+# @param alsoNonOLMet also include same metrics
+# for non overlapping CpGs (still also returns metrics for overlapping CpGs)
+
+# param columnMeans Not functional/is deprecated. The idea was to use
+# the mean of the column to speed up calculations (eg when calculating
+# mean of overlapping CpGs, use that info and column mean to get
+# mean for non overlapping CpGs without manually calculating it)
+
+
+# 
+cpgOLMetrics <- function(dataDT, regionGR, metrics=c("mean", "sd"), 
+                         alsoNonOLMet=TRUE) {
     
     # convert DT to GR for finding overlaps
     dataGR <- BSdtToGRanges(list(dataDT))[[1]]
@@ -1082,11 +1175,14 @@ cpgOLMetrics <- function(dataDT, regionGR, metrics=c("mean", "sd"), columnMeans=
     nonOLCpG <- (1:nrow(dataDT))[-olCpG]
     
     # gets metrics for all columns except chr, start, end
-    testCols <- colnames(dataDT)[!(colnames(dataDT) %in% c("chr", "start", "end"))] 
+    testCols <- colnames(dataDT)[!(colnames(dataDT) %in% 
+                                       c("chr", "start", "end"))] 
     
     jExpr <- buildJ(cols=rep(testCols, each=length(metrics)), 
                     funcs=rep(metrics, length(testCols)),
-                    newColNames = paste0(rep(testCols, each=length(metrics)), "_", metrics))
+                    newColNames = paste0(rep(testCols, 
+                                             each=length(metrics)), 
+                                         "_", metrics))
     
     # getting the metrics
     olMetrics <- as.data.frame(dataDT[olCpG, eval(parse(text=jExpr))])
@@ -1174,34 +1270,34 @@ rsWilcox <- function(dataDT, regionGR, ...) {
 }
 
 
-#' BSaggregate -- Aggregate a BSDT across regions or region groups,
-#' for multiple samples at a time.
-#' This function is as BScombineByRegion, but can handle not only multiple
-#' samples in BSDT, but also simultaneously multiple region sets by passing
-#' a regionsGRL (GRangesList object).
-#' you can use jExpr to do other functions.
+# BSaggregate -- Aggregate a BSDT across regions or region groups,
+# for multiple samples at a time.
+# This function is as BScombineByRegion, but can handle not only multiple
+# samples in BSDT, but also simultaneously multiple region sets by passing
+# a regionsGRL (GRangesList object).
+# you can use jExpr to do other functions.
 
-#' Given a bisulfite data table as input, with an identifier column for
-#' different samples; plus a GRanges objects with regions to aggregate.
-#'
-#' @param BSDT The bisulfite data.table (output from one of the parsing
-#' functions for methylation calls) that you wish to aggregate. It can
-#' be a combined table, with individual samples identified by column passed
-#' to splitFactor.
-#' @param regionsGRL Regions across which you want to aggregate.
-#' @param excludeGR A GenomicRanges object with regions you want to 
-#' exclude from the aggregation function. These regions will be eliminated
-#' from the input table and not counted.
-#' @param jExpr You can pass a custom command in the j slot to data.table
-#' specifying which columns to aggregate, and which functions to use. You
-#' can use buildJ() to build a jExpr argument easily.
-#' @param byRegionGroup You can aggregate by regionID or by regionGroupID; 
-#' this reflects the regionsGRL that you pass; by default, BSAggregate will
-#' aggregate each region individually -- scores will then be contiguous, and
-#' the output is 1 row per region.
-#' Turn on this flag to aggregate across all region groups, making the result
-#' uncontiguous, and resulting in 1 row per *region group*.
-#'
+# Given a bisulfite data table as input, with an identifier column for
+# different samples; plus a GRanges objects with regions to aggregate.
+#
+# @param BSDT The bisulfite data.table (output from one of the parsing
+# functions for methylation calls) that you wish to aggregate. It can
+# be a combined table, with individual samples identified by column passed
+# to splitFactor.
+# @param regionsGRL Regions across which you want to aggregate.
+# @param excludeGR A GenomicRanges object with regions you want to 
+# exclude from the aggregation function. These regions will be eliminated
+# from the input table and not counted.
+# @param jExpr You can pass a custom command in the j slot to data.table
+# specifying which columns to aggregate, and which functions to use. You
+# can use buildJ() to build a jExpr argument easily.
+# @param byRegionGroup You can aggregate by regionID or by regionGroupID; 
+# this reflects the regionsGRL that you pass; by default, BSAggregate will
+# aggregate each region individually -- scores will then be contiguous, and
+# the output is 1 row per region.
+# Turn on this flag to aggregate across all region groups, making the result
+# uncontiguous, and resulting in 1 row per *region group*.
+#
 BSAggregate_RGenomeUtils = function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL.length = NULL, splitFactor=NULL, keepCols=NULL, 
                        sumCols=NULL, jExpr=NULL, byRegionGroup=FALSE, keep.na=FALSE) {
     
@@ -1235,11 +1331,11 @@ BSAggregate_RGenomeUtils = function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL
     regionsGR <- unlist(regionsGRL)
     
     if(is.null(regionsGRL.length)) {
-        if (length(regionsGRL) > 100) {
-            message("BSAggregate: Calculating sizes. You can speed this up by supplying a regionsGRL.length vector...", appendLF=FALSE)
-        }
+        # if (length(regionsGRL) > 100) {
+        #     message("BSAggregate: Calculating sizes. You can speed this up by supplying a regionsGRL.length vector...", appendLF=FALSE)
+        # }
         regionsGRL.length <- sapply(regionsGRL, length)
-        message("Done counting regionsGRL lengths.")
+        # message("Done counting regionsGRL lengths.")
     }
     
     # Build a table to keep track of which regions belong to which group
@@ -1253,14 +1349,14 @@ BSAggregate_RGenomeUtils = function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL
     setkey(region2group, regionID)
     
     
-    message("Finding overlaps...")
+    # message("Finding overlaps...")
     fo <- findOverlaps(bsgr[[1]], regionsGR)
     
     setkey(BSDT, chr, start)
     # Gut check:
     # stopifnot(all(elementMetadata(bsgr[[1]])$readCount == BSDT$readCount))
     
-    message("Setting regionIDs...")
+    # message("Setting regionIDs...")
     BSDT <- BSDT[queryHits(fo),] #restrict the table to CpGs in any region.
     
     if (NROW(BSDT) < 1) {
@@ -1279,7 +1375,7 @@ BSAggregate_RGenomeUtils = function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL
         funcs <- c(rep("sum", length(sumCols)), rep("unique", length(keepCols)))
         jExpr <- buildJ(cols, funcs)
     }
-    message("jExpr: ", jExpr)
+    # message("jExpr: ", jExpr)
     
     # Define aggregation column. aggregate by region or by region group?
     if (byRegionGroup) {
@@ -1296,7 +1392,7 @@ BSAggregate_RGenomeUtils = function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL
     }
     
     # Now actually do the aggregate:
-    message("Combining...")
+    # message("Combining...")
     bsCombined <- BSDT[,eval(parse(text=jExpr)), by=eval(parse(text=byString))]
     setkey(bsCombined, regionID)
     # Now aggregate across groups.

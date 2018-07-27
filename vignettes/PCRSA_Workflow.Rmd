@@ -1,25 +1,23 @@
 ---
-    title: "PCRSA Workflow"
+title: "PCRSA Workflow"
 author: "John Lawson"
 date: "`r Sys.Date()`"
 output: 
-    BiocStyle::html_document
+  BiocStyle::html_document
 vignette: >
-    %\VignetteIndexEntry{PCRSA Workflow}
-%\VignetteEngine{knitr::rmarkdown}
-%\VignetteEncoding{UTF-8}
+  %\VignetteIndexEntry{PCRSA Workflow}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 ---
     
     
-This vignette is intended to be a script that can easily be modified for
-your own PCRSA analysis. It is unevaluated because PCRSA normally involves 
-large objects in memory.
+This vignette is intended to be a script that can easily be modified for your own PCRSA analysis. It is unevaluated because PCRSA normally involves large objects. For a description of the goals of the method, see the "Introduction to Principal Component Region Set Analysis" vignette.
 
 # Inputs
 
 1. PCA loadings (prcomp()$rotation).
 2. Genomic coordinates associated with PCA loadings.
-2. Region sets (normally a database of region sets).
+3. Region sets (normally a database of region sets).
 
 To begin, let's load the necessary packages:
     
@@ -31,7 +29,7 @@ library(GenomicRanges)
 library(ggplot2)
 ```
 
-## Input 1: PCA Loadings and Genomic Coordinates
+## Inputs 1 and 2: PCA Loadings and Genomic Coordinates
 
 First, we need the results from PCA of the DNA methylation data. We will also need the genomic coordinates for each cytosine in the DNA methylation data. As one way of doing this, we could store the methlylation level matrix and the coordinates as items in a named list called "methylData". The first item in the list -- "coordinates" -- would be a GRanges object with coordinates for the cytosines (or alternatively a data.frame with "chr" and "start" columns). The second item in the list -- "methylProp" -- would be a matrix of the methylation levels, with cytosines as rows (same order as "coordinates") and samples as columns. We will assume that structure for the following code.   
 
@@ -44,7 +42,7 @@ mPCA = prcomp(x = t(methylData$methylProp), center = TRUE, scale. = FALSE)
 
 ## Input 2: Large Collection of Region Sets
 
-Besides the PCA results, we need region sets. Normally we should use PCRSA with a large collection of region sets. The collection of region sets can come from anywhere but we will use the LOLA region set databases which include region sets from public sources such as the ENCODE, Roadmap Epigenomics, and Cistrome Projects. Documentation on LOLA here: (http://bioconductor.org/packages/release/bioc/html/LOLA.html). Let's load the LOLA databases (this may take a minute): 
+Besides the PCA results, we need region sets. Normally we should use PCRSA with a large collection of region sets. The collection of region sets can come from anywhere but we will use the LOLA region set databases which include region sets from public sources such as the ENCODE, Roadmap Epigenomics, and Cistrome Projects. Documentation on LOLA [here](http://bioconductor.org/packages/release/bioc/html/LOLA.html) and region set collections may be found [here](http://databio.org/regiondb). Let's load the LOLA databases (this may take a minute): 
     
 ```{r, eval=FALSE, message=FALSE, warning=FALSE}
 # reading in the region sets
@@ -69,7 +67,6 @@ GRList <- GRangesList(regionSetDB$regionGRL[collectionInd])
 rm("regionSetDB")
 ```
 
-
 # PCRSA
 
 Now we test how much each region set is associated with each principal component:
@@ -93,3 +90,10 @@ View(rsEnrichment[order(rsEnrichment$PC2, decreasing = TRUE), ])
 # etc.
 ```
 
+# Interpretation
+
+In the big picture, PCRSA can help you understand sources of variation in your data. Top region sets should have DNA methylation changes among samples along the PC axis. You can screen out region sets that have a low number of regions/cytosines covered in the DNA methylation data since these are more likely to be ranked highly by chance. Top region sets may capture some of the DNA methylation changes happening along the PC axes. However, they probably just capture a small window of the broader changes taking place and so it is likely that many other changes are taking place as well. Therefore, top region sets can be interpreted as reflecting broader changes but not necessarily defining a given PC. As further confirmation of your PCRSA results, you can look at raw methylation in the regions of your top region sets that have the highest loading values. These regions should show changes in DNA methylation along the PC axis. By identifying region sets where DNA methylation varies along the PC axis, you can understand variation in the data better and this can inspire further directions of research.
+
+# Computational Requirements
+
+When using PCRSA with the "raw" scoring method (preferred), a database of 2000 region sets, and 450,000 cytosines in the DNA methylation data, it is estimated that PCRSA will take between 30 minutes and 1.5 hours. The computer will need enough memory for the large objects used although some memory could be saved by splitting the region set database into parts, running separately on each part, and then combining the results.  

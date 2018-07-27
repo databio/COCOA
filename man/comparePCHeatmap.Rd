@@ -3,7 +3,7 @@
 \name{comparePCHeatmap}
 \alias{comparePCHeatmap}
 \title{create pdf with multiple heatmap plots (number = length(PCsToRankBy)). 
-Plot i will be ranked by PCsToRankBy[i].}
+Plot i will be ranked by PCsToRankBy[i]. A wrapper for rsScoreHeatmap}
 \usage{
 comparePCHeatmap(rsScores, PCsToRankBy = paste0("PC", 1:5),
   PCsToInclude = paste0("PC", 1:10), fileName = NULL)
@@ -15,9 +15,20 @@ Each row is a region set. Columns are PCs and info on region set overlap
 with DNA methylation data. Should be in the same order as GRList (the list of 
 region sets used to create it.)}
 
-\item{fileName}{# see https://github.com/jokergoo/ComplexHeatmap/issues/110}
+\item{PCsToRankBy}{PC to order by (decreasing order) in heatmap. One 
+heatmap for each PC in PCsToRankBy.}
+
+\item{PCsToInclude}{A character vector with names of PCs that 
+should be present in the heatmap.}
+
+\item{fileName}{A character vector. All plots from this function will
+be saved to a single pdf. fileName should give the name of that file.
+By default, it will be saved in the working directory but filename
+can also include the a file path to save the plot in another directory
+
+# see https://github.com/jokergoo/ComplexHeatmap/issues/110}
 }
 \description{
 create pdf with multiple heatmap plots (number = length(PCsToRankBy)). 
-Plot i will be ranked by PCsToRankBy[i].
+Plot i will be ranked by PCsToRankBy[i]. A wrapper for rsScoreHeatmap
 }
