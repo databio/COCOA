@@ -965,7 +965,7 @@ pcFromSubset <- function(regionSet, mPCA, methylData, mCoord,
     
     # get subset of loading values
    #  subsetInd = 
-    newColNames <- paste0(PCofInterest, "_subset")
+    newColNames <- paste0(pc, "_subset")
     
     
     olList <- findOverlaps(query = regionSet, subject = coordGR)
@@ -980,27 +980,27 @@ pcFromSubset <- function(regionSet, mPCA, methylData, mCoord,
     # getting PC scores manually so artificial PCs will be included (PC1m4 and PC1p3)
     centeringSubset <- mPCA$center[cytosineHitInd]
     centeredMeth <- t(apply(thisRSMData, 1, function(x) x - centeringSubset)) # center first 
-    reducedValsPCA <- centeredMeth %*% mPCA$rotation[cytosineHitInd, PCofInterest]
+    reducedValsPCA <- centeredMeth %*% mPCA$rotation[cytosineHitInd, pc]
     colnames(reducedValsPCA) <- newColNames
     # pcaValDF <- as.data.frame(reducedValsPCA)
     
     
     # optional calculate correlation
     if (returnCor) {
-        # plot(reducedValsPCA[, PCofInterest],mPCA$x[, PCofInterest])
-        corMat <- cor(reducedValsPCA[, newColNames],mPCA$x[, PCofInterest])
+        # plot(reducedValsPCA[, pc],mPCA$x[, pc])
+        corMat <- cor(reducedValsPCA[, newColNames],mPCA$x[, pc])
         # only correlation between subset and matching PC, not with other PCs
         mainCor <- diag(corMat)
-        names(mainCor) <- PCofInterest
+        names(mainCor) <- pc
         return(mainCor)
-        # origPCCor <- cor(pca$x[, PCofInterest])
-        # subsetPCCor <- cor(reducedValsPCA[, PCofInterest])
+        # origPCCor <- cor(pca$x[, pc])
+        # subsetPCCor <- cor(reducedValsPCA[, pc])
         # Heatmap(corMat, cluster_columns = FALSE, cluster_rows = FALSE)
         # Heatmap(origPCCor, cluster_columns = FALSE, cluster_rows = FALSE)
         # Heatmap(subsetPCCor, cluster_columns = FALSE, cluster_rows = FALSE)
-        # Heatmap(pca$rotation[cytosineHitInd, PCofInterest])
+        # Heatmap(pca$rotation[cytosineHitInd, pc])
     } else {
-        colnames(reducedValsPCA) <- PCofInterest
+        colnames(reducedValsPCA) <- pc
         return(reducedValsPCA)
     }
     

@@ -37,3 +37,14 @@ A heatmap of DNA methylation levels in regions of interest (regionSet).
 Look at methylation in regions of interest across samples, 
 with samples ordered according to PC of interest
 }
+\examples{
+data("brcaMethylData1")
+data("brcaCoord1")
+data("esr1_chr1")
+data("brcaPCScores")
+PCRSA:::rsMethylHeatmap(methylData=brcaMethylData1,
+                mCoord=brcaCoord1,
+                regionSet=esr1_chr1,
+                pcScores=brcaPCScores,
+                orderByPC="PC1", cluster_columns=TRUE)
+}

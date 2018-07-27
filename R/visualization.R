@@ -36,9 +36,19 @@
 #  library(ComplexHeatmap)
 #' @return A heatmap of DNA methylation levels in regions of interest (regionSet).
 #'
+#' @examples data("brcaMethylData1")
+#' data("brcaCoord1")
+#' data("esr1_chr1")
+#' data("brcaPCScores")
+#' PCRSA:::rsMethylHeatmap(methylData=brcaMethylData1,
+#'                 mCoord=brcaCoord1,
+#'                 regionSet=esr1_chr1,
+#'                 pcScores=brcaPCScores,
+#'                 orderByPC="PC1", cluster_columns=TRUE)
 rsMethylHeatmap <- function(methylData, mCoord, regionSet, 
                             pcScores, orderByPC="PC1", ...) {
     
+
     
     # test for appropriateness of inputs/right format
     if (is(mCoord, "GRanges")) {
@@ -73,8 +83,14 @@ rsMethylHeatmap <- function(methylData, mCoord, regionSet,
     thisRSMData <- thisRSMData[names(sort(pcScores[, orderByPC], decreasing = TRUE)), ]
     message(paste0("Number of cytosines: ", ncol(thisRSMData)))
     message(paste0("Number of regions: ", length(unique(queryHits(olList)))))
-    ComplexHeatmap::Heatmap(thisRSMData, cluster_rows = FALSE, cluster_columns = FALSE, ...)# ,
-                            # use_raster=TRUE, raster_device = "png")
+    if (hasArg("cluster_columns")) {
+        ComplexHeatmap::Heatmap(thisRSMData, cluster_rows = FALSE, ...)  
+    } else {
+        ComplexHeatmap::Heatmap(thisRSMData, cluster_rows = FALSE, 
+                                cluster_columns = .cluster_columns, ...)# ,
+        # use_raster=TRUE, raster_device = "png")    
+    }
+   
 }
 
 
@@ -203,35 +219,35 @@ comparePCHeatmap <- function(rsScores, PCsToRankBy=paste0("PC", 1:5),
 # only looking at regions with high average loading scores
 # still individual cytosine methylation
 
-#' raw methylation at top enriched regions for a single region set and single PC.
-#' Patients are ordered by PC score for given PC
-#' #' TODO: deal with bug when nrow(highVariable) = 1
-#' @param loadingMat matrix of loadings (the coefficients of 
-#' the linear combination that defines each PC). One named column for each PC.
-#' One row for each original dimension/variable (should be same order 
-#' as original data/mCoord). The x$rotation output of prcomp().
-#' @param loadingThreshold Only select regions with average 
-#' loading at least this high. Based on loading values from orderByPC.
-#' @param pcScores The principal component scores for the samples
-#'  (ie transformed methylation data). The $x output of prcomp() but must 
-#' have subject_ID as row names.
-#' These same subject_IDs must be column names of methylData.
-#' @param mCoord a GRanges object or data frame with coordinates 
-#' for the cytosines included in the PCA. Coordinates should be in the 
-#' same order as the methylation data and loadings. If a data.frame, 
-#' must have chr and start columns. If end is included, start 
-#' and end should be the same. Start coordinate will be used for calculations.
-#' @param methylData DNA methylation levels (0 to 1) in matrix or data.frame. 
-#' Rows are cytosines. Columns are samples.
-#' @param GRList GRangesList object. Each list item is 
-#' a distinct region set (regions that correspond to 
-#' the same biological annotation).
-#' @param orderByPC PC to order samples by (order rows of heatmap by PC score, 
-#' from high to low score)
-#' @param topXRegions max number of regions to plot, avoids excessively large 
-#' plots which can be hard to load. Number of regions on plot will be less
-#' than or equal to topXRegions (less than if there are not that many regions
-#' total). 50 is arbitrary 
+# raw methylation at top enriched regions for a single region set and single PC.
+# Patients are ordered by PC score for given PC
+# #' TODO: deal with bug when nrow(highVariable) = 1
+# @param loadingMat matrix of loadings (the coefficients of 
+# the linear combination that defines each PC). One named column for each PC.
+# One row for each original dimension/variable (should be same order 
+# as original data/mCoord). The x$rotation output of prcomp().
+# @param loadingThreshold Only select regions with average 
+# loading at least this high. Based on loading values from orderByPC.
+# @param pcScores The principal component scores for the samples
+#  (ie transformed methylation data). The $x output of prcomp() but must 
+# have subject_ID as row names.
+# These same subject_IDs must be column names of methylData.
+# @param mCoord a GRanges object or data frame with coordinates 
+# for the cytosines included in the PCA. Coordinates should be in the 
+# same order as the methylation data and loadings. If a data.frame, 
+# must have chr and start columns. If end is included, start 
+# and end should be the same. Start coordinate will be used for calculations.
+# @param methylData DNA methylation levels (0 to 1) in matrix or data.frame. 
+# Rows are cytosines. Columns are samples.
+# @param GRList GRangesList object. Each list item is 
+# a distinct region set (regions that correspond to 
+# the same biological annotation).
+# @param orderByPC PC to order samples by (order rows of heatmap by PC score, 
+# from high to low score)
+# @param topXRegions max number of regions to plot, avoids excessively large 
+# plots which can be hard to load. Number of regions on plot will be less
+# than or equal to topXRegions (less than if there are not that many regions
+# total). 50 is arbitrary 
 
 methylAlongPC <- function (loadingMat, loadingThreshold, 
                            pcScores, mCoord, methylData, 
