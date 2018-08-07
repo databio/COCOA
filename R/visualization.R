@@ -87,7 +87,7 @@ rsMethylHeatmap <- function(methylData, mCoord, regionSet,
         ComplexHeatmap::Heatmap(thisRSMData, cluster_rows = FALSE, ...)  
     } else {
         ComplexHeatmap::Heatmap(thisRSMData, cluster_rows = FALSE, 
-                                cluster_columns = .cluster_columns, ...)# ,
+                               cluster_columns = FALSE, ...)# ,
         # use_raster=TRUE, raster_device = "png")    
     }
    
@@ -121,6 +121,10 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
                             orderByPC="PC1", rsNameCol = "rsName", topX = 20) {
     
     rsEnrichment <- rsScores
+    # prevent indexing out of bounds later
+    if (nrow(rsEnrichment) < topX) {
+        topX = nrow(rsEnrichment)
+    }
     # so by reference operations will not affect original object
     rsEn <- as.data.table(data.table::copy(rsEnrichment))
     
@@ -130,7 +134,7 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
         stop("Please check format of PC names in PCsToAnnotate.")
     }
      
-    rsEn <- rsEn[, c(PCsToAnnotate, rsNameCol)] # apparently erases row names
+    rsEn <- rsEn[, c(PCsToAnnotate, rsNameCol), with=FALSE] # apparently erases row names
 
     
     # how to deal with NA?
@@ -184,7 +188,8 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
 #' # see https://github.com/jokergoo/ComplexHeatmap/issues/110
 #' 
 comparePCHeatmap <- function(rsScores, PCsToRankBy=paste0("PC", 1:5), 
-                             PCsToInclude=paste0("PC", 1:10), fileName=NULL) {
+                             PCsToInclude=paste0("PC", 1:10), fileName=NULL,
+                             topX=40) {
     rsEnrichment <- rsScores
     
     if (!is.null(fileName)) {
@@ -197,7 +202,7 @@ comparePCHeatmap <- function(rsScores, PCsToRankBy=paste0("PC", 1:5),
                                                          PCsToAnnotate = PCsToInclude,
                                                          orderByPC = PCsToRankBy[i], 
                                                          rsNameCol = "rsName", 
-                                                         topX = 40)))
+                                                         topX = topX)))
             
             pushViewport(viewport(y = unit((8.5 * length(PCsToRankBy)) -
                                                (i - 1) * 8.5, "in"), 
@@ -320,10 +325,10 @@ methylAlongPC <- function (loadingMat, loadingThreshold,
                 # text(paste0(pc1$rsDescription[i], ":", pc1$rsName[i]))
                 # gives error if nrow(highVariable = 1) (happened for PC2)
                 multiHM <- grid.grabExpr(draw(rsMethylHeatmap(methylData = methylData, 
-                                                             coordGR = dtToGr(coordinateDT), 
+                                                             mCoord = dtToGr(coordinateDT), 
                                                              regionSet = regionSet, 
                                                              pcScores = pcScores, 
-                                                             pc = orderByPC, 
+                                                             orderByPC = orderByPC, 
                                                              column_title= regionSetName))) # use_raster=TRUE, raster_device="jpeg")
                 pushViewport(viewport(y = unit((8.5 * nRSToPlot) - 
                                                    (i - 1) * 8.5, "in"), 
