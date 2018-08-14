@@ -6,7 +6,7 @@
 Plot i will be ranked by PCsToRankBy[i]. A wrapper for rsScoreHeatmap}
 \usage{
 comparePCHeatmap(rsScores, PCsToRankBy = paste0("PC", 1:5),
-  PCsToInclude = paste0("PC", 1:10), fileName = NULL)
+  PCsToInclude = paste0("PC", 1:10), fileName = NULL, topX = 40)
 }
 \arguments{
 \item{rsScores}{a data.table with scores for each 
@@ -24,7 +24,9 @@ should be present in the heatmap.}
 \item{fileName}{A character vector. All plots from this function will
 be saved to a single pdf. fileName should give the name of that file.
 By default, it will be saved in the working directory but filename
-can also include the a file path to save the plot in another directory
+can also include the a file path to save the plot in another directory}
+
+\item{topX}{Number of top region sets to include in the heatmap
 
 # see https://github.com/jokergoo/ComplexHeatmap/issues/110}
 }

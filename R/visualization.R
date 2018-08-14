@@ -184,6 +184,7 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
 #' be saved to a single pdf. fileName should give the name of that file.
 #' By default, it will be saved in the working directory but filename
 #' can also include the a file path to save the plot in another directory
+#' @param topX Number of top region sets to include in the heatmap
 #' 
 #' # see https://github.com/jokergoo/ComplexHeatmap/issues/110
 #' 

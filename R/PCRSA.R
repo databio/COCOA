@@ -32,6 +32,7 @@
 #' @importFrom grid grid.newpage grid.grabExpr grid.draw popViewport 
 #'             pushViewport unit viewport
 #' @importFrom grDevices dev.off
+#' @importFrom methods hasArg
 NULL
 
 
