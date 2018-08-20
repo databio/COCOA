@@ -577,7 +577,7 @@ averageByRegion <- function(loadingMat,
     
     bsgr <- BSdtToGRanges(list(BSDT));
     
-    colModes <- sapply(BSDT, mode);
+    colModes <- vapply(BSDT, mode, FUN.VALUE = "a")
     if (is.null(sumCols)) {
         sumCols <- setdiff(colnames(BSDT), c("chr", "start", "end", 
                                              "strand", splitFactor, keepCols))
@@ -598,7 +598,7 @@ averageByRegion <- function(loadingMat,
         #                     up by supplying a regionsGRL.length vector..."),
         #             appendLF = FALSE)
         # }
-        regionsGRL.length <- sapply(regionsGRL, length)
+        regionsGRL.length <- vapply(regionsGRL, length, 1L)
         # message("Done counting regionsGRL lengths.");
     }
     
@@ -831,12 +831,12 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL.length = NU
     
     # Build a table to keep track of which regions belong to which group
     region2group <- data.table(
-        regionID=1:length(regionsGR), 
+        regionID=seq_along(regionsGR), 
         chr=as.vector(seqnames(regionsGR)), 
         start=as.vector(start(regionsGR)), 
         end=as.vector(end(regionsGR)),
         withinGroupID= as.vector(unlist(sapply(regionsGRL.length, seq))),
-        regionGroupID=rep(1:length(regionsGRL), regionsGRL.length))
+        regionGroupID=rep(seq_along(regionsGRL), regionsGRL.length))
     setkey(region2group, regionID)
     
     
@@ -1045,14 +1045,16 @@ percentCOverlap <- function(mCoord, GRList) {
     cHitInd <- lapply(X = olList, function(x) sort(unique(subjectHits(x))))
 
     # total number
-    total_cytosines <- sapply(X = cHitInd, length)
+    total_cytosines <- vapply(X = cHitInd, length, FUN.VALUE = 1L)
     
     # make matrix of combinatorial intersection, will eventually have percent overlap
     pOL <- matrix(nrow=length(GRList), ncol=length(GRList))
     
     # intersect each iten in cHitInd with each item in cHitInd
     sharedC <- lapply(X = cHitInd, 
-                     FUN = function(x) sapply(X = cHitInd, FUN = function(y) length(intersect(x, y))))
+                     FUN = function(x) vapply(X = cHitInd, 
+                                              FUN = function(y) length(intersect(x, y)), 
+                                              FUN.VALUE = 1L))
     
     # converting to proportion of cytosines covered by each region set
     prop_overlap <- lapply(X = sharedC, function(x) x / total_cytosines)
@@ -1205,12 +1207,16 @@ cpgOLMetrics <- function(dataDT, regionGR, metrics=c("mean", "sd"),
     # if (!is.null())
     #
     # formatting so there is one row per PC/testCol
-    olResults <- sapply(X = metrics, FUN = function(x) as.numeric(olMetrics[, grepl(pattern = x, colnames(olMetrics))]))
+    olResults <- vapply(X = metrics, 
+                        FUN = function(x) as.numeric(olMetrics[, grepl(pattern = x, colnames(olMetrics))]), 
+                        FUN.VALUE = 1)
     olResults <- as.data.table(olResults)
     setnames(olResults, old = colnames(olResults), new = paste0(colnames(olResults), "_OL"))
     
     
-    nonOLResults <- sapply(X = metrics, FUN = function(x) as.numeric(nonOLMetrics[, grepl(pattern = x, colnames(nonOLMetrics))]))
+    nonOLResults <- vapply(X = metrics, 
+                           FUN = function(x) as.numeric(nonOLMetrics[, grepl(pattern = x, colnames(nonOLMetrics))]), 
+                           FUN.VALUE = 1)
     nonOLResults <- as.data.table(nonOLResults)
     setnames(nonOLResults, old = colnames(nonOLResults), new = paste0(colnames(nonOLResults), "_nonOL"))
     
@@ -1270,8 +1276,8 @@ rsWilcox <- function(dataDT, regionGR, ...) {
     
     # calculate Wilcoxon rank sum test for each column
     # additional parameters given with ...
-    pVals <- sapply(X = testCols, FUN = function(x) wilcox.test(x = as.numeric(as.matrix(dataDT[olCpG, x, with=FALSE])), 
-                                               y = as.numeric(as.matrix(dataDT[nonOLCpG, x, with=FALSE])), ...)$p.value)
+    pVals <- vapply(X = testCols, FUN = function(x) wilcox.test(x = as.numeric(as.matrix(dataDT[olCpG, x, with=FALSE])), 
+                                               y = as.numeric(as.matrix(dataDT[nonOLCpG, x, with=FALSE])), ...)$p.value, 1)
      
     
     
@@ -1327,7 +1333,7 @@ BSAggregate_RGenomeUtils = function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL
     
     additionalColNames <- setdiff(colnames(BSDT), c("chr","start", "end","hitCount","readCount", splitFactor))
     
-    colModes <- sapply(BSDT,mode)
+    colModes <- vapply(BSDT, mode, FUN.VALUE = "a")
     if (is.null(sumCols)) {
         sumCols <- setdiff(colnames(BSDT),c("chr", "start", "end", "strand", splitFactor, keepCols))
         # Restrict to numeric columns.		
@@ -1344,18 +1350,18 @@ BSAggregate_RGenomeUtils = function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL
         # if (length(regionsGRL) > 100) {
         #     message("BSAggregate: Calculating sizes. You can speed this up by supplying a regionsGRL.length vector...", appendLF=FALSE)
         # }
-        regionsGRL.length <- sapply(regionsGRL, length)
+        regionsGRL.length <- vapply(regionsGRL, length, FUN.VALUE = 1L)
         # message("Done counting regionsGRL lengths.")
     }
     
     # Build a table to keep track of which regions belong to which group
     region2group <- data.table(
-        regionID=1:length(regionsGR), 
+        regionID=seq_along(regionsGR), 
         chr=as.vector(seqnames(regionsGR)), 
         start=as.vector(start(regionsGR)), 
         end=as.vector(end(regionsGR)),
         withinGroupID= as.vector(unlist(sapply(regionsGRL.length, seq))),
-        regionGroupID=rep(1:length(regionsGRL), regionsGRL.length))
+        regionGroupID=rep(seq_along(regionsGRL), regionsGRL.length))
     setkey(region2group, regionID)
     
     

@@ -76,11 +76,13 @@ rsMethylHeatmap <- function(methylData, mCoord, regionSet,
     cytosineHitInd <- sort(unique(subjectHits(olList)))
     thisRSMData <- t(methylData[cytosineHitInd, ])
     subject_ID <- row.names(thisRSMData)
-    # centeredPCAMeth <- t(apply(t(methylData), 1, function(x) x - pcaData$center)) # center first 
+    # centeredPCAMeth <- t(apply(t(methylData), 1, 
+    #                            function(x) x - pcaData$center)) #center first 
     # reducedValsPCA <- centeredPCAMeth %*% pcaData$rotation
     # reducedValsPCA <- pcaData$x
     # pcaData must have subject_ID as row name
-    thisRSMData <- thisRSMData[names(sort(pcScores[, orderByPC], decreasing = TRUE)), ]
+    thisRSMData <- thisRSMData[names(sort(pcScores[, orderByPC], 
+                                          decreasing = TRUE)), ]
     message(paste0("Number of cytosines: ", ncol(thisRSMData)))
     message(paste0("Number of regions: ", length(unique(queryHits(olList)))))
     if (hasArg("cluster_columns")) {
@@ -134,7 +136,8 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
         stop("Please check format of PC names in PCsToAnnotate.")
     }
      
-    rsEn <- rsEn[, c(PCsToAnnotate, rsNameCol), with=FALSE] # apparently erases row names
+    # apparently erases row names
+    rsEn <- rsEn[, c(PCsToAnnotate, rsNameCol), with=FALSE] 
 
     
     # how to deal with NA?
@@ -404,10 +407,13 @@ regionQuantileByPC <- function(loadingMat, mCoord, GRList,
         # if there are too many regions, don't plot because the attempt to cluster
         # will cause a memory error
         if (nrow(rsRegionAverage) <= maxRegionsToPlot) {
-            multiHM <- grid.grabExpr(draw(Heatmap(matrix = as.matrix(rsRegionAverage[, PCsToAnnotate, with=FALSE]), column_title = rsNames[i], 
+            multiHM <- grid.grabExpr(draw(Heatmap(matrix = as.matrix(rsRegionAverage[, PCsToAnnotate, with=FALSE]), 
+                                                 column_title = rsNames[i], 
                                                  cluster_rows = cluster_rows,
-                                                 cluster_columns = FALSE, name = "Percentile of Loading Scores in PC"))) # use_raster=TRUE, raster_device="jpeg")
-            pushViewport(viewport(y = unit((8.5*length(GRList))-(i-1) * 8.5, "in"), height = unit(8, "in"), just = "top"))
+                                                 cluster_columns = FALSE, 
+                                                 name = "Percentile of Loading Scores in PC"))) # use_raster=TRUE, raster_device="jpeg")
+            pushViewport(viewport(y = unit((8.5*length(GRList))-(i-1) * 8.5, "in"), 
+                                  height = unit(8, "in"), just = "top"))
             grid.draw(multiHM)
             popViewport()
         }
