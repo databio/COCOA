@@ -1207,16 +1207,14 @@ cpgOLMetrics <- function(dataDT, regionGR, metrics=c("mean", "sd"),
     # if (!is.null())
     #
     # formatting so there is one row per PC/testCol
-    olResults <- vapply(X = metrics, 
-                        FUN = function(x) as.numeric(olMetrics[, grepl(pattern = x, colnames(olMetrics))]), 
-                        FUN.VALUE = 1)
+    olResults <- sapply(X = metrics, 
+                        FUN = function(x) as.numeric(olMetrics[, grepl(pattern = x, colnames(olMetrics))]))
     olResults <- as.data.table(olResults)
     setnames(olResults, old = colnames(olResults), new = paste0(colnames(olResults), "_OL"))
     
     
-    nonOLResults <- vapply(X = metrics, 
-                           FUN = function(x) as.numeric(nonOLMetrics[, grepl(pattern = x, colnames(nonOLMetrics))]), 
-                           FUN.VALUE = 1)
+    nonOLResults <- sapply(X = metrics, 
+                           FUN = function(x) as.numeric(nonOLMetrics[, grepl(pattern = x, colnames(nonOLMetrics))]))
     nonOLResults <- as.data.table(nonOLResults)
     setnames(nonOLResults, old = colnames(nonOLResults), new = paste0(colnames(nonOLResults), "_nonOL"))
     
