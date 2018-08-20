@@ -60,9 +60,11 @@ data("brcaCoord1")
 data("brcaLoadings1")
 data("esr1_chr1")
 data("nrf1_chr1")
-GRList = GenomicRanges::GRangesList(esr1_chr1, nrf1_chr1)
-pcRegionSetEnrichment(loadingMat=brcaLoadings1, mCoord=brcaCoord1, 
-                      GRList=GRList, PCsToAnnotate=c("PC1", "PC2"), 
-                      scoringMetric="raw")
+GRList <- GenomicRanges::GRangesList(esr1_chr1, nrf1_chr1)
+rsScores <- pcRegionSetEnrichment(loadingMat=brcaLoadings1, 
+                                 mCoord=brcaCoord1, 
+                                 GRList=GRList, 
+                                 PCsToAnnotate=c("PC1", "PC2"), 
+                                 scoringMetric="raw")
 
 }

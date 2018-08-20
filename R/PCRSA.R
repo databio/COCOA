@@ -291,11 +291,12 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
 #' data("brcaLoadings1")
 #' data("esr1_chr1")
 #' data("nrf1_chr1")
-#' GRList = GenomicRanges::GRangesList(esr1_chr1, nrf1_chr1)
-#' pcRegionSetEnrichment(loadingMat=brcaLoadings1, mCoord=brcaCoord1, 
-#'                       GRList=GRList, PCsToAnnotate=c("PC1", "PC2"), 
-#'                       scoringMetric="raw")
-
+#' GRList <- GenomicRanges::GRangesList(esr1_chr1, nrf1_chr1)
+#' rsScores <- pcRegionSetEnrichment(loadingMat=brcaLoadings1, 
+#'                                  mCoord=brcaCoord1, 
+#'                                  GRList=GRList, 
+#'                                  PCsToAnnotate=c("PC1", "PC2"), 
+#'                                  scoringMetric="raw")
 #' 
 #' @export
 
@@ -863,7 +864,7 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL.length = NU
     BSDT[,regionID:=subjectHits(fo)] #record which region they overlapped.
     #BSDT[queryHits(fo),regionID:=subjectHits(fo)]
     #if (!keep.na) {
-    #	BSDT = BSDT[queryHits(fo),]
+    #    BSDT = BSDT[queryHits(fo),]
     #}
     
     if (is.null(jExpr)) {
@@ -1083,6 +1084,14 @@ percentCOverlap <- function(mCoord, GRList) {
 #' ranked by enrichment score for region sets for that PC.
 #' Original indices for region sets that were used to create rsScores
 #' are given. 
+#' @examples data("rsScores")
+#' rsRankInd = rsRankingIndex(rsScores=rsScores, 
+#'                            PCsToAnnotate=c("PC1", "PC2"))
+#' # region sets sorted by score for PC1
+#' rsScores[rsRankInd$PC1, ]
+#' # region sets sorted by score for PC2
+#' rsScores[rsRankInd$PC2, ]
+#' 
 #' @export
 #' 
 rsRankingIndex <- function(rsScores, PCsToAnnotate) {
@@ -1368,7 +1377,7 @@ BSAggregate_RGenomeUtils = function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL
     BSDT[,regionID:=subjectHits(fo)] #record which region they overlapped.
     #BSDT[queryHits(fo),regionID:=subjectHits(fo)]
     #if (!keep.na) {
-    #	BSDT <- BSDT[queryHits(fo),]
+    #    BSDT <- BSDT[queryHits(fo),]
     #}
     
     if (is.null(jExpr)) {

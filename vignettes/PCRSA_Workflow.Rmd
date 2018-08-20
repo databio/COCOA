@@ -35,9 +35,9 @@ First, we need the results from PCA of the DNA methylation data. We will also ne
 
 ```{r, eval=FALSE, message=FALSE, warning=FALSE}
 # the genomic coordinates
-mCoord = methylData$coordinates
+mCoord <- methylData$coordinates
 # consider whether centering or scaling is needed
-mPCA = prcomp(x = t(methylData$methylProp), center = TRUE, scale. = FALSE)
+mPCA <- prcomp(x=t(methylData$methylProp), center=TRUE, scale.=FALSE)
 ```
 
 ## Input 2: Large Collection of Region Sets
@@ -72,21 +72,21 @@ rm("regionSetDB")
 Now we test how much each region set is associated with each principal component:
     
 ```{r, eval=FALSE, message=FALSE, warning=FALSE}
-PCsToAnnotate = paste0("PC", 1:6)
-rsEnrichment = pcRegionSetEnrichment(loadingMat=mPCA$rotation, 
-                                     mCoord = mCoord, 
+PCsToAnnotate <- paste0("PC", 1:6)
+rsEnrichment <- pcRegionSetEnrichment(loadingMat=mPCA$rotation, 
+                                     mCoord=mCoord, 
                                      GRList=GRList, 
-                                     PCsToAnnotate = PCsToAnnotate, 
+                                     PCsToAnnotate=PCsToAnnotate, 
                                      scoringMetric="raw")
-rsEnrichment$rsName = rsName
-rsEnrichment$rsDescription = rsDescription
+rsEnrichment$rsName <- rsName
+rsEnrichment$rsDescription <- rsDescription
 ```
 
 We can sort the results to see which region sets are most associated with each PC.
 
 ```{r, eval=FALSE, message=FALSE, warning=FALSE}
-View(rsEnrichment[order(rsEnrichment$PC1, decreasing = TRUE), ])
-View(rsEnrichment[order(rsEnrichment$PC2, decreasing = TRUE), ])
+View(rsEnrichment[order(rsEnrichment$PC1, decreasing=TRUE), ])
+View(rsEnrichment[order(rsEnrichment$PC2, decreasing=TRUE), ])
 # etc.
 ```
 

@@ -32,3 +32,13 @@ are given.
 Use this function when you want to look at top region sets to make it 
 easier to get the original indices to select them from a list of region sets.
 }
+\examples{
+data("rsScores")
+rsRankInd = rsRankingIndex(rsScores=rsScores, 
+                           PCsToAnnotate=c("PC1", "PC2"))
+# region sets sorted by score for PC1
+rsScores[rsRankInd$PC1, ]
+# region sets sorted by score for PC2
+rsScores[rsRankInd$PC2, ]
+
+}

@@ -43,69 +43,69 @@ data("brcaCoord1")
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 # prepare data
-GRList = GRangesList(esr1_chr1, gata3_chr1, nrf1_chr1, atf3_chr1) 
-rsName = c("esr1_chr1", "gata3_chr1", "nrf1_chr1", "atf3_chr1")
+GRList <- GRangesList(esr1_chr1, gata3_chr1, nrf1_chr1, atf3_chr1) 
+rsName <- c("esr1_chr1", "gata3_chr1", "nrf1_chr1", "atf3_chr1")
 ```
 
 Now we test how much each region set is associated with each principal component:
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
-PCsToAnnotate = paste0("PC", 1:4)
-rsEnrichment = pcRegionSetEnrichment(loadingMat=brcaLoadings1, 
-                                              mCoord = brcaCoord1, 
+PCsToAnnotate <- paste0("PC", 1:4)
+rsEnrichment <- pcRegionSetEnrichment(loadingMat=brcaLoadings1, 
+                                              mCoord=brcaCoord1, 
                                               GRList=GRList, 
-                                              PCsToAnnotate = PCsToAnnotate, 
+                                              PCsToAnnotate=PCsToAnnotate, 
                                               scoringMetric="raw")
-rsEnrichment$rsName = rsName
+rsEnrichment$rsName <- rsName
 ```
 
 We can see whether variability along the PC is specific to the region of interest by comparing the region of interest to the surrounding genome. To do this, we will calculate the average loadings of a wide area surrounding the regions of interest.
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
-wideGRList = lapply(GRList, resize, width = 14000, fix="center")
-loadProfile = pcEnrichmentProfile(loadingMat = brcaLoadings1, mCoord = brcaCoord1,
-                                 GRList=wideGRList, PCsToAnnotate = PCsToAnnotate,
-                                 binNum = 21)
+wideGRList <- lapply(GRList, resize, width=14000, fix="center")
+loadProfile <- pcEnrichmentProfile(loadingMat=brcaLoadings1, mCoord=brcaCoord1,
+                                 GRList=wideGRList, PCsToAnnotate=PCsToAnnotate,
+                                 binNum=21)
 ```
 
 We will normalize the result for each PC so we can better compare them.
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 # average loading value from each PC to normalize so PCs can be compared with each other
-avLoad = apply(X = brcaLoadings1[, PCsToAnnotate], MARGIN = 2, FUN = function(x) mean(abs(x)))
+avLoad <- apply(X=brcaLoadings1[, PCsToAnnotate], MARGIN=2, FUN=function(x) mean(abs(x)))
 
 # normalize
-loadProfile = lapply(loadProfile, FUN = function(x) x[, mapply(FUN = function(y, z) get(y) - z, y=PCsToAnnotate, z = avLoad)])
-loadProfile = lapply(loadProfile, FUN = function(x) data.table(regionGroupID=1:nrow(x), x))
+loadProfile <- lapply(loadProfile, FUN=function(x) x[, mapply(FUN=function(y, z) get(y) - z, y=PCsToAnnotate, z=avLoad)])
+loadProfile <- lapply(loadProfile, FUN=function(x) data.table(regionGroupID=1:nrow(x), x))
 
 # for the plot scale
-maxVal = max(sapply(loadProfile, FUN = function(x) max(x[, .SD, .SDcols=PCsToAnnotate])))
-minVal = min(sapply(loadProfile, FUN = function(x) min(x[, .SD, .SDcols=PCsToAnnotate])))
+maxVal <- max(sapply(loadProfile, FUN=function(x) max(x[, .SD, .SDcols=PCsToAnnotate])))
+minVal <- min(sapply(loadProfile, FUN=function(x) min(x[, .SD, .SDcols=PCsToAnnotate])))
 # convert to long format for plots
-loadProfile = lapply(X = loadProfile, FUN = function(x) tidyr::gather(data = x, key = "PC", value="loading_value", PCsToAnnotate))
-loadProfile = lapply(X = loadProfile, as.data.table)
-loadProfile = lapply(loadProfile, function(x) x[, PC := factor(PC, levels = PCsToAnnotate)])
+loadProfile <- lapply(X=loadProfile, FUN=function(x) tidyr::gather(data=x, key="PC", value="loading_value", PCsToAnnotate))
+loadProfile <- lapply(X=loadProfile, as.data.table)
+loadProfile <- lapply(loadProfile, function(x) x[, PC := factor(PC, levels=PCsToAnnotate)])
 ```
 
 Let's look at the plots!
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
-wrapper <- function(x, ...) paste(strwrap(x, ...), collapse = "\n") 
-profilePList = list()
+wrapper <- function(x, ...) paste(strwrap(x, ...), collapse="\n") 
+profilePList <- list()
 for (i in seq_along(loadProfile)) {
     
-    thisRS = loadProfile[[i]]
+    thisRS <- loadProfile[[i]]
     
-    profilePList[[i]] = ggplot(data = thisRS, mapping = aes(x =regionGroupID , y = loading_value)) + 
-        geom_line() + ylim(c(minVal, maxVal)) + facet_wrap(facets = "PC") + 
-        ggtitle(label = wrapper(rsName[i], width=30)) + xlab("Genome around Region Set, 14 kb") + 
+    profilePList[[i]] <- ggplot(data=thisRS, mapping=aes(x=regionGroupID , y=loading_value)) + 
+        geom_line() + ylim(c(minVal, maxVal)) + facet_wrap(facets="PC") + 
+        ggtitle(label=wrapper(rsName[i], width=30)) + xlab("Genome around Region Set, 14 kb") + 
         ylab("Normalized Loading Value") + 
-        theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank())
+        theme(panel.grid.major.x=element_blank(), panel.grid.minor.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
     profilePList[[i]]
     # plot(loadProfile[[i]]$PC1, type="l") + title(rsNames[i])
     # 
     
-    #xLabels = xAxisForRegionPlots2()
+    #xLabels <- xAxisForRegionPlots2()
     
 }
 profilePList[[1]]

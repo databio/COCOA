@@ -145,6 +145,21 @@ NULL
 #' @format A GRanges object
 NULL
 
+#' Example PCRSA Results (made up)
+#' 
+#' A data.frame with example PCRSA results.
+#' 5 region sets with names given by rsScores$rsName.
+#' Each region set has a score for each PC. Scores
+#' for real region sets would normally be orders of 
+#' magnitude smaller.
+#'
+#' @docType data
+#' @keywords datasets
+#' @name rsScores
+#' @usage data(rsScores)
+#' @format A data.frame object
+NULL
+
 # # script for generating package data
 # # restricting data to reduce how much memory the package takes up
 # # first run part of 02-brca_PCRSA to get brcaMList and filteredMData
@@ -222,3 +237,12 @@ NULL
 # ## also getting PC scores for PC 1-4 for these patients
 # brcaPCScores <- mPCA$x[c(lowScore, highScore), paste0("PC", 1:4)]
 # save("brcaPCScores", file="brcaPCScores.RData", compress="xz")
+
+############ data for rsRankingIndex
+# setwd("/data")
+# PC1 <- c(1, 2, 3, 5, 7)
+# PC2 <- c(5, 1, 3, 2, 4)
+# rsName <- c("rs1", "rs2", "rs3", "rs4", "rs5")
+# rsScores <- data.frame(PC1, PC2, rsName)
+# save(rsScores, file = "rsScores.RData", compress = "xz")
+# rsRankingIndex(rsScores = rsScores, PCsToAnnotate = c("PC1", "PC2"))
