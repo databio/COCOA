@@ -242,8 +242,8 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
         message("|")
     }
         
-        return(results)
-    }
+    return(results)
+}
 
 
 

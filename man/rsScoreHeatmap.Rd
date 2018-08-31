@@ -2,11 +2,17 @@
 % Please edit documentation in R/visualization.R
 \name{rsScoreHeatmap}
 \alias{rsScoreHeatmap}
-\title{Heatmap of enrichment scores across PCs
-A visualization of the enrichment data.frame.}
+\title{Heatmap of the ranking of region set scores across PCs
+A visualization of rank of region sets in each PC, allowing the
+user to see if a region set is ranked highly in all PCs or only a subset.
+The ComplexHeatmap package
+is used and additional parameters for the ComplexHeatmap::Heatmap function
+may be passed to this function to modify the heatmap.}
 \usage{
 rsScoreHeatmap(rsScores, PCsToAnnotate = paste0("PC", 1:5),
-  orderByPC = "PC1", rsNameCol = "rsName", topX = 20)
+  orderByPC = "PC1", rsNameCol = "rsName", topX = 20,
+  cluster_rows = FALSE, cluster_columns = FALSE, show_row_names = TRUE,
+  row_names_max_width = unit(1e+05, "mm"), name = "Rank within PC", ...)
 }
 \arguments{
 \item{rsScores}{a data.table with scores for each 
@@ -25,6 +31,23 @@ names/identifiers for the region sets so this information can be included
 in the plot.}
 
 \item{topX}{Number of top region sets to include in the heatmap}
+
+\item{cluster_rows}{boolean, whether rows should be clustered. 
+This should be kept as FALSE to keep the correct ranking of region sets.}
+
+\item{cluster_columns}{boolean, whether to cluster columns. It is recommended
+to keep this as FALSE so it will be easier to compare PCs 
+(with cluster_columns = FALSE, they will be in the same specified
+order in different heatmaps)}
+
+\item{show_row_names}{boolean, display row names (ie region set names)}
+
+\item{row_names_max_width}{"unit" object. The amount of room to 
+allocate for row names. See ?grid::unit for object type.}
+
+\item{name}{character object, legend title}
+
+\item{...}{optional parameters for ComplexHeatmap::Heatmap()}
 }
 \value{
 A heatmap of region set scores across. Each row is a region set,
@@ -32,6 +55,15 @@ each column is a PC. The color corresponds to a region set's relative
 rank for a given PC out of all tested region sets.
 }
 \description{
-Heatmap of enrichment scores across PCs
-A visualization of the enrichment data.frame.
+Heatmap of the ranking of region set scores across PCs
+A visualization of rank of region sets in each PC, allowing the
+user to see if a region set is ranked highly in all PCs or only a subset.
+The ComplexHeatmap package
+is used and additional parameters for the ComplexHeatmap::Heatmap function
+may be passed to this function to modify the heatmap.
+}
+\examples{
+data("rsScores")
+scoreHeatmap <- rsScoreHeatmap(rsScores, 
+          PCsToAnnotate=paste0("PC", 1:2), orderByPC = "PC2")
 }

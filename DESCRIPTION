@@ -23,8 +23,7 @@ Imports:
     MIRA,
     tidyr,
     grid,
-    grDevices,
-    methods
+    grDevices
 Suggests:
     knitr,
     parallel,

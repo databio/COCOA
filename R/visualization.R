@@ -9,14 +9,18 @@
 ###
 # plotting functions to be exported:
 # rsScoreHeatmap (heatmap of top region sets (rows) by PCs (cols), ordered by one PC), uses ComplexHeatmap
-# rsMethylHeatmap (raw methylation along PC), uses ComplexHeatmap
+# featuresAlongPC (raw methylation along PC), uses ComplexHeatmap
 # regionQuantileByPC?
 
 # functions to visualize results of PCRSA, relevant regions, and variation in the dataset
 # 
 
-#' Look at methylation in regions of interest across samples, 
-#' with samples ordered according to PC of interest 
+#' Look at features (eg, DNA methylation values) in regions of 
+#' interest across samples, 
+#' with samples ordered according to PC of interest. 
+#' The ComplexHeatmap package
+#' is used and additional parameters for the ComplexHeatmap::Heatmap function
+#' may be passed to this function to modify the heatmap.   
 #'
 #' @param methylData DNA methylation levels (0 to 1) in matrix or data.frame. 
 #' Rows are cytosines. Columns are samples.
@@ -32,21 +36,34 @@
 #' These same subject_IDs must be column names of methylData
 #' @param orderByPC PC to order samples by (order rows of heatmap by PC score, 
 #' from high to low score)
+#' @param cluster_columns boolean, whether to cluster columns (the features,
+#' eg DNA methylation values for each CpG).
+#' @param cluster_rows boolean, whether rows should be clustered. 
+#' This should be kept as FALSE to keep the correct ranking of 
+#' samples/observations according to their PC score.
+#' @param name character object, legend title
 #' @param ... optional parameters for ComplexHeatmap::Heatmap()
-#  library(ComplexHeatmap)
-#' @return A heatmap of DNA methylation levels in regions of interest (regionSet).
+#' @return A heatmap of feature values (eg DNA methylation levels) 
+#' in regions of interest (regionSet).
+#' Each row is a patient/sample and each column is an individual feature. 
+#' Rows are ordered by PC score (orderByPC), high scores at top and low at 
+#' the bottom.
 #'
 #' @examples data("brcaMethylData1")
 #' data("brcaCoord1")
 #' data("esr1_chr1")
 #' data("brcaPCScores")
-#' PCRSA:::rsMethylHeatmap(methylData=brcaMethylData1,
+#' featuresAlongPC(methylData=brcaMethylData1,
 #'                 mCoord=brcaCoord1,
 #'                 regionSet=esr1_chr1,
 #'                 pcScores=brcaPCScores,
 #'                 orderByPC="PC1", cluster_columns=TRUE)
-rsMethylHeatmap <- function(methylData, mCoord, regionSet, 
-                            pcScores, orderByPC="PC1", ...) {
+#' 
+#' @export
+# previously called rsMethylHeatmap
+featuresAlongPC <- function(methylData, mCoord, regionSet, 
+                            pcScores, orderByPC="PC1", cluster_columns = FALSE, 
+                            cluster_rows = FALSE, name = "Feature Value", ...) {
     
 
     
@@ -85,20 +102,22 @@ rsMethylHeatmap <- function(methylData, mCoord, regionSet,
                                           decreasing = TRUE)), ]
     message(paste0("Number of cytosines: ", ncol(thisRSMData)))
     message(paste0("Number of regions: ", length(unique(queryHits(olList)))))
-    if (hasArg("cluster_columns")) {
-        ComplexHeatmap::Heatmap(thisRSMData, cluster_rows = FALSE, ...)  
-    } else {
-        ComplexHeatmap::Heatmap(thisRSMData, cluster_rows = FALSE, 
-                               cluster_columns = FALSE, ...)# ,
-        # use_raster=TRUE, raster_device = "png")    
-    }
-   
+    ComplexHeatmap::Heatmap(thisRSMData, 
+                            cluster_rows = cluster_rows, 
+                            cluster_columns = cluster_columns, 
+                            name = name,
+                            ...)
 }
 
 
 
-#' Heatmap of enrichment scores across PCs
-#' A visualization of the enrichment data.frame.
+
+#' Heatmap of the ranking of region set scores across PCs
+#' A visualization of rank of region sets in each PC, allowing the
+#' user to see if a region set is ranked highly in all PCs or only a subset.
+#' The ComplexHeatmap package
+#' is used and additional parameters for the ComplexHeatmap::Heatmap function
+#' may be passed to this function to modify the heatmap.  
 #' 
 #' @param rsScores a data.table with scores for each 
 #' region set from main PCRSA function. 
@@ -112,15 +131,32 @@ rsMethylHeatmap <- function(methylData, mCoord, regionSet,
 #' names/identifiers for the region sets so this information can be included 
 #' in the plot.
 #' @param topX Number of top region sets to include in the heatmap
+#' @param cluster_rows boolean, whether rows should be clustered. 
+#' This should be kept as FALSE to keep the correct ranking of region sets.
+#' @param cluster_columns boolean, whether to cluster columns. It is recommended
+#' to keep this as FALSE so it will be easier to compare PCs 
+#' (with cluster_columns = FALSE, they will be in the same specified
+#' order in different heatmaps)
+#' @param show_row_names boolean, display row names (ie region set names)
+#' @param row_names_max_width "unit" object. The amount of room to 
+#' allocate for row names. See ?grid::unit for object type.
+#' @param name character object, legend title
+#' @param ... optional parameters for ComplexHeatmap::Heatmap()
 #' @return A heatmap of region set scores across. Each row is a region set,
 #' each column is a PC. The color corresponds to a region set's relative
 #' rank for a given PC out of all tested region sets.
-#
-# @examples scoreHeatmap <- rsScoreHeatmap(rsScores, 
-#           PCsToAnnotate=paste0("PC", 1:10), orderByPC = "PC2")
+#'
+#' @examples data("rsScores")
+#' scoreHeatmap <- rsScoreHeatmap(rsScores, 
+#'           PCsToAnnotate=paste0("PC", 1:2), orderByPC = "PC2")
+#' @export
 
 rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
-                            orderByPC="PC1", rsNameCol = "rsName", topX = 20) {
+                            orderByPC="PC1", rsNameCol = "rsName", topX = 20, 
+                           cluster_rows = FALSE, cluster_columns = FALSE, 
+                           show_row_names = TRUE, 
+                           row_names_max_width = unit(100000, "mm"), 
+                           name="Rank within PC", ...) {
     
     rsEnrichment <- rsScores
     # prevent indexing out of bounds later
@@ -164,33 +200,35 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
     rsEn[, c(rsNameCol) := NULL]
     rsEn <- as.matrix(rsEn)
     row.names(rsEn) <- rowNames
-    Heatmap(rsEn[1:topX, ], cluster_rows = FALSE, cluster_columns = FALSE, 
-            show_row_names = TRUE, row_names_max_width = unit(100000, "mm"))
+    Heatmap(rsEn[1:topX, ], cluster_rows = cluster_rows, 
+            cluster_columns = cluster_columns, 
+            show_row_names = show_row_names, 
+            row_names_max_width = row_names_max_width, 
+            name = name, ...)
     
 }
 
 
-
-#' create pdf with multiple heatmap plots (number = length(PCsToRankBy)). 
-#' Plot i will be ranked by PCsToRankBy[i]. A wrapper for rsScoreHeatmap
-#' 
-#' @param rsScores a data.table with scores for each 
-#' region set from main PCRSA function. 
-#' Each row is a region set. Columns are PCs and info on region set overlap
-#' with DNA methylation data. Should be in the same order as GRList (the list of 
-#' region sets used to create it.)
-#' @param PCsToRankBy PC to order by (decreasing order) in heatmap. One 
-#' heatmap for each PC in PCsToRankBy. 
-#' @param PCsToInclude A character vector with names of PCs that 
-#' should be present in the heatmap.
-#' @param fileName A character vector. All plots from this function will
-#' be saved to a single pdf. fileName should give the name of that file.
-#' By default, it will be saved in the working directory but filename
-#' can also include the a file path to save the plot in another directory
-#' @param topX Number of top region sets to include in the heatmap
-#' 
-#' # see https://github.com/jokergoo/ComplexHeatmap/issues/110
-#' 
+# create pdf with multiple heatmap plots (number = length(PCsToRankBy)). 
+# Plot i will be ranked by PCsToRankBy[i]. A wrapper for rsScoreHeatmap
+# 
+# @param rsScores a data.table with scores for each 
+# region set from main PCRSA function. 
+# Each row is a region set. Columns are PCs and info on region set overlap
+# with DNA methylation data. Should be in the same order as GRList (the list of 
+# region sets used to create it.)
+# @param PCsToRankBy PC to order by (decreasing order) in heatmap. One 
+# heatmap for each PC in PCsToRankBy. 
+# @param PCsToInclude A character vector with names of PCs that 
+# should be present in the heatmap.
+# @param fileName A character vector. All plots from this function will
+# be saved to a single pdf. fileName should give the name of that file.
+# By default, it will be saved in the working directory but filename
+# can also include the a file path to save the plot in another directory
+# @param topX Number of top region sets to include in the heatmap
+# 
+# # see https://github.com/jokergoo/ComplexHeatmap/issues/110
+# 
 comparePCHeatmap <- function(rsScores, PCsToRankBy=paste0("PC", 1:5), 
                              PCsToInclude=paste0("PC", 1:10), fileName=NULL,
                              topX=40) {
@@ -328,7 +366,7 @@ methylAlongPC <- function (loadingMat, loadingThreshold,
                 
                 # text(paste0(pc1$rsDescription[i], ":", pc1$rsName[i]))
                 # gives error if nrow(highVariable = 1) (happened for PC2)
-                multiHM <- grid.grabExpr(draw(rsMethylHeatmap(methylData = methylData, 
+                multiHM <- grid.grabExpr(draw(featuresAlongPC(methylData = methylData, 
                                                              mCoord = dtToGr(coordinateDT), 
                                                              regionSet = regionSet, 
                                                              pcScores = pcScores, 
@@ -354,31 +392,37 @@ methylAlongPC <- function (loadingMat, loadingThreshold,
 
 
 
-#' plot individual region scores/percentiles across PCs for a single region set
-#' One plot for each region set
-#' @param loadingMat matrix of loadings (the coefficients of 
-#' the linear combination that defines each PC). One named column for each PC.
-#' One row for each original dimension/variable (should be same order 
-#' as original data/mCoord). The x$rotation output of prcomp().
-#' @param mCoord a GRanges object or data frame with coordinates 
-#' for the cytosines included in the PCA. Coordinates should be in the 
-#' same order as the methylation data and loadings. If a data.frame, 
-#' must have chr and start columns. If end is included, start 
-#' and end should be the same. Start coordinate will be used for calculations.
-#' @param GRList GRangesList object. Each list item is 
-#' a distinct region set (regions that correspond to 
-#' the same biological annotation).
-#' @param rsNames character vector. Names of the region sets in the same
-#' order as GRList. For use as a title for each heatmap.
-#' @param PCsToAnnotate A character vector with principal components to 
-#' include. eg c("PC1", "PC2")
-#' @param maxRegionsToPlot how many top regions from region set to include
-#' in heatmap. Including too many may slow down computation and increase memory
-#' use.
-#' @param cluster_rows Boolean, whether to cluster rows or not (may 
-#' increase computation time significantly for large number of rows)
-#' 
-regionQuantileByPC <- function(loadingMat, mCoord, GRList, 
+# plot multiple regionQuantileByPC plots in a single pdf.
+# regionQuantileByPC plots individual region scores/percentiles 
+# across PCs for a single region set
+# One plot for each region set
+# @param loadingMat matrix of loadings (the coefficients of 
+# the linear combination that defines each PC). One named column for each PC.
+# One row for each original dimension/variable (should be same order 
+# as original data/mCoord). The x$rotation output of prcomp().
+# @param mCoord a GRanges object or data frame with coordinates 
+# for the cytosines included in the PCA. Coordinates should be in the 
+# same order as the methylation data and loadings. If a data.frame, 
+# must have chr and start columns. If end is included, start 
+# and end should be the same. Start coordinate will be used for calculations.
+# @param GRList GRangesList object. Each list item is 
+# a distinct region set (regions that correspond to 
+# the same biological annotation).
+# @param rsNames character vector. Names of the region sets in the same
+# order as GRList. For use as a title for each heatmap.
+# @param PCsToAnnotate A character vector with principal components to 
+# include. eg c("PC1", "PC2")
+# @param maxRegionsToPlot how many top regions from region set to include
+# in heatmap. Including too many may slow down computation and increase memory
+# use.
+# @param cluster_rows Boolean, whether to cluster rows or not (may 
+# increase computation time significantly for large number of rows)
+# @return
+# 
+# @examples 
+# 
+# 
+multiRegionQuantileByPC <- function(loadingMat, mCoord, GRList, 
                                rsNames, PCsToAnnotate=paste0("PC", 1:5),
                                maxRegionsToPlot = 8000, cluster_rows = TRUE) {
     
@@ -422,3 +466,103 @@ regionQuantileByPC <- function(loadingMat, mCoord, GRList,
     }
     
 }
+
+#' plot individual region scores/percentiles across PCs for a single region set
+#' One plot for each region set
+#' @param loadingMat matrix of loadings (the coefficients of 
+#' the linear combination that defines each PC). One named column for each PC.
+#' One row for each original dimension/variable (should be same order 
+#' as original data/mCoord). The x$rotation output of prcomp().
+#' @param mCoord a GRanges object or data frame with coordinates 
+#' for the cytosines included in the PCA. Coordinates should be in the 
+#' same order as the methylation data and loadings. If a data.frame, 
+#' must have chr and start columns. If end is included, start 
+#' and end should be the same. Start coordinate will be used for calculations.
+#' @param regionSet A genomic ranges object with regions corresponding
+#' to the same biological annotation.
+#' @param rsName character vector. Names of the region sets in the same
+#' order as GRList. For use as a title for each heatmap.
+#' @param PCsToAnnotate A character vector with principal components to 
+#' include. eg c("PC1", "PC2")
+#' @param maxRegionsToPlot how many top regions from region set to include
+#' in heatmap. Including too many may slow down computation and increase memory
+#' use. If regionSet has more regions than maxRegionsToPlot, a number of regions 
+#' equal to maxRegionsToPlot will be randomly sampled from the region set and
+#' these regions will be plotted.
+#' @param cluster_rows Boolean, whether to cluster rows or not (may 
+#' increase computation time significantly for large number of rows)
+#' @param cluster_columns boolean, whether to cluster columns. It is recommended
+#' to keep this as FALSE so it will be easier to compare PCs 
+#' (with cluster_columns = FALSE, they will be in the same specified
+#' order in different heatmaps)
+#' @param column_title character object, column title
+#' @param name character object, legend title
+#' @param ... optional parameters for ComplexHeatmap::Heatmap()
+#' @return a heatmap. This heatmap allows you to see if some regions are 
+#' associated with certain PCs but not others. Also, you can see if a subset of 
+#' regions in the region set are associated with PCs while another subset
+#' are not associated with any PCs 
+#' Columns are PCs, rows are regions. To color
+#' each region, first the absolute loading values within that region are
+#' averaged. Then this average is compared to the distribution of absolute
+#' loading values for all individual features to get a quantile/percentile 
+#' for that region. Colors are based on this quantile/percentile. 
+#' The output is a Heatmap object (ComplexHeatmap package).
+#' 
+#' @examples data("brcaLoadings1")
+#' data("brcaCoord1")
+#' data("esr1_chr1")
+#' data("brcaPCScores")
+#' regionByPCHM <- regionQuantileByPC(loadingMat = brcaLoadings1, 
+#'                                    mCoord = brcaCoord1, 
+#'                                    regionSet = esr1_chr1, 
+#'                                    rsName = "Estrogen Receptor Chr1", 
+#'                                    PCsToAnnotate=paste0("PC", 1:2),
+#'                                    maxRegionsToPlot = 8000, 
+#'                                    cluster_rows = TRUE, 
+#'                                    cluster_columns = FALSE, 
+#'                                    column_title = rsName, 
+#'                                    name = "Percentile of Loading Scores in PC")
+#' 
+#' @export
+regionQuantileByPC <- function(loadingMat, mCoord, regionSet, 
+                               rsName = "", PCsToAnnotate=paste0("PC", 1:5),
+                               maxRegionsToPlot = 8000, cluster_rows = TRUE, 
+                               cluster_columns = FALSE, column_title = rsName, 
+                               name = "Percentile of Loading Scores in PC", ...) {
+    
+    if (is(mCoord, "GRanges")) {
+        coordinateDT <- grToDt(mCoord)
+    } else if (is(mCoord, "data.frame")) {
+        coordinateDT <- mCoord
+    } else {
+        stop("mCoord should be a data.frame or GRanges object.")
+    }
+    
+    
+    # if too many regions to plot, randomly subsample regions
+    if (length(regionSet) > maxRegionsToPlot) {
+        regionInd <- sample(x = seq_along(regionSet), size = maxRegionsToPlot, 
+                            replace = FALSE)
+        # get subset
+        regionSet <- regionSet[regionInd]
+    }
+    
+    
+    
+    rsRegionAverage <- averageByRegion(loadingMat = loadingMat, 
+                                       mCoord =coordinateDT, 
+                                       regionSet = regionSet, 
+                                       PCsToAnnotate = PCsToAnnotate,
+                                       returnQuantile = TRUE)
+    # ranking in terms of percentiles in case there were different 
+    # distributions of loading scores for each PC
+    
+    # the heatmap
+    Heatmap(matrix = as.matrix(rsRegionAverage[, PCsToAnnotate, with=FALSE]), 
+            column_title = rsName, 
+            cluster_rows = cluster_rows,
+            cluster_columns = cluster_columns, 
+            name = name, ...)
+}
+
