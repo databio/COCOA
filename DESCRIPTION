@@ -34,9 +34,9 @@ Suggests:
     LOLA
 VignetteBuilder: knitr
 License: GPL-3
-biocViews: DNAMethylation, GeneRegulation, GenomeAnnotation, 
+biocViews: PrincipalComponent, GenomicVariation, DNAMethylation, GeneRegulation, GenomeAnnotation, 
 	   SystemsBiology, FunctionalGenomics, ChIPSeq, 
-           MethylSeq, Sequencing, Epigenetics, Coverage
+           MethylSeq, Sequencing, Epigenetics
 URL: http://github.com/databio/PCRSA
 BugReports: https://github.com/databio/PCRSA
 RoxygenNote: 6.0.1

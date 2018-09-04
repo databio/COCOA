@@ -96,7 +96,7 @@ loadProfile <- pcEnrichmentProfile(loadingMat=brcaLoadings1, mCoord=brcaCoord1,
                                  binNum=21)
 ```
 
-We will normalize the result for each PC so we can better compare them.
+We will normalize the result for each PC so we can better compare them. Here we normalize by subtracting the mean absolute loading of each PC from the region set profiles for the corresponding PC. Then we get the plot scale so we can easily compare the different profiles. 
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 # average loading value from each PC to normalize so PCs can be compared with each other
@@ -109,6 +109,7 @@ loadProfile <- lapply(loadProfile, FUN=function(x) data.table(regionGroupID=1:nr
 # for the plot scale
 maxVal <- max(sapply(loadProfile, FUN=function(x) max(x[, .SD, .SDcols=PCsToAnnotate])))
 minVal <- min(sapply(loadProfile, FUN=function(x) min(x[, .SD, .SDcols=PCsToAnnotate])))
+
 # convert to long format for plots
 loadProfile <- lapply(X=loadProfile, FUN=function(x) tidyr::gather(data=x, key="PC", value="loading_value", PCsToAnnotate))
 loadProfile <- lapply(X=loadProfile, as.data.table)
@@ -170,4 +171,39 @@ Since PCRSA ranks region sets based on their relative scores in comparison to ot
 
 ## Looking at Loadings of Individual Regions
 
+This plot can help you learn more about the contribution of individual regions to the region set score for each PC. For example, if the estrogen receptor region set was associated with PCs 1, 3, and 4, we might wonder whether the same regions are causing the association with these PCs or whether different regions are associated with each PC. To do this, we will first calculate the average absolute loading value for each region in a region set (obtained by averaging a given PC's loadings for CpGs within that region). Then we can use the distribution of loadings for each PC to convert each region set's loading to a percentile to see how extreme/high that region is for each PC. Let's look at the plot for estrogen receptor: 
 
+```{r, eval=TRUE, message=FALSE, warning=FALSE}
+regionQuantileByPC(loadingMat = brcaLoadings1,
+                                mCoord = brcaCoord1,
+                                regionSet = esr1_chr1,
+                                rsName = "Estrogen Receptor (Chr1)",
+                                PCsToAnnotate=paste0("PC", 1:4),
+                                maxRegionsToPlot = 8000,
+                                cluster_rows = TRUE,
+                                cluster_columns = FALSE,
+                                column_title = rsName,
+                                name = "Percentile of Loading Scores in PC")
+```
+
+We can see that some of the same regions have high loadings for multiple PCs (ie these regions are important for these PCs). Also, there are some regions that do not have high loadings for any of the top 4 PCs, suggesting that these regions are not associated with the largest sources of covariation in the data.  Overall, PC2 does not have as high loadings as PCs 1, 3, and 4, consistent with our loading profiles (no peak for PC2). While Esr1 was ranked highest for PC2 for the initial PCRSA results, this was only the highest score out of 4 region sets. This illustrates two important points for using PCRSA. First, you almost always will want to use many region sets so that you can compare the PCRSA score for a region set to many others to see if it really is relatively high. Second, you should do further confirmation on top-ranked region sets such as looking at the raw DNA methylation values and looking at the loading profiles to make sure your top region sets are capturing real variation.  
+
+For contrast, we can look at the regions of Nrf1:
+
+```{r, eval=TRUE, message=FALSE, warning=FALSE}
+regionQuantileByPC(loadingMat = brcaLoadings1,
+                                mCoord = brcaCoord1,
+                                regionSet = nrf1_chr1,
+                                rsName = "Nrf1 (Chr1)",
+                                PCsToAnnotate=paste0("PC", 1:4),
+                                maxRegionsToPlot = 8000,
+                                cluster_rows = TRUE,
+                                cluster_columns = FALSE,
+                                column_title = rsName,
+                                name = "Percentile of Loading Scores in PC")
+```
+
+
+We can see that only a very small proportion of regions in the Nrf1 region set have high loadings for PCs 1-4. This is consistent with this region set being ranked low by PCRSA for association with these PCs.
+
+These visualization functions can help you explore your data and understand its variation. In conclusion, PCRSA can help you identify biologically meaningful sources of variation that contribute to each PC, giving you insight into variability in your data. 
