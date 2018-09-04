@@ -22,7 +22,7 @@ This vignette begins after PCA has been performed on DNA methlyation data. There
 2. Genomic coordinates associated with PCA loadings.
 3. Region sets (normally a database of region sets).
 
-PCA loadings were derived from PCA of 450k DNA methylation microarrays for 657 breast cancer patients from The Cancer Genome Atlas (TCGA-BRCA, https://portal.gdc.cancer.gov/). The PCA was done with all autosomal chromosomes but only loadings and coordinates for cytosines in chromosome 1 are included to minimize memory requirements. `brcaLoadings1` has chr1 loadings and corresponding coordinates are in `brcaCoord1`. In this vignette, we will use a small number of region sets to demonstrate how to use the PCRSA functions. For actual use, PCRSA should be done with a large number of region sets. Publicly available collections of region sets can be found online (eg http://databio.org/regiondb).
+For this vignette, we are using data from The Cancer Genome Atlas: 450k DNA methylation microarrays for 657 breast cancer patients (TCGA-BRCA, https://portal.gdc.cancer.gov/). PCA was done with DNA methylation data for all autosomal chromosomes but only the PC loadings and coordinates for cytosines in chromosome 1 are included in this vignette to minimize memory requirements. `brcaLoadings1` has chr1 loadings and corresponding coordinates are in `brcaCoord1`. In this vignette, we will use a small number of region sets to demonstrate how to use the PCRSA functions. For actual use, PCRSA should be done with a large number of region sets. Publicly available collections of region sets can be found online (eg http://databio.org/regiondb).
 
 # Running PCRSA
 
@@ -49,7 +49,7 @@ GRList <- GRangesList(esr1_chr1, gata3_chr1, nrf1_chr1, atf3_chr1)
 rsName <- c("esr1_chr1", "gata3_chr1", "nrf1_chr1", "atf3_chr1")
 ```
 
-Now we test how much each region set is associated with each principal component:
+Now we see how much each region set is associated with each principal component:
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 PCsToAnnotate <- paste0("PC", 1:4)
@@ -83,7 +83,7 @@ We can further understand the variability in these region sets in several ways:
 
 1. Look at whether variability is specific to the regions of interest compared to the genome around these regions. 
 2. Look at the raw DNA methylation in these regions and whether it follows the same trends as the PC scores.
-3. Look at the loadings in each region of a given region set to see whether all regions have high loadings or just some of the regions.
+3. Look at the loadings in each region of a given region set to see whether all regions have high loadings or just a subset the regions. Also we can see if the same regions have high loadings for multiple PCs.
 
 ## Specificity of variation to the regions of interest
 
@@ -139,11 +139,11 @@ profilePList[[3]]
 profilePList[[4]]
 ```
 
-These plots show that Esr1 and Gata3 binding regions are variable compared to the surrounding genome while Nrf1 and Atf3 are not. Some region sets may have an increased loading but no peak, for example some histone modification region sets like H3K27me3 or H3K9me3. This doesn't necessarily mean these regions are not relevant. It could just mean that there are larger blocks of variability around these histone modifications. The results from our four region sets suggest that Esr1 and Gata3 regions contribute to the variation along the PCs 1 and 3 (as well as perhaps 4), helping us understand the biological meaning of those PCs (at least partially estrogen receptor-related) and understand sources of variation in our data.
+These plots show that Esr1 and Gata3 binding regions are variable compared to the surrounding genome (because they have a peak in the middle) while Nrf1 and Atf3 are not. Some region sets may have an increased loading but no peak, for example some histone modification region sets like H3K27me3 or H3K9me3. This doesn't necessarily mean these regions are not relevant. It could just mean that there are larger blocks of variability around these histone modifications. The results from our four region sets suggest that Esr1 and Gata3 regions contribute to the variation along the PCs 1 and 3 (as well as perhaps 4), helping us understand the biological meaning of those PCs (at least partially estrogen receptor-related) and understand sources of variation in our data.
 
 ## Looking at the Raw Data
 
-If a region set has a high score for a PC, we would expect that DNA methylation in those regions varies along the PC axis. In other words, as you go from high PC score to low PC score, DNA methylation will either go up or down in this same direction. Let's look at DNA methylation at CpGs in Esr1 regions. In the following plot, each column is a CpG in an Esr1 region and each row is a patient. Patients are ordered by their PC score for PC1.
+If a region set has a high score for a PC, we would expect that DNA methylation in at least some of those regions would correlate with PC score. In other words, as you go from high PC score to low PC score along the PC axis, DNA methylation will either go up or down. Let's look at DNA methylation at CpGs in Esr1 regions. In the following plot, each column is a CpG in an Esr1 region and each row is a patient. Patients are ordered by their PC score for PC1.
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 featuresAlongPC(methylData=brcaMethylData1,
@@ -153,7 +153,7 @@ featuresAlongPC(methylData=brcaMethylData1,
                 orderByPC="PC1", cluster_columns=TRUE, name = "DNA Methylation Level")
 ```
 
-It appears that some but not all CpGs vary greatly along the PC axis. The CpGs that show high variation along the axis are the ones that contribute to the Esr1 region set being ranked highly in our analysis. Looking at the raw data confirms that DNA methylation is in fact varying along the PC axis, which gives us more confidence in our results.
+It appears that some but not all CpGs vary greatly along the PC axis. The CpGs that show high variation along the PC axis are the ones that contribute to the Esr1 region set being ranked highly in our analysis. Looking at the raw data confirms that DNA methylation is in fact varying along the PC axis, which gives us more confidence in our results.
 
 Now let's look at one of the region sets, Nrf1, that had a low score for PC1:
 
@@ -171,7 +171,7 @@ Since PCRSA ranks region sets based on their relative scores in comparison to ot
 
 ## Looking at Loadings of Individual Regions
 
-This plot can help you learn more about the contribution of individual regions to the region set score for each PC. For example, if the estrogen receptor region set was associated with PCs 1, 3, and 4, we might wonder whether the same regions are causing the association with these PCs or whether different regions are associated with each PC. To do this, we will first calculate the average absolute loading value for each region in a region set (obtained by averaging a given PC's loadings for CpGs within that region). Then we can use the distribution of loadings for each PC to convert each region set's loading to a percentile to see how extreme/high that region is for each PC. Let's look at the plot for estrogen receptor: 
+This plot can help you learn more about the contribution of individual regions to the region set score for each PC. For example, if the estrogen receptor region set was associated with PCs 1, 3, and 4, we might wonder whether the same regions are causing the association with these PCs or whether different regions are associated with each PC. To do this, we will first calculate the average absolute loading value for each region in a region set (obtained by averaging a given PC's loadings for CpGs within that region). Then we can use the distribution of loadings for each PC to convert each region's loading to a percentile to see how extreme/high that region is for each PC. Let's look at the plot for estrogen receptor: 
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 regionQuantileByPC(loadingMat = brcaLoadings1,
