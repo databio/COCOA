@@ -94,8 +94,9 @@ if (getRversion() >= "2.15.1") {
 #' all regions in regionSet and not just ones that overlap. 
 
 aggregateLoadings <- function(loadingMat, mCoord, regionSet, 
-                  PCsToAnnotate = c("PC1", "PC2"), metric="raw", pcLoadAv=NULL,
-                  verbose=FALSE) {
+                              PCsToAnnotate = c("PC1", "PC2"), 
+                              metric="raw", pcLoadAv=NULL,
+                              verbose=FALSE) {
     # UPDATE: take out permutations
     permute <- FALSE
     
@@ -137,9 +138,9 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
         # modified copy
         loadAgMain <- BSAggregate(BSDT = loadingDT, 
                                   regionsGRL = GRangesList(regionSet),
-                                 jExpr = aggrCommand,
-                                 byRegionGroup = TRUE,
-                                 splitFactor = NULL)
+                                  jExpr = aggrCommand,
+                                  byRegionGroup = TRUE,
+                                  splitFactor = NULL)
         results <- loadAgMain[, .SD, .SDcols = PCsToAnnotate]
         # if no cytosines from loadings were included in regionSet, result is NA
         if (is.null(loadAgMain)) {
@@ -187,7 +188,8 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
     } else if (metric == "meanDiff") {
         # if (is.null(pcLoadAv)) {
         #     # calculate (should already be absolute)
-        #     pcLoadAv <- apply(X = loadingDT[, PCsToAnnotate, with=FALSE], MARGIN = 2, FUN = mean)
+        #     pcLoadAv <- apply(X = loadingDT[, PCsToAnnotate, with=FALSE], 
+        #                       MARGIN = 2, FUN = mean)
         # }
         loadMetrics <- cpgOLMetrics(dataDT=loadingDT, regionGR=regionSet, 
                                    metrics=c("mean", "sd"), 
@@ -482,14 +484,16 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
     }
     
     # message("Binning...")
-    binnedDT <- rangeDT[, MIRA::binRegion(start, end, binCount, get(seqnamesColName))]
+    binnedDT <- rangeDT[, MIRA::binRegion(start, end, 
+                                          binCount, get(seqnamesColName))]
     binnedGR <- sapply(split(binnedDT, binnedDT$binID), dtToGr)
     # message("Aggregating...")
     
     # RGenomeUtils::BSAggregate
     binnedBSDT <- BSAggregate_RGenomeUtils(BSDT, 
                              regionsGRL=GRangesList(binnedGR), 
-                             jExpr=buildJ(PCsToAnnotate, rep("mean", length(PCsToAnnotate))), 
+                             jExpr=buildJ(PCsToAnnotate, 
+                                          rep("mean", length(PCsToAnnotate))), 
                                           byRegionGroup=byRegionGroup, 
                                           splitFactor = splitFactor)
     # # If we aren't aggregating by bin, then don't restrict to min reads!
@@ -789,8 +793,11 @@ averageByRegion <- function(loadingMat,
 # and also for rows that do not overlap with region set.
 #
 # 
-BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL.length = NULL, splitFactor=NULL, keepCols=NULL, 
-                       sumCols=NULL, jExpr=NULL, byRegionGroup=FALSE, keep.na=FALSE, returnSD=FALSE) {
+BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL, 
+                        regionsGRL.length = NULL, splitFactor=NULL, 
+                        keepCols=NULL, sumCols=NULL, 
+                        jExpr=NULL, byRegionGroup=FALSE, 
+                        keep.na=FALSE, returnSD=FALSE) {
     
     # Assert that regionsGRL is a GRL.
     # If regionsGRL is given as a GRanges, we convert to GRL
@@ -806,13 +813,17 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL.length = NU
     
     bsgr <- BSdtToGRanges(list(BSDT))
     
-    additionalColNames <- setdiff(colnames(BSDT), c("chr","start", "end","hitCount","readCount", splitFactor))
+    additionalColNames <- setdiff(colnames(BSDT), 
+                                  c("chr","start", "end",
+                                    "hitCount","readCount", splitFactor))
     
     colModes <- sapply(BSDT,mode)
     if (is.null(sumCols)) {
-        sumCols <- setdiff(colnames(BSDT),c("chr", "start", "end", "strand", splitFactor, keepCols))
+        sumCols <- setdiff(colnames(BSDT),c("chr", "start", "end", 
+                                            "strand", splitFactor, keepCols))
         # Restrict to numeric columns.		
-        sumCols <- intersect(sumCols, names(colModes[which(colModes == "numeric")]))
+        sumCols <- intersect(sumCols, 
+                             names(colModes[which(colModes == "numeric")]))
         
     }
     # It's required to do a findoverlaps on each region individually,
@@ -885,7 +896,9 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL.length = NU
     if (is.null(splitFactor)) {
         byString <- paste0("list(regionID)")
     } else {
-        byString <- paste0("list(", paste("regionID", paste0(splitFactor, ""), collapse=", ", sep=", "), ")")
+        byString <- paste0("list(", paste("regionID", 
+                                          paste0(splitFactor, ""), 
+                                          collapse=", ", sep=", "), ")")
     }
     
     # Now actually do the aggregate:
@@ -901,11 +914,15 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL.length = NU
         # must set allow=TRUE here in case there are multiple IDs (splitCol)
         bsCombined[region2group, regionGroupID:=regionGroupID, allow=TRUE]
         if (! is.null(splitFactor) ) { 
-            byStringGroup <- paste0("list(", paste("regionGroupID", paste0(splitFactor, collapse=", "), sep=", "), ")")
+            byStringGroup <- paste0("list(", paste("regionGroupID", 
+                                                   paste0(splitFactor, 
+                                                          collapse=", "), 
+                                                   sep=", "), ")")
         } else {
             byStringGroup <- "list(regionGroupID)"
         }
-        bsCombined=bsCombined[,eval(parse(text=jExpr)), by=eval(parse(text=byStringGroup))]
+        bsCombined=bsCombined[,eval(parse(text=jExpr)), 
+                              by=eval(parse(text=byStringGroup))]
         bsCombined[, numCpGsOverlapping := numCpGsOverlapping]
         bsCombined[, numRegionsOverlapping := numRegionsOverlapping]
         return(bsCombined)
@@ -1078,7 +1095,13 @@ cpgOLMetrics <- function(dataDT, regionGR, metrics=c("mean", "sd"),
     
     
     
-    metricDT <- cbind(data.table(testCol=testCols), olResults, nonOLResults, data.table(cytosine_coverage, region_coverage, total_region_number, mean_region_size))
+    metricDT <- cbind(data.table(testCol=testCols), 
+                      olResults, 
+                      nonOLResults, 
+                      data.table(cytosine_coverage, 
+                                 region_coverage, 
+                                 total_region_number, 
+                                 mean_region_size))
     
     return(metricDT)
 }
@@ -1105,7 +1128,8 @@ rsWilcox <- function(dataDT, regionGR, ...) {
     
 
     # columns of interest
-    testCols <- colnames(dataDT)[!(colnames(dataDT) %in% c("chr", "start", "end"))]
+    testCols <- colnames(dataDT)[!(colnames(dataDT) %in% 
+                                       c("chr", "start", "end"))]
     
     
     # convert DT to GR for finding overlaps
@@ -1137,7 +1161,11 @@ rsWilcox <- function(dataDT, regionGR, ...) {
      
     
     
-    wRes <- data.frame(t(pVals), cytosine_coverage, region_coverage, total_region_number, mean_region_size)
+    wRes <- data.frame(t(pVals), 
+                       cytosine_coverage, 
+                       region_coverage, 
+                       total_region_number, 
+                       mean_region_size)
     return(wRes)
 }
 
@@ -1170,8 +1198,11 @@ rsWilcox <- function(dataDT, regionGR, ...) {
 # Turn on this flag to aggregate across all region groups, making the result
 # uncontiguous, and resulting in 1 row per *region group*.
 #
-BSAggregate_RGenomeUtils = function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL.length = NULL, splitFactor=NULL, keepCols=NULL, 
-                       sumCols=NULL, jExpr=NULL, byRegionGroup=FALSE, keep.na=FALSE) {
+BSAggregate_RGenomeUtils = function(BSDT, regionsGRL, 
+                                    excludeGR=NULL, regionsGRL.length = NULL, 
+                                    splitFactor=NULL, keepCols=NULL, 
+                                    sumCols=NULL, jExpr=NULL, 
+                                    byRegionGroup=FALSE, keep.na=FALSE) {
     
     # Assert that regionsGRL is a GRL.
     # If regionsGRL is given as a GRanges, we convert to GRL
@@ -1187,13 +1218,18 @@ BSAggregate_RGenomeUtils = function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL
     
     bsgr <- BSdtToGRanges(list(BSDT))
     
-    additionalColNames <- setdiff(colnames(BSDT), c("chr","start", "end","hitCount","readCount", splitFactor))
+    additionalColNames <- setdiff(colnames(BSDT), c("chr", "start", 
+                                                    "end", "hitCount", 
+                                                    "readCount", splitFactor))
     
     colModes <- vapply(BSDT, mode, FUN.VALUE = "a")
     if (is.null(sumCols)) {
-        sumCols <- setdiff(colnames(BSDT),c("chr", "start", "end", "strand", splitFactor, keepCols))
+        sumCols <- setdiff(colnames(BSDT),c("chr", "start", 
+                                            "end", "strand", 
+                                            splitFactor, keepCols))
         # Restrict to numeric columns.		
-        sumCols <- intersect(sumCols, names(colModes[which(colModes == "numeric")]))
+        sumCols <- intersect(sumCols, 
+                             names(colModes[which(colModes == "numeric")]))
         
     }
     # It's required to do a findoverlaps on each region individually,
@@ -1260,7 +1296,12 @@ BSAggregate_RGenomeUtils = function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL
     if (is.null(splitFactor)) {
         byString <- paste0("list(regionID)")
     } else {
-        byString <- paste0("list(", paste("regionID", paste0(splitFactor, ""), collapse=", ", sep=", "), ")")
+        byString <- paste0("list(", 
+                           paste("regionID", 
+                                 paste0(splitFactor, ""), 
+                                 collapse=", ", 
+                                 sep=", "), 
+                           ")")
     }
     
     # Now actually do the aggregate:
@@ -1276,11 +1317,17 @@ BSAggregate_RGenomeUtils = function(BSDT, regionsGRL, excludeGR=NULL, regionsGRL
         # must set allow=TRUE here in case there are multiple IDs (splitCol)
         bsCombined[region2group, regionGroupID:=regionGroupID, allow=TRUE]
         if (! is.null(splitFactor) ) { 
-            byStringGroup <- paste0("list(", paste("regionGroupID", paste0(splitFactor, collapse=", "), sep=", "), ")")
+            byStringGroup <- paste0("list(", 
+                                    paste("regionGroupID", 
+                                          paste0(splitFactor, 
+                                                 collapse=", "), 
+                                          sep=", "), 
+                                    ")")
         } else {
             byStringGroup <- "list(regionGroupID)"
         }
-        bsCombined=bsCombined[,eval(parse(text=jExpr)), by=eval(parse(text=byStringGroup))]
+        bsCombined=bsCombined[, eval(parse(text=jExpr)), 
+                              by=eval(parse(text=byStringGroup))]
         return(bsCombined)
     } else {
         e <- region2group[bsCombined,]

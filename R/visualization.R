@@ -7,15 +7,11 @@
 # MIRA: dtToGr
 # ComplexHeatmap
 ###
-# plotting functions to be exported:
-# rsScoreHeatmap (heatmap of top region sets (rows) by PCs (cols), ordered by one PC), uses ComplexHeatmap
-# featuresAlongPC (raw methylation along PC), uses ComplexHeatmap
-# regionQuantileByPC?
 
 # functions to visualize results of PCRSA, relevant regions, and variation in the dataset
 # 
 
-# color schemes: red/blue, yellow/red, red/grey, skyblue/coral
+# color schemes: red/blue, yellow/red, red/grey, skyblue/coral, skyblue/yellow
 
 #' Look at features (eg, DNA methylation values) in regions of 
 #' interest across samples, 

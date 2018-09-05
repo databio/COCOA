@@ -178,11 +178,16 @@ NULL
 # 
 # # region sets
 # # some of the top ranked region sets for PC1 (in top 5)
-# esr1 <- GRList[rsName == "Human_MCF-7_ESR1_E2-45min_Brown.bed"][[1]]
-# gata3 <- GRList[rsName == "wgEncodeAwgTfbsSydhMcf7Gata3UcdUniPk.narrowPeak"][[1]]
-# # some of the bottom ranked region sets for PC1 (in bottom 1% of >2200 region sets)
-# nrf1 <- GRList[rsName == "wgEncodeAwgTfbsSydhHepg2Nrf1IggrabUniPk.narrowPeak"][[1]]
-# atf3 <- GRList[rsName == "wgEncodeAwgTfbsSydhK562Atf3UniPk.narrowPeak"][[1]]
+# esr1 <- GRList[rsName == 
+#                    "Human_MCF-7_ESR1_E2-45min_Brown.bed"][[1]]
+# gata3 <- GRList[rsName == 
+#                     "wgEncodeAwgTfbsSydhMcf7Gata3UcdUniPk.narrowPeak"][[1]]
+# # some of the bottom ranked region sets 
+# # for PC1 (in bottom 1% of >2200 region sets)
+# nrf1 <- GRList[rsName == 
+#                    "wgEncodeAwgTfbsSydhHepg2Nrf1IggrabUniPk.narrowPeak"][[1]]
+# atf3 <- GRList[rsName == 
+#                    "wgEncodeAwgTfbsSydhK562Atf3UniPk.narrowPeak"][[1]]
 # 
 # 
 # # restrict to chromosome 22 (reduce file sizes)
@@ -192,7 +197,9 @@ NULL
 # load22 <- loadingMat[chr22Ind, paste0("PC", 1:4)]
 # 
 # grList <- GRangesList(er, gata, nrf1, atf3)
-# ol22 <- lapply(X = grList, function(x) findOverlaps(query = x, subject = MIRA:::dtToGr(coord22)))
+# ol22 <- lapply(X = grList, 
+#                function(x) findOverlaps(query = x, 
+#                                         subject = MIRA:::dtToGr(coord22)))
 # 
 # 
 # # restrict to chromosome 1 (reduce file sizes)
@@ -203,7 +210,9 @@ NULL
 # 
 # # restrict region sets to chr1
 # grList <- GRangesList(er, gata3, nrf1, atf3)
-# ol1 <- lapply(X = grList, function(x) findOverlaps(query = x, subject = MIRA:::dtToGr(coord1)))
+# ol1 <- lapply(X = grList, 
+#               function(x) findOverlaps(query = x, 
+#                                        subject = MIRA:::dtToGr(coord1)))
 # 
 # # to restrict to chr1
 # esr1_chr1 <- esr1[ seqnames(esr1) == "chr1"]
@@ -212,7 +221,9 @@ NULL
 # atf3_chr1 <- atf3[ seqnames(atf3) == "chr1"]
 # 
 # # save("", file = "coord1.RData") # reduce ~4x from in-memory size
-# save("brcaLoadings1", file = "brcaLoadings1.RData", compress = "xz") # reduce ~7x
+# save("brcaLoadings1", 
+#      file = "brcaLoadings1.RData", 
+#      compress = "xz") # reduce ~7x
 # save("brcaCoord1", file = "brcaCoord1.RData", compress = "xz")
 # 
 # save("esr1_chr1", file = "esr1_chr1.RData", compress = "xz")
@@ -224,8 +235,8 @@ NULL
 # filteredMData <- cbind(brcaMList[["coordinates"]], filteredMData)
 # chr1MData <- filteredMData[filteredMData$chr == "chr1", ]
 # 
-# # selecting patients to include based on PC1, two with low PC scores, two with 
-# # high PC scores
+# # selecting patients to include based on PC1, two with low PC scores, 
+# # and two with high PC scores
 # pc1Order <- sort(mPCA$x[, "PC1"], decreasing = FALSE)
 # lowScore <- names(pc1Order)[1:2]
 # highScore <- names(pc1Order)[(length(pc1Order) - 1):length(pc1Order)]
