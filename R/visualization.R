@@ -155,7 +155,7 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
                            cluster_rows = FALSE, cluster_columns = FALSE, 
                            show_row_names = TRUE, 
                            row_names_max_width = unit(100000, "mm"), 
-                           name="Rank within PC", col = c("red", "gray"), ...) {
+                           name="Rank within PC", col = c("gray", "red"), ...) {
     
     rsEnrichment <- rsScores
     # prevent indexing out of bounds later
