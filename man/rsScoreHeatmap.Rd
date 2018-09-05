@@ -12,7 +12,8 @@ may be passed to this function to modify the heatmap.}
 rsScoreHeatmap(rsScores, PCsToAnnotate = paste0("PC", 1:5),
   orderByPC = "PC1", rsNameCol = "rsName", topX = 20,
   cluster_rows = FALSE, cluster_columns = FALSE, show_row_names = TRUE,
-  row_names_max_width = unit(1e+05, "mm"), name = "Rank within PC", ...)
+  row_names_max_width = unit(1e+05, "mm"), name = "Rank within PC",
+  col = c("red", "gray"), ...)
 }
 \arguments{
 \item{rsScores}{a data.table with scores for each 
@@ -46,6 +47,10 @@ order in different heatmaps)}
 allocate for row names. See ?grid::unit for object type.}
 
 \item{name}{character object, legend title}
+
+\item{col}{a vector of colors or a color mapping function which
+will be passed to the ComplexHeatmap::Heatmap() function. See ?Heatmap
+(the "col" parameter) for more details.}
 
 \item{...}{optional parameters for ComplexHeatmap::Heatmap()}
 }

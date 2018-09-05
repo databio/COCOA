@@ -8,7 +8,8 @@ One plot for each region set}
 regionQuantileByPC(loadingMat, mCoord, regionSet, rsName = "",
   PCsToAnnotate = paste0("PC", 1:5), maxRegionsToPlot = 8000,
   cluster_rows = TRUE, cluster_columns = FALSE, column_title = rsName,
-  name = "Percentile of Loading Scores in PC", ...)
+  name = "Percentile of Loading Scores in PC", col = c("skyblue", "yellow"),
+  ...)
 }
 \arguments{
 \item{loadingMat}{matrix of loadings (the coefficients of 
@@ -49,6 +50,10 @@ order in different heatmaps)}
 
 \item{name}{character object, legend title}
 
+\item{col}{a vector of colors or a color mapping function which
+will be passed to the ComplexHeatmap::Heatmap() function. See ?Heatmap
+(the "col" parameter) for more details.}
+
 \item{...}{optional parameters for ComplexHeatmap::Heatmap()}
 }
 \value{
@@ -82,5 +87,6 @@ regionByPCHM <- regionQuantileByPC(loadingMat = brcaLoadings1,
                                    cluster_columns = FALSE, 
                                    column_title = rsName, 
                                    name = "Percentile of Loading Scores in PC")
+                                   regionByPCHM
 
 }

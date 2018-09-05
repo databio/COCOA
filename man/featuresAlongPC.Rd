@@ -42,7 +42,8 @@ samples/observations according to their PC score.}
 
 \item{name}{character object, legend title}
 
-\item{...}{optional parameters for ComplexHeatmap::Heatmap()}
+\item{...}{optional parameters for ComplexHeatmap::Heatmap() (eg change
+heatmap colors with "col" parameter)}
 }
 \value{
 A heatmap of feature values (eg DNA methylation levels) 

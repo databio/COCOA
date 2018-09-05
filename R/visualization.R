@@ -15,6 +15,8 @@
 # functions to visualize results of PCRSA, relevant regions, and variation in the dataset
 # 
 
+# color schemes: red/blue, yellow/red, red/grey, skyblue/coral
+
 #' Look at features (eg, DNA methylation values) in regions of 
 #' interest across samples, 
 #' with samples ordered according to PC of interest. 
@@ -42,7 +44,8 @@
 #' This should be kept as FALSE to keep the correct ranking of 
 #' samples/observations according to their PC score.
 #' @param name character object, legend title
-#' @param ... optional parameters for ComplexHeatmap::Heatmap()
+#' @param ... optional parameters for ComplexHeatmap::Heatmap() (eg change
+#' heatmap colors with "col" parameter)
 #' @return A heatmap of feature values (eg DNA methylation levels) 
 #' in regions of interest (regionSet).
 #' Each row is a patient/sample and each column is an individual feature. 
@@ -105,8 +108,7 @@ featuresAlongPC <- function(methylData, mCoord, regionSet,
     ComplexHeatmap::Heatmap(thisRSMData, 
                             cluster_rows = cluster_rows, 
                             cluster_columns = cluster_columns, 
-                            name = name,
-                            ...)
+                            name = name, ...)
 }
 
 
@@ -139,6 +141,9 @@ featuresAlongPC <- function(methylData, mCoord, regionSet,
 #' @param row_names_max_width "unit" object. The amount of room to 
 #' allocate for row names. See ?grid::unit for object type.
 #' @param name character object, legend title
+#' @param col a vector of colors or a color mapping function which
+#' will be passed to the ComplexHeatmap::Heatmap() function. See ?Heatmap
+#' (the "col" parameter) for more details.
 #' @param ... optional parameters for ComplexHeatmap::Heatmap()
 #' @return A heatmap of region set scores across. Each row is a region set,
 #' each column is a PC. The color corresponds to a region set's relative
@@ -154,7 +159,7 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
                            cluster_rows = FALSE, cluster_columns = FALSE, 
                            show_row_names = TRUE, 
                            row_names_max_width = unit(100000, "mm"), 
-                           name="Rank within PC", ...) {
+                           name="Rank within PC", col = c("red", "gray"), ...) {
     
     rsEnrichment <- rsScores
     # prevent indexing out of bounds later
@@ -202,7 +207,8 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
             cluster_columns = cluster_columns, 
             show_row_names = show_row_names, 
             row_names_max_width = row_names_max_width, 
-            name = name, ...)
+            name = name, 
+            col = col, ...)
     
 }
 
@@ -237,6 +243,9 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
 #' order in different heatmaps)
 #' @param column_title character object, column title
 #' @param name character object, legend title
+#' @param col a vector of colors or a color mapping function which
+#' will be passed to the ComplexHeatmap::Heatmap() function. See ?Heatmap
+#' (the "col" parameter) for more details.
 #' @param ... optional parameters for ComplexHeatmap::Heatmap()
 #' @return a heatmap. This heatmap allows you to see if some regions are 
 #' associated with certain PCs but not others. Also, you can see if a subset of 
@@ -263,13 +272,15 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
 #'                                    cluster_columns = FALSE, 
 #'                                    column_title = rsName, 
 #'                                    name = "Percentile of Loading Scores in PC")
+#'                                    regionByPCHM
 #' 
 #' @export
 regionQuantileByPC <- function(loadingMat, mCoord, regionSet, 
                                rsName = "", PCsToAnnotate=paste0("PC", 1:5),
                                maxRegionsToPlot = 8000, cluster_rows = TRUE, 
                                cluster_columns = FALSE, column_title = rsName, 
-                               name = "Percentile of Loading Scores in PC", ...) {
+                               name = "Percentile of Loading Scores in PC", 
+                               col = c("skyblue", "yellow"), ...) {
     
     if (is(mCoord, "GRanges")) {
         coordinateDT <- grToDt(mCoord)
@@ -303,6 +314,7 @@ regionQuantileByPC <- function(loadingMat, mCoord, regionSet,
             column_title = rsName, 
             cluster_rows = cluster_rows,
             cluster_columns = cluster_columns, 
-            name = name, ...)
+            name = name, 
+            col = col, ...)
 }
 
