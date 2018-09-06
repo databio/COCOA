@@ -42,7 +42,7 @@ mPCA <- prcomp(x=t(methylData$methylProp), center=TRUE, scale.=FALSE)
 
 ## Input 2: Large Collection of Region Sets
 
-Besides the PCA results, we need region sets. Normally we should use PCRSA with a large collection of region sets. The collection of region sets can come from anywhere but we will use the LOLA region set databases which include region sets from public sources such as the ENCODE, Roadmap Epigenomics, and Cistrome Projects. Documentation on LOLA [here](http://bioconductor.org/packages/release/bioc/html/LOLA.html) and region set collections may be found [here](http://databio.org/regiondb). Let's load the LOLA databases (this may take a minute): 
+Besides the PCA results, we need region sets. Normally we should use PCRSA with a large collection of region sets. The collection of region sets can come from anywhere but we will use the LOLA region set databases which include region sets from public sources such as the ENCODE, Roadmap Epigenomics, and Cistrome Projects. Documentation on LOLA [here](http://bioconductor.org/packages/release/bioc/html/LOLA.html) and region set collections may be found [here](http://databio.org/regiondb). The AnnotationHub package also contains region sets and may be of interest. Let's load the LOLA databases (this may take a minute): 
     
 ```{r, eval=FALSE, message=FALSE, warning=FALSE}
 # reading in the region sets

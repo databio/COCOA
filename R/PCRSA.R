@@ -36,16 +36,14 @@
 NULL
 
 
-# Because of some issues with CRAN submission, 
+# Because of some issues, 
 # (see here: http://stackoverflow.com/questions/9439256/)
 # I have to register stuff used in data.table as non-standard evaluation, 
 # in order to pass some R CMD check NOTES.
 if (getRversion() >= "2.15.1") {
     utils::globalVariables(c(
-        ".", "bin", "binID", "chr", "element_blank", "featureID", 
-        "geom_violin", "methylCount", "id", "meth", 
-        "methylProp", "coverage", "sumCoverage", "regionGroupID", "regionID", 
-        "sampleName", "sampleType", "theme", "ubinID", "V1", 
+        ".", "bin", "binID", "chr", "id", 
+        "coverage", "regionGroupID", "regionID", "theme", 
         "mean_region_size", "region_coverage", "rowIndex", "rsIndex",
         "total_region_number", "cytosine_coverage", ".SD")) 
 }
@@ -469,7 +467,7 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
                           byRegionGroup = TRUE, 
                           splitFactor = NULL,
                           PCsToAnnotate, verbose=FALSE) {
-    if (! "data.table" %in% class(rangeDT)) {
+    if (!is(rangeDT, "data.table")) {
     stop("rangeDT must be a data.table")
 }
     seqnamesColName <- "seqnames"  # default column name
