@@ -13,7 +13,7 @@ for that PC, etc.}
 rsRankingIndex(rsScores, PCsToAnnotate)
 }
 \arguments{
-\item{rsScores}{a data.table with scores for each 
+\item{rsScores}{a data.frame with scores for each 
 region set from main PCRSA function. 
 Each row is a region set. Columns are PCs and info on region set overlap
 with DNA methylation data. Should be in the same order as GRList (the list of 

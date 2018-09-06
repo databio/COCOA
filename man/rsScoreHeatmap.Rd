@@ -13,10 +13,10 @@ rsScoreHeatmap(rsScores, PCsToAnnotate = paste0("PC", 1:5),
   orderByPC = "PC1", rsNameCol = "rsName", topX = 20,
   cluster_rows = FALSE, cluster_columns = FALSE, show_row_names = TRUE,
   row_names_max_width = unit(1e+05, "mm"), name = "Rank within PC",
-  col = c("red", "gray"), ...)
+  col = c("gray", "red"), ...)
 }
 \arguments{
-\item{rsScores}{a data.table with scores for each 
+\item{rsScores}{a data.frame with scores for each 
 region set from main PCRSA function. 
 Each row is a region set. Columns are PCs and info on region set overlap
 with DNA methylation data. Should be in the same order as GRList (the list of 

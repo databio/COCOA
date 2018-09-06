@@ -68,12 +68,16 @@ if (getRversion() >= "2.15.1") {
 #' @param PCsToAnnotate A character vector with principal components to 
 #' include. eg c("PC1", "PC2")
 # #UPDATE: make sure only aggregating PCsToAnnotate to save time
-#' @param metric Scoring metric. "raw" is a simple
-#' average of the loading values with no normalization (recommended). With
-#' "raw" score, be cautious in interpretation for
+#' @param metric Scoring metric. "rsMean" is a weighted
+#' average of the absolute value of the loadings
+#' with no normalization (recommended). First loadings are
+#' averaged within each region, then all the regions are averaged. With
+#' "rsMean" score, be cautious in interpretation for
 #'  region sets with low number of regions.
 #' Mean difference ("meanDiff") is also supported but is skewed toward 
-#' ranking large region sets highly.
+#' ranking large region sets highly. Wilcoxon rank sum test ("rankSum")
+#' also is skewed toward ranking large region sets highly and is
+#' significantly slower than the "rsMean" method.
 #' @param pcLoadAv The average absolute loading value for each PC. Will
 #' significantly speed up computation if this is given.
 #' @param verbose A boolean. Whether progress 
@@ -93,11 +97,10 @@ if (getRversion() >= "2.15.1") {
 
 aggregateLoadings <- function(loadingMat, mCoord, regionSet, 
                               PCsToAnnotate = c("PC1", "PC2"), 
-                              metric="raw", pcLoadAv=NULL,
+                              metric="rsMean", pcLoadAv=NULL,
                               verbose=FALSE) {
-    # UPDATE: take out permutations
-    permute <- FALSE
     
+
     if (is(mCoord, "GRanges")) {
         coordinateDT <- grToDt(mCoord)
     } else if (is(mCoord, "data.frame")) {
@@ -106,6 +109,17 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
         stop("mCoord should be a data.frame or GRanges object.")
     }
     
+    # preferred as matrix, data.frame works
+    if (!(is(loadingMat, "matrix") || is(loadingMat, "data.frame"))) {
+        stop("loadingMat should be a matrix. Check object class.")
+    }
+    
+    if (!is(regionSet, "GRanges")) {
+        stop("regionSet should be a GRanges object. Check object class.")
+    }
+    if (!is(PCsToAnnotate, "character")) {
+        stop("PCsToAnnotate should be a character object (eg 'PC1').")
+    }
     
     numOfRegions <- length(regionSet)
     totalCpGs <- nrow(loadingMat)
@@ -131,7 +145,7 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
                                 rep("mean", length(PCsToAnnotate)))
     
     # do the actual aggregation
-    if (metric == "raw") {
+    if (metric == "rsMean") {
         # previously used BSAggregate from RGenomeUtils but now using local, 
         # modified copy
         loadAgMain <- BSAggregate(BSDT = loadingDT, 
@@ -154,7 +168,7 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
             results[, total_region_number := numOfRegions]
             results[, mean_region_size := round(mean(width(regionSet)), 1)]
         }
-    } else if (metric == "raw_CpG") {
+    } else if (metric == "cpgMean") {
         
         # average of loadings for all CpGs within region set
         loadMetrics <- cpgOLMetrics(dataDT=loadingDT, regionGR=regionSet, 
@@ -263,12 +277,16 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
 #' the same biological annotation).
 #' @param PCsToAnnotate A character vector with principal components to 
 #' include. eg c("PC1", "PC2")
-#' @param scoringMetric Scoring metric. "raw" is a simple
-#' average of the loading values with no normalization (recommended). With
-#' "raw" score, be cautious in interpretation for
+#' @param scoringMetric Scoring metric. "rsMean" is a weighted
+#' average of the absolute value of the loadings
+#' with no normalization (recommended). First loadings are
+#' averaged within each region, then all the regions are averaged. With
+#' "rsMean" score, be cautious in interpretation for
 #'  region sets with low number of regions.
 #' Mean difference ("meanDiff") is also supported but is skewed toward 
-#' ranking large region sets highly.
+#' ranking large region sets highly. Wilcoxon rank sum test ("rankSum")
+#' also is skewed toward ranking large region sets highly and is
+#' significantly slower than the "rsMean" method.
 #' @param verbose A boolean. Whether progress 
 #' of the function should be shown, one
 #' bar indicates the region set is completed.
@@ -296,12 +314,12 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
 #'                                  mCoord=brcaCoord1, 
 #'                                  GRList=GRList, 
 #'                                  PCsToAnnotate=c("PC1", "PC2"), 
-#'                                  scoringMetric="raw")
+#'                                  scoringMetric="rsMean")
 #' 
 #' @export
 
 pcRegionSetEnrichment <- function(loadingMat, mCoord, GRList, 
-                  PCsToAnnotate = c("PC1", "PC2"), scoringMetric = "raw",
+                  PCsToAnnotate = c("PC1", "PC2"), scoringMetric = "rsMean",
                   verbose=TRUE) {
     
     if (!(any(c(is(loadingMat, "matrix"), is(loadingMat, "data.frame"))))) {
@@ -321,6 +339,10 @@ pcRegionSetEnrichment <- function(loadingMat, mCoord, GRList,
         GRList <- GRangesList(GRList)
     } else if (!is(GRList, "GRangesList")) {
         stop("GRList should be a GRangesList object.")
+    }
+    
+    if (!is(PCsToAnnotate, "character")) {
+        stop("PCsToAnnotate should be a character object (eg 'PC1').")
     }
     
     
@@ -415,6 +437,10 @@ pcEnrichmentProfile = function(loadingMat, mCoord, GRList,
         stop("GRList should be a GRanges or GRangesList object.")
     } 
     
+    if (!is(PCsToAnnotate, "character")) {
+        stop("PCsToAnnotate should be a character object (eg 'PC1').")
+    }
+    
     
     loadingDT <- as.data.table(abs(loadingMat))
     loadingDT <- cbind(coordinateDT, loadingDT)
@@ -505,28 +531,28 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
     return(binnedBSDT)
 }
 
-#' modification of BSAggregate to just return mean per region
-#' 
-#' @param loadingMat matrix of loadings (the coefficients of 
-#' the linear combination that defines each PC). One named column for each PC.
-#' One row for each original dimension/variable (should be same order 
-#' as original data/mCoord). The x$rotation output of prcomp().
-#' @param mCoord a GRanges object or data frame with coordinates 
-#' for the cytosines included in the PCA. Coordinates should be in the 
-#' same order as the methylation data and loadings. If a data.frame, 
-#' must have chr and start columns. If end is included, start 
-#' and end should be the same. Start coordinate will be used for calculations.
-#' @param regionSet A GRanges object with regions corresponding
-#' to the same biological annotation.
-#' @param PCsToAnnotate A character vector with principal components to 
-#' include. eg c("PC1", "PC2")
-#' @param returnQuantile Boolean. If FALSE, return region averages. If TRUE,
-#' for each region, return the quantile of that region's average value
-#' based on the distribution of individual cytosine values
-#' @return a data.table with region coordinates and average loading 
-#' values for each region. Has columns chr, start, end, and a column for each
-#' PC in PCsToAnnotate. Regions are not in order along the rows of the data.table.
-#'
+# modification of BSAggregate to just return mean per region
+# 
+# @param loadingMat matrix of loadings (the coefficients of 
+# the linear combination that defines each PC). One named column for each PC.
+# One row for each original dimension/variable (should be same order 
+# as original data/mCoord). The x$rotation output of prcomp().
+# @param mCoord a GRanges object or data frame with coordinates 
+# for the cytosines included in the PCA. Coordinates should be in the 
+# same order as the methylation data and loadings. If a data.frame, 
+# must have chr and start columns. If end is included, start 
+# and end should be the same. Start coordinate will be used for calculations.
+# @param regionSet A GRanges object with regions corresponding
+# to the same biological annotation.
+# @param PCsToAnnotate A character vector with principal components to 
+# include. eg c("PC1", "PC2")
+# @param returnQuantile Boolean. If FALSE, return region averages. If TRUE,
+# for each region, return the quantile of that region's average value
+# based on the distribution of individual cytosine values
+# @return a data.table with region coordinates and average loading 
+# values for each region. Has columns chr, start, end, and a column for each
+# PC in PCsToAnnotate. Regions are not in order along the rows of the data.table.
+#
 # @example averageByRegion(BSDT = BSDT, regionsGRL, 
 #          jCommand = MIRA:::buildJ(cols = "methylProp", "mean")) 
 # Devel note: I could add a column for how many cytosines are in each region 
@@ -545,6 +571,15 @@ averageByRegion <- function(loadingMat,
         coordinateDT <- mCoord
     } else {
         stop("mCoord should be a data.frame or GRanges object.")
+    }
+    
+    # preferred as matrix, data.frame works
+    if (!(is(loadingMat, "matrix") || is(loadingMat, "data.frame"))) {
+        stop("loadingMat should be a matrix or data.frame. Check object class.")
+    }
+    
+    if (!is(PCsToAnnotate, "character")) {
+        stop("PCsToAnnotate should be a character object (eg 'PC1').")
     }
     
     
@@ -757,7 +792,7 @@ averageByRegion <- function(loadingMat,
 
 ###########################################################################
 
-#  BSAggregate from RGenomeUtils
+
 # BSaggregate -- Aggregate a BSDT across regions or region groups,
 # for multiple samples at a time.
 # This function is as BScombineByRegion, but can handle not only multiple
@@ -1143,7 +1178,7 @@ BSFilter <- function(BSDT, minReads = 10, excludeGR = NULL) {
 #' Use this function when you want to look at top region sets to make it 
 #' easier to get the original indices to select them from a list of region sets.
 #' 
-#' @param rsScores a data.table with scores for each 
+#' @param rsScores a data.frame with scores for each 
 #' region set from main PCRSA function. 
 #' Each row is a region set. Columns are PCs and info on region set overlap
 #' with DNA methylation data. Should be in the same order as GRList (the list of 
@@ -1165,7 +1200,16 @@ BSFilter <- function(BSDT, minReads = 10, excludeGR = NULL) {
 #' @export
 #' 
 rsRankingIndex <- function(rsScores, PCsToAnnotate) {
-    rsScores <- as.data.table(rsScores) # UPDATE to not be data.table
+    
+    if (!(is(rsScores, "data.frame") || is(rsScores, "matrix"))) {
+        stop("rsScores should be a data.frame. Check object class.")
+    }
+    rsScores <- as.data.table(rsScores)
+    
+    if (!is(PCsToAnnotate, "character")) {
+        stop("PCsToAnnotate should be a character object (eg 'PC1').")
+    }
+    
     # so by references changes will not be a problem
     rsScores <- copy(rsScores)
     rsScores[, rsIndex := 1:nrow(rsScores)]
@@ -1280,13 +1324,10 @@ cpgOLMetrics <- function(dataDT, regionGR, metrics=c("mean", "sd"),
     olResults <- as.data.table(olResults)
     setnames(olResults, old = colnames(olResults), new = paste0(colnames(olResults), "_OL"))
     
-    
     nonOLResults <- sapply(X = metrics, 
                            FUN = function(x) as.numeric(nonOLMetrics[, grepl(pattern = x, colnames(nonOLMetrics))]))
     nonOLResults <- as.data.table(nonOLResults)
     setnames(nonOLResults, old = colnames(nonOLResults), new = paste0(colnames(nonOLResults), "_nonOL"))
-    
-    
     
     metricDT <- cbind(data.table(testCol=testCols), 
                       olResults, 
@@ -1300,16 +1341,16 @@ cpgOLMetrics <- function(dataDT, regionGR, metrics=c("mean", "sd"),
 }
 
 
-#' Wilcoxon rank sum test for a region set
-#' @param dataDT a data.table with chr, start, end columns as well
-#' as columns to get metrics of eg (PC1, PC2). All columns
-#' except chr, start, and end will be considered 
-#' columns to get the metrics from so no unnecessary columns should be
-#' included.
-#' @param regionGR Region set, GenomicRanges object
-#' @param ... Additional parameters of wilcox.test function. See ?wilcox.test.
-#' For instance specify alternative hypothesis: alternative = "greater".
-#' @return A vector with a p value for each column other than chr, start or end. 
+# Wilcoxon rank sum test for a region set
+# @param dataDT a data.table with chr, start, end columns as well
+# as columns to get metrics of eg (PC1, PC2). All columns
+# except chr, start, and end will be considered 
+# columns to get the metrics from so no unnecessary columns should be
+# included.
+# @param regionGR Region set, GenomicRanges object
+# @param ... Additional parameters of wilcox.test function. See ?wilcox.test.
+# For instance specify alternative hypothesis: alternative = "greater".
+# @return A vector with a p value for each column other than chr, start or end. 
 
 # could make this a generic function then apply it across PCs of interest
 
@@ -1318,12 +1359,10 @@ rsWilcox <- function(dataDT, regionGR, ...) {
     # region set info
     total_region_number <- length(regionGR)
     mean_region_size <- round(mean(width(regionGR)), 1)
-    
 
     # columns of interest
     testCols <- colnames(dataDT)[!(colnames(dataDT) %in% 
                                        c("chr", "start", "end"))]
-    
     
     # convert DT to GR for finding overlaps
     dataGR <- BSdtToGRanges(list(dataDT))[[1]]
@@ -1339,21 +1378,17 @@ rsWilcox <- function(dataDT, regionGR, ...) {
     olCpG <- subjectHits(OL)
     nonOLCpG <- (1:nrow(dataDT))[-olCpG]
     
-    
     # get info on degree of overlap
     # number of CpGs that overlap
     cytosine_coverage <- length(unique(olCpG))
     # number of regions that overlap
     region_coverage <- length(unique(queryHits(OL)))
     
-    
     # calculate Wilcoxon rank sum test for each column
     # additional parameters given with ...
     pVals <- vapply(X = testCols, FUN = function(x) wilcox.test(x = as.numeric(as.matrix(dataDT[olCpG, x, with=FALSE])), 
                                                y = as.numeric(as.matrix(dataDT[nonOLCpG, x, with=FALSE])), ...)$p.value, 1)
      
-    
-    
     wRes <- data.frame(t(pVals), 
                        cytosine_coverage, 
                        region_coverage, 

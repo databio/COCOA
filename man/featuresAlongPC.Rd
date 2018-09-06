@@ -26,7 +26,7 @@ and end should be the same. Start coordinate will be used for calculations.}
 \item{regionSet}{A genomic ranges object with regions corresponding
 to the same biological annotation.}
 
-\item{pcScores}{The principal component scores for the samples 
+\item{pcScores}{A matrix. The principal component scores for the samples 
 (ie transformed methylation data). Must have subject_ID as row names,
 These same subject_IDs must be column names of methylData}
 

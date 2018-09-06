@@ -29,7 +29,7 @@
 #' and end should be the same. Start coordinate will be used for calculations.
 #' @param regionSet A genomic ranges object with regions corresponding
 #' to the same biological annotation.
-#' @param pcScores The principal component scores for the samples 
+#' @param pcScores A matrix. The principal component scores for the samples 
 #' (ie transformed methylation data). Must have subject_ID as row names,
 #' These same subject_IDs must be column names of methylData
 #' @param orderByPC PC to order samples by (order rows of heatmap by PC score, 
@@ -65,6 +65,9 @@ featuresAlongPC <- function(methylData, mCoord, regionSet,
                             cluster_rows = FALSE, name = "Feature Value", ...) {
     
 
+    if (!(is(methylData, "matrix") || is(methylData, "data.frame"))) {
+        stop("methylData should be a matrix or data.frame. Check object class.")
+    }
     
     # test for appropriateness of inputs/right format
     if (is(mCoord, "GRanges")) {
@@ -76,6 +79,11 @@ featuresAlongPC <- function(methylData, mCoord, regionSet,
         stop("mCoord should be a data.frame or GRanges object.")
     }
     
+    if (!(is(pcScores, "matrix") || is(pcScores, "data.frame"))) {
+        stop("pcScores should be a matrix or data.frame.")
+    }
+    
+    
     # PCA object must have subject_ID as row.names (corresponding 
     # to column names of methylData)
     if (sum(row.names(pcScores) %in% colnames(methylData)) < 2) {
@@ -83,6 +91,12 @@ featuresAlongPC <- function(methylData, mCoord, regionSet,
                       must match sample names on methylation
                              (column names)"))
     }
+    
+    
+    if (!is(regionSet, "GRanges")) {
+        stop("regionSet should be a GRanges object. Check object class.")
+    }
+   
     
     
     
@@ -115,7 +129,7 @@ featuresAlongPC <- function(methylData, mCoord, regionSet,
 #' is used and additional parameters for the ComplexHeatmap::Heatmap function
 #' may be passed to this function to modify the heatmap.  
 #' 
-#' @param rsScores a data.table with scores for each 
+#' @param rsScores a data.frame with scores for each 
 #' region set from main PCRSA function. 
 #' Each row is a region set. Columns are PCs and info on region set overlap
 #' with DNA methylation data. Should be in the same order as GRList (the list of 
@@ -157,49 +171,50 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
                            row_names_max_width = unit(100000, "mm"), 
                            name="Rank within PC", col = c("gray", "red"), ...) {
     
-    rsEnrichment <- rsScores
+    
+    
     # prevent indexing out of bounds later
-    if (nrow(rsEnrichment) < topX) {
-        topX = nrow(rsEnrichment)
+    if (nrow(rsScores) < topX) {
+        topX = nrow(rsScores)
     }
     # so by reference operations will not affect original object
-    rsEn <- as.data.table(data.table::copy(rsEnrichment))
+    rsScores <- as.data.table(data.table::copy(rsScores))
     
     # only ones you have data for
-    PCsToAnnotate <- PCsToAnnotate[PCsToAnnotate %in% colnames(rsEn)]
+    PCsToAnnotate <- PCsToAnnotate[PCsToAnnotate %in% colnames(rsScores)]
     if (length(PCsToAnnotate) == 0) {
         stop("Please check format of PC names in PCsToAnnotate.")
     }
      
     # apparently erases row names
-    rsEn <- rsEn[, c(PCsToAnnotate, rsNameCol), with=FALSE] 
+    rsScores <- rsScores[, c(PCsToAnnotate, rsNameCol), with=FALSE] 
 
     
     # how to deal with NA?
     
     # number of region sets tested
-    rsNum <- nrow(rsEn)
+    rsNum <- nrow(rsScores)
     
     # convert to data.table to do some data.table operations
-    rsEn = as.data.table(rsEn)
+    rsScores = as.data.table(rsScores)
     
     for (i in seq_along(PCsToAnnotate)) {
         # first convert to rank
-        setorderv(rsEn, PCsToAnnotate[i], order = -1L) # descending order
-        rsEn[, PCsToAnnotate[i] := 1:rsNum]
+        setorderv(rsScores, PCsToAnnotate[i], order = -1L) # descending order
+        rsScores[, PCsToAnnotate[i] := 1:rsNum]
         
         # center around zero
-        rsEn[, PCsToAnnotate[i] := ((rsNum + 1) / 2) - get(PCsToAnnotate[i])]
+        rsScores[, PCsToAnnotate[i] := ((rsNum + 1) / 2) - get(PCsToAnnotate[i])]
     }
     
     # heatmap of the centered ranks
-    setorderv(rsEn, orderByPC, order = -1L) # back to first order
-    rowNames <-  rsEn[, get(rsNameCol)] # redefined/reordered later
-    row.names(rsEn) <- rowNames
-    rsEn[, c(rsNameCol) := NULL]
-    rsEn <- as.matrix(rsEn)
-    row.names(rsEn) <- rowNames
-    Heatmap(rsEn[1:topX, ], cluster_rows = cluster_rows, 
+    setorderv(rsScores, orderByPC, order = -1L) # back to first order
+    rowNames <-  rsScores[, get(rsNameCol)] # redefined/reordered later
+    row.names(rsScores) <- rowNames
+    rsScores[, c(rsNameCol) := NULL]
+    rsScores <- as.matrix(rsScores)
+    row.names(rsScores) <- rowNames
+    Heatmap(rsScores[1:topX, ], cluster_rows = cluster_rows, 
             cluster_columns = cluster_columns, 
             show_row_names = show_row_names, 
             row_names_max_width = row_names_max_width, 
