@@ -207,3 +207,8 @@ regionQuantileByPC(loadingMat = brcaLoadings1,
 We can see that only a very small proportion of regions in the Nrf1 region set have high loadings for PCs 1-4. This is consistent with this region set being ranked low by PCRSA for association with these PCs.
 
 These visualization functions can help you explore your data and understand its variation. In conclusion, PCRSA can help you identify biologically meaningful sources of variation that contribute to each PC, giving you insight into variability in your data. 
+
+# Related references
+This paper involves gene sets instead of region sets but provided some inspiration for our method:
+
+Frost HR, Li Z, Moore JH. Principal component gene set enrichment (PCGSE). BioData Mining. 2015;8:25. doi:10.1186/s13040-015-0059-z.

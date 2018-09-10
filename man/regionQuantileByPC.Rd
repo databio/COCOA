@@ -2,7 +2,7 @@
 % Please edit documentation in R/visualization.R
 \name{regionQuantileByPC}
 \alias{regionQuantileByPC}
-\title{plot individual region scores/percentiles across PCs for a single region set
+\title{Plot individual region scores/percentiles across PCs for a single region set
 One plot for each region set}
 \usage{
 regionQuantileByPC(loadingMat, mCoord, regionSet, rsName = "",
@@ -69,7 +69,7 @@ for that region. Colors are based on this quantile/percentile.
 The output is a Heatmap object (ComplexHeatmap package).
 }
 \description{
-plot individual region scores/percentiles across PCs for a single region set
+Plot individual region scores/percentiles across PCs for a single region set
 One plot for each region set
 }
 \examples{
@@ -87,6 +87,6 @@ regionByPCHM <- regionQuantileByPC(loadingMat = brcaLoadings1,
                                    cluster_columns = FALSE, 
                                    column_title = rsName, 
                                    name = "Percentile of Loading Scores in PC")
-                                   regionByPCHM
+                                   
 
 }

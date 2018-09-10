@@ -151,10 +151,11 @@ featuresAlongPC <- function(methylData, mCoord, regionSet,
 #' @param row_names_max_width "unit" object. The amount of room to 
 #' allocate for row names. See ?grid::unit for object type.
 #' @param name character object, legend title
-#' @param col a vector of colors or a color mapping function which
-#' will be passed to the ComplexHeatmap::Heatmap() function. See ?Heatmap
-#' (the "col" parameter) for more details.
-#' @param ... optional parameters for ComplexHeatmap::Heatmap()
+# @param col a vector of colors or a color mapping function which
+# will be passed to the ComplexHeatmap::Heatmap() function. See ?Heatmap
+# (the "col" parameter) for more details.
+#' @param ... optional parameters for ComplexHeatmap::Heatmap(), 
+#' including "col" to change heatmap color scheme.
 #' @return A heatmap of region set scores across. Each row is a region set,
 #' each column is a PC. The color corresponds to a region set's relative
 #' rank for a given PC out of all tested region sets.
@@ -169,16 +170,42 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
                            cluster_rows = FALSE, cluster_columns = FALSE, 
                            show_row_names = TRUE, 
                            row_names_max_width = unit(100000, "mm"), 
-                           name="Rank within PC", col = c("gray", "red"), ...) {
+                           name="Rank within PC", ...) {
     
+    
+    if (!is(PCsToAnnotate, "character")) {
+        stop("PCsToAnnotate should be a character object (eg 'PC1').")
+    }
+    
+    # function is not meant for making a heatmap of a single PC but should work
+    if (is(rsScores, "numeric")) {
+        warning("rsScores should be a data.frame")
+        rsScores <- data.frame(rsScores)
+        colnames(rsScores) <- orderByPC
+    }
+    if (!is(rsScores, "data.frame")) {
+        stop("rsScores should be a data.frame.")
+    }
+    
+    if (!(orderByPC %in% colnames(rsScores))) {
+        stop(cleanws(paste0("orderByPC parameter:", orderByPC, 
+                            ", was not a column of rsScores")))
+    }
+    if (!(rsNameCol %in% colnames(rsScores))) {
+        stop(cleanws(paste0(rsNameCol, "was not a column of rsScores. 
+                            Specify the column containing region set names 
+                            with the rsNameCol parameter.")))
+    }
+    
+    # so by reference operations will not affect original object
+    rsScores <- as.data.table(data.table::copy(rsScores))
     
     
     # prevent indexing out of bounds later
     if (nrow(rsScores) < topX) {
         topX = nrow(rsScores)
     }
-    # so by reference operations will not affect original object
-    rsScores <- as.data.table(data.table::copy(rsScores))
+    
     
     # only ones you have data for
     PCsToAnnotate <- PCsToAnnotate[PCsToAnnotate %in% colnames(rsScores)]
@@ -224,7 +251,7 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
 }
 
 
-#' plot individual region scores/percentiles across PCs for a single region set
+#' Plot individual region scores/percentiles across PCs for a single region set
 #' One plot for each region set
 #' @param loadingMat matrix of loadings (the coefficients of 
 #' the linear combination that defines each PC). One named column for each PC.
@@ -283,7 +310,7 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
 #'                                    cluster_columns = FALSE, 
 #'                                    column_title = rsName, 
 #'                                    name = "Percentile of Loading Scores in PC")
-#'                                    regionByPCHM
+#'                                    
 #' 
 #' @export
 regionQuantileByPC <- function(loadingMat, mCoord, regionSet, 
@@ -293,12 +320,22 @@ regionQuantileByPC <- function(loadingMat, mCoord, regionSet,
                                name = "Percentile of Loading Scores in PC", 
                                col = c("skyblue", "yellow"), ...) {
     
+    if (is(loadingMat, "matrix")) {
+        loadingMat = as.data.frame(loadingMat)
+    } else if (!is(loadingMat, "data.frame")) {
+        stop("loadingMat should be a matrix or data.frame. Check object class.")
+    }
+    
     if (is(mCoord, "GRanges")) {
         coordinateDT <- grToDt(mCoord)
     } else if (is(mCoord, "data.frame")) {
         coordinateDT <- mCoord
     } else {
         stop("mCoord should be a data.frame or GRanges object.")
+    }
+    
+    if (!is(regionSet, "GRanges")) {
+        stop("regionSet should be a GRanges object. Check object class.")
     }
     
     
