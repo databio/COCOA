@@ -257,3 +257,11 @@ NULL
 # rsScores <- data.frame(PC1, PC2, rsName)
 # save(rsScores, file = "rsScores.RData", compress = "xz")
 # rsRankingIndex(rsScores = rsScores, PCsToAnnotate = c("PC1", "PC2"))
+
+############ brcaPCScores657
+# # first load patient metadata and PCA for the 657 patients
+# brcaPCScores657 <- as.data.frame(allMPCA$x[, c("PC1", "PC2", "PC3", "PC4")])
+# patientMetadata <- as.data.frame(patientMetadata)
+# row.names(patientMetadata) <- patientMetadata$subject_ID
+# brcaPCScores657 <- cbind(brcaPCScores657, ER_Status = patientMetadata[row.names(brcaPCScores657), "ER_status"])
+# save(brcaPCScores657, file="brcaPCScores657.RData", compress = "xz")

@@ -14,6 +14,12 @@ vignette: >
 
 Principal Component Region Set Analysis (PCRSA) is a method for understanding variation among samples with PCA. PCA reduces dimensions of the data and summarizes important features of data in a new set of dimensions called principal components (PCs). Currently, PCRSA is for understanding DNA methylation data (although it can potentially be used for other types of data like ATACseq). PCA is commonly used for DNA methylation data but the PCs are hard to interpret. PCRSA can annotate PCs with region sets, giving insight into variation in the data. A region set is a set of genomic regions that share a biological annotation. This includes transcription factor (TF) binding regions (eg from ChIP-seq), regions with a certain histone modification (eg ChIP-seq) or chromatin accessibility regions (eg DNase/ATAC-seq). Since DNA methylation can correlate with TF binding and with certain histone modifications, finding a region set to have variation in DNA methylation along the PC axis could also imply functional variation of the TF/histone modification/chromatin accessibility along the PC axis. By annotating PCs with region sets, you can identify meaningful sources of variation in your data, increasing your understanding of the epigenetic variation and the biological entity you are studying.  
 
+```{r, eval=TRUE, message=FALSE, warning=FALSE}
+library(PCRSA)
+data("brcaPCScores657")
+ggplot(data = brcaPCScores657, mapping = aes(x=PC1, y=PC4, col=ER_Status)) + geom_point() + ggtitle("PCA of DNA Methylation Data from Breast Cancer Patients")
+```
+
 # Inputs
 
 This vignette begins after PCA has been performed on DNA methlyation data. There are three main inputs:
@@ -57,7 +63,7 @@ rsScores <- pcRegionSetEnrichment(loadingMat=brcaLoadings1,
                                               mCoord=brcaCoord1, 
                                               GRList=GRList, 
                                               PCsToAnnotate=PCsToAnnotate, 
-                                              scoringMetric="raw")
+                                              scoringMetric="rsMean")
 rsScores$rsName <- rsName
 ```
 

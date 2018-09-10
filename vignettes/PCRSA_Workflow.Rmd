@@ -77,7 +77,7 @@ rsEnrichment <- pcRegionSetEnrichment(loadingMat=mPCA$rotation,
                                      mCoord=mCoord, 
                                      GRList=GRList, 
                                      PCsToAnnotate=PCsToAnnotate, 
-                                     scoringMetric="raw")
+                                     scoringMetric="rsMean")
 rsEnrichment$rsName <- rsName
 rsEnrichment$rsDescription <- rsDescription
 ```
@@ -92,8 +92,8 @@ View(rsEnrichment[order(rsEnrichment$PC2, decreasing=TRUE), ])
 
 # Interpretation
 
-In the big picture, PCRSA can help you understand sources of variation in your data. Top region sets should have DNA methylation changes among samples along the PC axis. You can screen out region sets that have a low number of regions/cytosines covered in the DNA methylation data since these are more likely to be ranked highly by chance. Top region sets may capture some of the DNA methylation changes happening along the PC axes. However, they probably just capture a small window of the broader changes taking place and so it is likely that many other changes are taking place as well. Therefore, top region sets can be interpreted as reflecting broader changes but not necessarily defining a given PC. As further confirmation of your PCRSA results, you can look at raw methylation in the regions of your top region sets that have the highest loading values. These regions should show changes in DNA methylation along the PC axis. By identifying region sets where DNA methylation varies along the PC axis, you can understand variation in the data better and this can inspire further directions of research.
+In the big picture, PCRSA can help you understand sources of variation in your data. Top region sets should have DNA methylation changes among samples along the PC axis. You can screen out region sets that have a low number of regions/cytosines covered in the DNA methylation data since these are more likely to be ranked highly by chance. Top region sets may capture some of the DNA methylation changes happening along the PC axes. However, they probably just capture a small window of the broader changes taking place and so it is likely that many other changes are taking place as well. Therefore, top region sets can be interpreted as reflecting broader changes but not necessarily defining a given PC. As further confirmation of your PCRSA results, you can look at the DNA methylation in the regions of your top region sets that have the highest loading values. These regions should show changes in DNA methylation along the PC axis. By identifying region sets where DNA methylation varies along the PC axis, you can understand variation in the data better and this can inspire further directions of research.
 
 # Computational Requirements
 
-When using PCRSA with the "raw" scoring method (preferred), a database of 2000 region sets, and 450,000 cytosines in the DNA methylation data, it is estimated that PCRSA will take between 30 minutes and 1.5 hours. The computer will need enough memory for the large objects used although some memory could be saved by splitting the region set database into parts, running separately on each part, and then combining the results.  
+When using PCRSA with the "rsMean" scoring method (preferred), a database of 2000 region sets, and 450,000 cytosines in the DNA methylation data, it is estimated that PCRSA will take between 30 minutes and 1.5 hours. The computer will need enough memory for the large objects used although some memory could be saved by splitting the region set database into parts, running separately on each part, and then combining the results.  
