@@ -99,37 +99,37 @@ test_that("aggregateLoadings and scoring metrics", {
     
     
     
-    # test raw scoring method, average first within region, then
+    # test rsMean scoring method, average first within region, then
     # between regions
-    rawRes = PCRSA:::aggregateLoadings(loadingMat = loadingMatW, 
+    rsMeanRes = PCRSA:::aggregateLoadings(loadingMat = loadingMatW, 
                               mCoord = coordinateDTW, 
                               regionSet = regionSetW, 
                               PCsToAnnotate = c("PC2", "PC3"), 
-                              metric = "raw")
+                              metric = "rsMean")
     PC2R = mean(c(2, mean(c(0, 1))))
     PC3R = mean(c(8, mean(c(6, 5))))
     expect_equal(c(PC2R, PC3R, 3, 2, 2, mean(width(regionSetW))), 
-                 c(rawRes$PC2, rawRes$PC3, rawRes$cytosine_coverage, 
-                   rawRes$region_coverage, 
-                   rawRes$total_region_number, 
-                   rawRes$mean_region_size))
+                 c(rsMeanRes$PC2, rsMeanRes$PC3, rsMeanRes$cytosine_coverage, 
+                   rsMeanRes$region_coverage, 
+                   rsMeanRes$total_region_number, 
+                   rsMeanRes$mean_region_size))
     
-    ########### test raw_CpG scoring method ################
+    ########### test cpgMean scoring method ################
     # this is a mean of CpG loading values just like "raw" but instead
     # of averaging within regions then averaging regions together, this 
     # method does the simple average of all CpGs within the region set
-    rawResCpG = PCRSA:::aggregateLoadings(loadingMat = loadingMatW, 
+    cpgMeanRes = PCRSA:::aggregateLoadings(loadingMat = loadingMatW, 
                                        mCoord = coordinateDTW, 
                                        regionSet = regionSetW, 
                                        PCsToAnnotate = c("PC2", "PC3"), 
-                                       metric = "raw_CpG")
+                                       metric = "cpgMean")
     PC2RC = mean(c(2, 0, 1))
     PC3RC = mean(c(8, 6, 5))
     expect_equal(c(PC2RC, PC3RC, 3, 2, 2, mean(width(regionSetW))), 
-                 c(rawResCpG$PC2, rawResCpG$PC3, rawResCpG$cytosine_coverage, 
-                   rawResCpG$region_coverage, 
-                   rawResCpG$total_region_number, 
-                   rawResCpG$mean_region_size))
+                 c(cpgMeanRes$PC2, cpgMeanRes$PC3, cpgMeanRes$cytosine_coverage, 
+                   cpgMeanRes$region_coverage, 
+                   cpgMeanRes$total_region_number, 
+                   cpgMeanRes$mean_region_size))
     
 
     # test mean difference scoring method

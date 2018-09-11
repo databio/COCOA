@@ -93,6 +93,30 @@ NULL
 #' @format A matrix object
 NULL
 
+#' A data.frame with principal component scores for 
+#' PCs 1-4 for 657 breast cancer patients as well
+#' as a column with estrogen receptor status.
+#' 
+#' This object contains PC scores for 657 patients
+#' for PCs 1-4. Columns are PCs as well
+#' as a column with estrogen receptor status. Rows are patients,
+#' with TCGA patient identifiers as row names. Patients
+#' were selected from all BRCA patients in TCGA based on having complete
+#' metadata information for estrogen receptor status 
+#' and progesterone receptor status as well as 
+#' having 450k microarray data. 
+#' PCA was done on the Illumina 450k
+#' DNA methlyation  
+#' microarray data (TCGA-BRCA, https://portal.gdc.cancer.gov/).
+#'
+#'
+#' @docType data
+#' @keywords datasets
+#' @name brcaPCScores657
+#' @usage data(brcaPCScores657)
+#' @format A data.frame object
+NULL
+
 #' Estrogen receptor alpha binding regions.
 #' 
 #' Binding regions for estrogen receptor alpha (ESR1).

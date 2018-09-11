@@ -152,7 +152,7 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
                                   regionsGRL = GRangesList(regionSet),
                                   jExpr = aggrCommand,
                                   byRegionGroup = TRUE,
-                                  splitFactor = NULL)
+                                  splitFactor = NULL, returnOLInfo = TRUE)
         results <- loadAgMain[, .SD, .SDcols = PCsToAnnotate]
         # if no cytosines from loadings were included in regionSet, result is NA
         if (is.null(loadAgMain)) {
@@ -514,7 +514,7 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
     # message("Aggregating...")
     
     # RGenomeUtils::BSAggregate
-    binnedBSDT <- BSAggregate_RGenomeUtils(BSDT, 
+    binnedBSDT <- BSAggregate(BSDT, 
                              regionsGRL=GRangesList(binnedGR), 
                              jExpr=buildJ(PCsToAnnotate, 
                                           rep("mean", length(PCsToAnnotate))), 
@@ -582,193 +582,28 @@ averageByRegion <- function(loadingMat,
         stop("PCsToAnnotate should be a character object (eg 'PC1').")
     }
     
+    if (!is(regionSet, "GRanges")) {
+        stop("regionSet should be a GRanges object. Check object class.")
+    }
     
-    # old parameters of BSAggregate
-    excludeGR <- NULL
-    splitFactor <- NULL
-    regionsGRL.length <- NULL
-    keep.na <- FALSE
-    keepCols <- NULL
-    sumCols <- NULL
-    byRegionGroup <- FALSE
     
     # reformating parameters and assigning new names
-    GRList <- regionSet
-    regionsGRL <- GRList
     loadingDT <- as.data.table(abs(loadingMat))
     # linking coordinates to loading values, has columns chr start, PCsToAnnotate
     BSDT <- cbind(coordinateDT, loadingDT[, .SD, .SDcols = PCsToAnnotate])
-    jCommand <- buildJ(PCsToAnnotate, rep("mean", length(PCsToAnnotate)))
+    jExpr <- buildJ(PCsToAnnotate, rep("mean", length(PCsToAnnotate)))
     
-    # Assert that regionsGRL is a GRL.
-    # If regionsGRL is given as a GRanges, we convert to GRL
-    if (is(regionsGRL, "GRanges")) {
-        regionsGRL <- GRangesList(regionsGRL);
-    } else if (!is(regionsGRL, "GRangesList")) {
-        stop("regionsGRL is not a GRanges or GRangesList object");
-    }
-    
-    if (! is.null(excludeGR)) {
-        BSDT <- BSFilter(BSDT, minReads = 0, excludeGR)
-    }
-    
-    bsgr <- BSdtToGRanges(list(BSDT));
-    
-    colModes <- vapply(BSDT, mode, FUN.VALUE = "a")
-    if (is.null(sumCols)) {
-        sumCols <- setdiff(colnames(BSDT), c("chr", "start", "end", 
-                                             "strand", splitFactor, keepCols))
-        # Restrict to numeric columns.      
-        sumCols <- intersect(sumCols, 
-                             names(colModes[which(colModes == "numeric")]))
-        
-    }
-    # It's required to do a findoverlaps on each region individually, 
-    # Not on a GRL, because of the way overlaps with GRLs work. So, 
-    # we must convert the GRL to a GR, but we must keep track of which
-    # regions came from which group.
-    regionsGR <- unlist(regionsGRL)
-    
-    if (is.null(regionsGRL.length)) {
-        # if (length(regionsGRL) > 100) {
-        #     message(cleanws("BSAggregate: Calculating sizes. You can speed this
-        #                     up by supplying a regionsGRL.length vector..."),
-        #             appendLF = FALSE)
-        # }
-        regionsGRL.length <- vapply(regionsGRL, length, 1L)
-        # message("Done counting regionsGRL lengths.");
-    }
-    
-    # Build a table to keep track of which regions belong to which group
-    region2group <- data.table(
-        regionID = seq_along(regionsGR), 
-        chr = as.vector(seqnames(regionsGR)), 
-        start = as.vector(start(regionsGR)), 
-        end = as.vector(end(regionsGR)), 
-        withinGroupID = as.vector(unlist(sapply(regionsGRL.length, seq))), 
-        regionGroupID = rep(seq_along(regionsGRL), regionsGRL.length))
-    setkey(region2group, regionID)
-    
-    
-    # message("Finding overlaps...");
-    fo <- findOverlaps(bsgr[[1]], regionsGR)
-    
-    setkey(BSDT, chr, start)
-    # Gut check:
-    # stopifnot(all(elementMetadata(bsgr[[1]])$coverage == BSDT$coverage))
-    
-    # message("Setting regionIDs...");
-    BSDT <- BSDT[queryHits(fo), ] # restrict the table to CpGs in any region.
-    
-    if (NROW(BSDT) < 1) {
-        warning("No BSDT sites in the given region list. 
-                Please expand your regionsGRL")
-        return(NULL)
-    }
-    
-    # record which region they overlapped, corresponds to withinGroupID
-    BSDT[, regionID := subjectHits(fo)]
-    # if (!keep.na) {
-    # BSDT <- BSDT[queryHits(fo), ]
-    #}
-    
-    if (is.null(jCommand)) {
-        cols <- c(sumCols, keepCols)
-        funcs <- c(rep("sum", length(sumCols)), rep("unique", length(keepCols)))
-        jCommand <- buildJ(cols, funcs)
-    }
-    # message("jCommand: ", jCommand)
-    
-    # Build the by string
-    if (is.null(splitFactor)) {
-        byString <- paste0("list(regionID)");
-    } else {
-        byString <- paste0("list(", paste("regionID", paste0(splitFactor, ""), 
-                                          collapse = ",", sep = ","), ")")
-    }
-    
-    # Now actually do the aggregate:
-    # message("Combining...");
-    # for MIRA: average methylProp and sum coverage within each instance of 
-    # each bin (ie average methylProp's in bin1 of first region, average 
-    # methylProp's in bin1 of second region etc. for all bins and all regions
-    # separately)
-    bsCombined <- BSDT[, eval(parse(text = jCommand)), 
-                       by = eval(parse(text = byString))]
-    setkey(bsCombined, regionID)
-    setkey(region2group, regionID)
-    
-    avPerRegion <- merge(bsCombined, region2group)
-    avPerRegion[, c("regionID", "withinGroupID", "regionGroupID") := NULL]
-    
-    if (returnQuantile) {
-       
-        for (i in seq_along(PCsToAnnotate)) {
-            # perhaps this could be more efficient with mapply
-            avPerRegion[, c(PCsToAnnotate[i]) := ecdf(loadingDT[[PCsToAnnotate[i]]])(avPerRegion[[PCsToAnnotate[i]]])]
-            # I tried set() to improve performance but it took about the same time
-        }
-
-    }
-    
+   
+    avPerRegion <- BSAggregate(BSDT=BSDT, regionsGRL=regionSet, excludeGR=NULL, 
+                                           regionsGRL.length = NULL, splitFactor=NULL, 
+                                           keepCols=NULL, sumCols=NULL, 
+                                           jExpr=jExpr, byRegionGroup=FALSE, 
+                                           keep.na=FALSE, returnSD=FALSE, 
+                                           returnOLInfo=FALSE, 
+                                           meanPerRegion=TRUE, returnQuantile=returnQuantile) 
     
     return(avPerRegion)
     
-    # Now aggregate across groups.
-    # I do this in 2 steps to avoid assigning regions to groups, 
-    # which takes awhile. I think this preserves memory and is faster.
-    
-    # # Define aggregation column. aggregate by region or by region group?
-    # if (byRegionGroup) {
-    #     # must set allow = TRUE here in case there are multiple IDs (splitCol)
-    #     # adds regionGroupID column from region2group to bsCombined
-    #     bsCombined[region2group, regionGroupID := regionGroupID, allow = TRUE]
-    #     if (! is.null(splitFactor)) { 
-    #         byStringGroup <- paste0("list(", 
-    #                                 paste("regionGroupID", 
-    #                                       paste0(splitFactor, collapse = ","), 
-    #                                       sep = ","), 
-    #                                 ")")
-    #     } else {
-    #         byStringGroup <- "list(regionGroupID)"
-    #     }
-    #     
-    #     
-    #     # actual aggregation operation
-    #     # for normal MIRA use: averaging methylProp's and summing
-    #     # coverage for all bins with the same number (ie all
-    #     # bin1's together, all bin2's together, etc.)
-    #     # NOTE: 2nd use of the jCommand so if the first jCommand use changed
-    #     # column names that are required by the jCommand 
-    #     # then this 2nd jCommand use will cause an error
-    #     bsCombined <- bsCombined[, eval(parse(text = jCommand)), 
-    #                              by = eval(parse(text = byStringGroup))]
-    #     
-    #     # if any strand information was not given, averaging the profiles 
-    #     # about the center to account for unknown strand orientation, 
-    #     # also averaging coverage about center
-    #     # ie if any "*" are present then average
-    #     if ("*" %in% unique(as.character(strand(regionsGR)))) {
-    #         bsCombined[, methylProp := (methylProp + rev(methylProp)) / 2]
-    #         if (hasCoverage) {
-    #             bsCombined[, coverage := (coverage + rev(coverage)) / 2]
-    #         }
-    #     }
-    #     
-    #     # changing "regionGroupID" name to "bin" which is less confusing
-    #     # for normal MIRA use cases
-    #     setnames(bsCombined, old = "regionGroupID", new = "bin")
-    #     return(bsCombined[]);
-    # } else {
-    #     warning(cleanws("Using byRegionGroup = FALSE may 
-    #          result in missing functionalities such as symmetrical averaging"))
-    #     e <- region2group[bsCombined, ]
-    #     setkey(e, regionID);
-    #     return(e);
-    # }
-    # # WARNING: There are now 2^2 ways to aggregate, sum vs mean
-    # # at each level: across regions, then across region sets. THis
-    # # doesn't give you a choice at this point. 
 }
 
 
@@ -823,14 +658,25 @@ averageByRegion <- function(loadingMat,
 # uncontiguous, and resulting in 1 row per *region group*.
 # @param returnSD Whether the standard deviation of the columns of interest 
 # should be returned. Standard deviation for rows that overlap with region set
-# and also for rows that do not overlap with region set.
+# and also for rows that do not overlap with region set. Not currently functional.
+# @param returnOLInfo if true, include number of overlapping cpgs and number 
+# of overlapping regions in the result
+# @param meanPerRegion Will return the mean value in each region in a data.table
+# instead of averaging all regions into a single value, returnOLInfo does
+# nothing if meanPerRegion=TRUE (function exits before that code, which
+# expects a different data structure)
+# @param returnQuantile Only used if meanPerRegion=TRUE, instead of mean
+# return the quantile/percentile of the mean of each region
+# in relation to the distribution of original values in BSDT
 #
 # 
 BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL, 
                         regionsGRL.length = NULL, splitFactor=NULL, 
                         keepCols=NULL, sumCols=NULL, 
                         jExpr=NULL, byRegionGroup=FALSE, 
-                        keep.na=FALSE, returnSD=FALSE) {
+                        keep.na=FALSE, returnSD=FALSE, 
+                        returnOLInfo=FALSE, 
+                        meanPerRegion=FALSE, returnQuantile=FALSE) {
     
     # Assert that regionsGRL is a GRL.
     # If regionsGRL is given as a GRanges, we convert to GRL
@@ -840,8 +686,15 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL,
         stop("regionsGRL is not a GRanges or GRangesList object")
     }
     
+    
     if(! is.null(excludeGR)) {
         BSDT <- BSFilter(BSDT, minReads=0, excludeGR)
+    }
+    
+    if (returnQuantile) {
+        # keep all data so quantiles can be calculated
+        # later code will change BSDT
+        origBSDT <- data.table::copy(BSDT)
     }
     
     bsgr <- BSdtToGRanges(list(BSDT))
@@ -889,8 +742,10 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL,
     
     ### use info from findOverlaps to see how many individual
     # cytosines and how many regions overlap with each other
-    numCpGsOverlapping <- length(unique(queryHits(fo)))
-    numRegionsOverlapping <- length(unique(subjectHits(fo)))
+    if (returnOLInfo) {
+        numCpGsOverlapping <- length(unique(queryHits(fo)))
+        numRegionsOverlapping <- length(unique(subjectHits(fo)))
+    }
     
     
     setkey(BSDT, chr, start)
@@ -938,6 +793,25 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL,
     # message("Combining...")
     bsCombined <- BSDT[,eval(parse(text=jExpr)), by=eval(parse(text=byString))]
     setkey(bsCombined, regionID)
+    
+    if (meanPerRegion) {
+        setkey(region2group, regionID)
+        
+        avPerRegion <- merge(bsCombined, region2group)
+        avPerRegion[, c("regionID", "withinGroupID", "regionGroupID") := NULL]
+        
+        if (returnQuantile) {
+            
+            for (i in seq_along(sumCols)) {
+                # perhaps this could be more efficient with mapply
+                # ecdf example: ecdf(distributionData)(getPercentileOfThis)
+                avPerRegion[, c(sumCols[i]) := ecdf(origBSDT[[sumCols[i]]])(avPerRegion[[sumCols[i]]])]
+                # I tried set() to improve performance but it took about the same time
+            }
+            
+        }
+        return(avPerRegion)
+    }
     # Now aggregate across groups.
     # I do this in 2 steps to avoid assigning regions to groups,
     # which takes awhile. I think this preserve memory and is faster.
@@ -956,178 +830,10 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL,
         }
         bsCombined=bsCombined[,eval(parse(text=jExpr)), 
                               by=eval(parse(text=byStringGroup))]
-        bsCombined[, numCpGsOverlapping := numCpGsOverlapping]
-        bsCombined[, numRegionsOverlapping := numRegionsOverlapping]
-        return(bsCombined)
-    } else {
-        e <- region2group[bsCombined,]
-        setkey(e, regionID)
-        return(e)
-    }
-    # WARNING: There are now 2^2 ways to aggregate, sum vs mean
-    # at each level: across regions, then across region sets. THis
-    # doesn't give you a choice at this point. 
-}
-
-
-# BSaggregate -- Aggregate a BSDT across regions or region groups,
-# for multiple samples at a time.
-# This function is as BScombineByRegion, but can handle not only multiple
-# samples in BSDT, but also simultaneously multiple region sets by passing
-# a regionsGRL (GRangesList object).
-# you can use jExpr to do other functions.
-
-# Given a bisulfite data table as input, with an identifier column for
-# different samples; plus a GRanges objects with regions to aggregate.
-#
-# @param BSDT The bisulfite data.table (output from one of the parsing
-# functions for methylation calls) that you wish to aggregate. It can
-# be a combined table, with individual samples identified by column passed
-# to splitFactor.
-# @param regionsGRL Regions across which you want to aggregate.
-# @param excludeGR A GenomicRanges object with regions you want to 
-# exclude from the aggregation function. These regions will be eliminated
-# from the input table and not counted.
-# @param jExpr You can pass a custom command in the j slot to data.table
-# specifying which columns to aggregate, and which functions to use. You
-# can use buildJ() to build a jExpr argument easily.
-# @param byRegionGroup You can aggregate by regionID or by regionGroupID; 
-# this reflects the regionsGRL that you pass; by default, BSAggregate will
-# aggregate each region individually -- scores will then be contiguous, and
-# the output is 1 row per region.
-# Turn on this flag to aggregate across all region groups, making the result
-# uncontiguous, and resulting in 1 row per *region group*.
-#
-BSAggregate_RGenomeUtils = function(BSDT, regionsGRL, 
-                                    excludeGR=NULL, regionsGRL.length = NULL, 
-                                    splitFactor=NULL, keepCols=NULL, 
-                                    sumCols=NULL, jExpr=NULL, 
-                                    byRegionGroup=FALSE, keep.na=FALSE) {
-    
-    # Assert that regionsGRL is a GRL.
-    # If regionsGRL is given as a GRanges, we convert to GRL
-    if (is(regionsGRL, "GRanges")) {
-        regionsGRL <- GRangesList(regionsGRL);
-    } else if (!is(regionsGRL, "GRangesList")) {
-        stop("regionsGRL is not a GRanges or GRangesList object");
-    }
-    
-    if(! is.null(excludeGR)) {
-        BSDT <- BSFilter(BSDT, minReads=0, excludeGR)
-    }
-    
-    bsgr <- BSdtToGRanges(list(BSDT))
-    
-    additionalColNames <- setdiff(colnames(BSDT), c("chr", "start", 
-                                                    "end", "hitCount", 
-                                                    "readCount", splitFactor))
-    
-    colModes <- vapply(BSDT, mode, FUN.VALUE = "a")
-    if (is.null(sumCols)) {
-        sumCols <- setdiff(colnames(BSDT),c("chr", "start", 
-                                            "end", "strand", 
-                                            splitFactor, keepCols))
-        # Restrict to numeric columns.		
-        sumCols <- intersect(sumCols, 
-                             names(colModes[which(colModes == "numeric")]))
-        
-    }
-    # It's required to do a findoverlaps on each region individually,
-    # Not on a GRL, because of the way overlaps with GRLs work. So,
-    # we must convert the GRL to a GR, but we must keep track of which
-    # regions came from which group.
-    regionsGR <- unlist(regionsGRL)
-    
-    if(is.null(regionsGRL.length)) {
-        # if (length(regionsGRL) > 100) {
-        #     message("BSAggregate: Calculating sizes. You can speed this up by supplying a regionsGRL.length vector...", appendLF=FALSE)
-        # }
-        regionsGRL.length <- vapply(regionsGRL, length, FUN.VALUE = 1L)
-        # message("Done counting regionsGRL lengths.")
-    }
-    
-    # Build a table to keep track of which regions belong to which group
-    region2group <- data.table(
-        regionID=seq_along(regionsGR), 
-        chr=as.vector(seqnames(regionsGR)), 
-        start=as.vector(start(regionsGR)), 
-        end=as.vector(end(regionsGR)),
-        withinGroupID= as.vector(unlist(sapply(regionsGRL.length, seq))),
-        regionGroupID=rep(seq_along(regionsGRL), regionsGRL.length))
-    setkey(region2group, regionID)
-    
-    
-    # message("Finding overlaps...")
-    fo <- findOverlaps(bsgr[[1]], regionsGR)
-    
-    setkey(BSDT, chr, start)
-    # Gut check:
-    # stopifnot(all(elementMetadata(bsgr[[1]])$readCount == BSDT$readCount))
-    
-    # message("Setting regionIDs...")
-    BSDT <- BSDT[queryHits(fo),] #restrict the table to CpGs in any region.
-    
-    if (NROW(BSDT) < 1) {
-        warning("No BSDT sites in the given region list; please expand your regionsGRL")
-        return(NULL)
-    }
-    
-    BSDT[,regionID:=subjectHits(fo)] #record which region they overlapped.
-    #BSDT[queryHits(fo),regionID:=subjectHits(fo)]
-    #if (!keep.na) {
-    #    BSDT <- BSDT[queryHits(fo),]
-    #}
-    
-    if (is.null(jExpr)) {
-        cols <- c(sumCols, keepCols)
-        funcs <- c(rep("sum", length(sumCols)), rep("unique", length(keepCols)))
-        jExpr <- buildJ(cols, funcs)
-    }
-    # message("jExpr: ", jExpr)
-    
-    # Define aggregation column. aggregate by region or by region group?
-    if (byRegionGroup) {
-        agCol <- "regionGroupID"
-    } else {
-        agCol <- "regionID" # Default
-    }
-    
-    # Build the by string
-    if (is.null(splitFactor)) {
-        byString <- paste0("list(regionID)")
-    } else {
-        byString <- paste0("list(", 
-                           paste("regionID", 
-                                 paste0(splitFactor, ""), 
-                                 collapse=", ", 
-                                 sep=", "), 
-                           ")")
-    }
-    
-    # Now actually do the aggregate:
-    # message("Combining...")
-    bsCombined <- BSDT[,eval(parse(text=jExpr)), by=eval(parse(text=byString))]
-    setkey(bsCombined, regionID)
-    # Now aggregate across groups.
-    # I do this in 2 steps to avoid assigning regions to groups,
-    # which takes awhile. I think this preserve memory and is faster.
-    
-    # Define aggregation column. aggregate by region or by region group?
-    if (byRegionGroup) {
-        # must set allow=TRUE here in case there are multiple IDs (splitCol)
-        bsCombined[region2group, regionGroupID:=regionGroupID, allow=TRUE]
-        if (! is.null(splitFactor) ) { 
-            byStringGroup <- paste0("list(", 
-                                    paste("regionGroupID", 
-                                          paste0(splitFactor, 
-                                                 collapse=", "), 
-                                          sep=", "), 
-                                    ")")
-        } else {
-            byStringGroup <- "list(regionGroupID)"
+        if (returnOLInfo) {
+            bsCombined[, numCpGsOverlapping := numCpGsOverlapping]
+            bsCombined[, numRegionsOverlapping := numRegionsOverlapping]
         }
-        bsCombined=bsCombined[, eval(parse(text=jExpr)), 
-                              by=eval(parse(text=byStringGroup))]
         return(bsCombined)
     } else {
         e <- region2group[bsCombined,]
@@ -1138,6 +844,7 @@ BSAggregate_RGenomeUtils = function(BSDT, regionsGRL,
     # at each level: across regions, then across region sets. THis
     # doesn't give you a choice at this point. 
 }
+
 
 
 # Given a BSDT (bisulfite data.table), remove any entries that overlap

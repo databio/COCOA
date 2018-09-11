@@ -11,7 +11,7 @@ vignette: >
 ---
     
     
-This vignette is intended to be a script that can easily be modified for your own PCRSA analysis. It is unevaluated because PCRSA normally involves large objects. For a description of the goals of the method, see the "Introduction to Principal Component Region Set Analysis" vignette.
+This vignette is intended to be a script that can easily be modified for your own PCRSA analysis. It is unevaluated because PCRSA normally involves large objects. For a description of the goals of the method and a practical example with only a few region sets, see the "Introduction to Principal Component Region Set Analysis" vignette. Visualization function can also be found in that vignette.
 
 # Inputs
 

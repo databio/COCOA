@@ -245,8 +245,7 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
             cluster_columns = cluster_columns, 
             show_row_names = show_row_names, 
             row_names_max_width = row_names_max_width, 
-            name = name, 
-            col = col, ...)
+            name = name, ...)
     
 }
 

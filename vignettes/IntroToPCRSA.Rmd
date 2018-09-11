@@ -14,21 +14,26 @@ vignette: >
 
 Principal Component Region Set Analysis (PCRSA) is a method for understanding variation among samples with PCA. PCA reduces dimensions of the data and summarizes important features of data in a new set of dimensions called principal components (PCs). Currently, PCRSA is for understanding DNA methylation data (although it can potentially be used for other types of data like ATACseq). PCA is commonly used for DNA methylation data but the PCs are hard to interpret. PCRSA can annotate PCs with region sets, giving insight into variation in the data. A region set is a set of genomic regions that share a biological annotation. This includes transcription factor (TF) binding regions (eg from ChIP-seq), regions with a certain histone modification (eg ChIP-seq) or chromatin accessibility regions (eg DNase/ATAC-seq). Since DNA methylation can correlate with TF binding and with certain histone modifications, finding a region set to have variation in DNA methylation along the PC axis could also imply functional variation of the TF/histone modification/chromatin accessibility along the PC axis. By annotating PCs with region sets, you can identify meaningful sources of variation in your data, increasing your understanding of the epigenetic variation and the biological entity you are studying.  
 
-```{r, eval=TRUE, message=FALSE, warning=FALSE}
+# Our test case
+
+```{r, eval=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
 library(PCRSA)
+library(ggplot2)
 data("brcaPCScores657")
 ggplot(data = brcaPCScores657, mapping = aes(x=PC1, y=PC4, col=ER_Status)) + geom_point() + ggtitle("PCA of DNA Methylation Data from Breast Cancer Patients")
 ```
 
+For this vignette, we are using data from The Cancer Genome Atlas: 450k DNA methylation microarrays for 657 breast cancer patients (TCGA-BRCA, https://portal.gdc.cancer.gov/). This vignette begins after PCA has been performed on the DNA methylation data. As you can see above, PC1 and PC4 cluster patients based on estrogen receptor status which is an important prognostic marker for breast cancer. Based on this, we might expect that these PCs would be associated with estrogen receptor. We are using an easy example for this vignette but PCRSA will still work even if there are not distinct clusters in your PCA plot. We will test a few region sets to see which ones have the highest association with our top PCs.
+
 # Inputs
 
-This vignette begins after PCA has been performed on DNA methlyation data. There are three main inputs:
+There are three main inputs:
 
 1. PCA loadings (prcomp()$rotation).
 2. Genomic coordinates associated with PCA loadings.
 3. Region sets (normally a database of region sets).
 
-For this vignette, we are using data from The Cancer Genome Atlas: 450k DNA methylation microarrays for 657 breast cancer patients (TCGA-BRCA, https://portal.gdc.cancer.gov/). PCA was done with DNA methylation data for all autosomal chromosomes but only the PC loadings and coordinates for cytosines in chromosome 1 are included in this vignette to minimize memory requirements. `brcaLoadings1` has chr1 loadings and corresponding coordinates are in `brcaCoord1`. In this vignette, we will use a small number of region sets to demonstrate how to use the PCRSA functions. For actual use, PCRSA should be done with a large number of region sets. Publicly available collections of region sets can be found online (eg http://databio.org/regiondb).
+PCA was done with DNA methylation data for all autosomal chromosomes but only the PC loadings and coordinates for cytosines in chromosome 1 are included in this vignette to minimize memory requirements. `brcaLoadings1` has chr1 loadings and corresponding coordinates are in `brcaCoord1`. In this vignette, we will use a small number of region sets to demonstrate how to use the PCRSA functions. For actual use, PCRSA should be done with a large number of region sets. Publicly available collections of region sets can be found online (eg http://databio.org/regiondb).
 
 # Running PCRSA
 
@@ -48,6 +53,8 @@ data("brcaCoord1")
 data("brcaPCScores")
 data("brcaMethylData1")
 ```
+
+We have region sets for four transcription factors: Esr1, Gata3, Nrf1, and Atf1.
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 # prepare data
@@ -75,7 +82,7 @@ rsScoreHeatmap(rsScores,
                orderByPC = "PC1", column_title = "Region sets ordered by score for PC1")
 ```
 
-We can see that Gata3 had the highest score for PCs 1, 3, and 4 but that Esr1 had a higher score for PC2. If you want to arrange the heatmap by region set scores for another PC, you can just change the orderByPC parameter like so:
+We can see that Gata3 had the highest score for PCs 1, 3, and 4 but that Esr1 had a higher score for PC2. While you might expect that Esr1 would be ranked first for all PCs, these results actually make sense because Gata3 is known to be associated with breast cancer and Esr1 activity. On a practical note, if you want to arrange the heatmap by region set scores for another PC, you can just change the orderByPC parameter like so:
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 rsScoreHeatmap(rsScores, 
@@ -213,6 +220,7 @@ regionQuantileByPC(loadingMat = brcaLoadings1,
 We can see that only a very small proportion of regions in the Nrf1 region set have high loadings for PCs 1-4. This is consistent with this region set being ranked low by PCRSA for association with these PCs.
 
 These visualization functions can help you explore your data and understand its variation. In conclusion, PCRSA can help you identify biologically meaningful sources of variation that contribute to each PC, giving you insight into variability in your data. 
+
 
 # Related references
 This paper involves gene sets instead of region sets but provided some inspiration for our method:
