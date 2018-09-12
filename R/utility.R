@@ -91,7 +91,7 @@ dtToGr <- function(DT, chr = "chr", start = "start",
             splitFactor <- DT[, get(splitFactor)];
         }
     }
-    lapply(split(1:nrow(DT), splitFactor), 
+    lapply(split(seq_len(nrow(DT)), splitFactor), 
            function(x) { 
                dtToGrInternal(DT[x, ], chr, start, end, strand, name, metaCols)
            }
