@@ -11,8 +11,9 @@ may be passed to this function to modify the heatmap.}
 \usage{
 rsScoreHeatmap(rsScores, PCsToAnnotate = paste0("PC", 1:5),
   orderByPC = "PC1", rsNameCol = "rsName", topX = 20,
-  cluster_rows = FALSE, cluster_columns = FALSE, show_row_names = TRUE,
-  row_names_max_width = unit(1e+05, "mm"), name = "Rank within PC", ...)
+  cluster_rows = FALSE, cluster_columns = FALSE,
+  show_row_names = TRUE, row_names_max_width = unit(1e+05, "mm"),
+  name = "Rank within PC", ...)
 }
 \arguments{
 \item{rsScores}{a data.frame with scores for each 

@@ -3,7 +3,7 @@ Version: 0.99.0
 Date: 2018-09-05
 Title: Principal Component Region Set Analysis
 Description: A method for annotating principal components of DNA methylation data with region sets. A region set is a set of genomic regions that share a biological annotation. PCRSA can identify biologically meaningful sources of variation along the PCs, increasing interpretability of the PCs and understanding of variation in the data. 
-Author:John Lawson [aut, cre],
+Author: John Lawson [aut, cre],
     Nathan Sheffield <http://www.databio.org> [aut]
 Maintainer: John Lawson <jtl2hk@virginia.edu>
 Depends: R (>= 3.5)
@@ -37,4 +37,4 @@ biocViews: PrincipalComponent, GenomicVariation, DNAMethylation, GeneRegulation,
            MethylSeq, Sequencing, Epigenetics
 URL: http://github.com/databio/PCRSA
 BugReports: https://github.com/databio/PCRSA
-RoxygenNote: 6.0.1
+RoxygenNote: 6.1.0
