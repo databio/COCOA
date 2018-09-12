@@ -9,9 +9,9 @@ The ComplexHeatmap package
 is used and additional parameters for the ComplexHeatmap::Heatmap function
 may be passed to this function to modify the heatmap.}
 \usage{
-featuresAlongPC(methylData, mCoord, regionSet, pcScores, orderByPC = "PC1",
-  cluster_columns = FALSE, cluster_rows = FALSE, name = "Feature Value",
-  ...)
+featuresAlongPC(methylData, mCoord, regionSet, pcScores,
+  orderByPC = "PC1", cluster_columns = FALSE, cluster_rows = FALSE,
+  name = "Feature Value", ...)
 }
 \arguments{
 \item{methylData}{DNA methylation levels (0 to 1) in matrix or data.frame. 

@@ -4,8 +4,9 @@
 \alias{pcRegionSetEnrichment}
 \title{Do PCRSA for many region sets}
 \usage{
-pcRegionSetEnrichment(loadingMat, mCoord, GRList, PCsToAnnotate = c("PC1",
-  "PC2"), scoringMetric = "rsMean", verbose = TRUE)
+pcRegionSetEnrichment(loadingMat, mCoord, GRList,
+  PCsToAnnotate = c("PC1", "PC2"), scoringMetric = "rsMean",
+  verbose = TRUE)
 }
 \arguments{
 \item{loadingMat}{matrix of loadings (the coefficients of 

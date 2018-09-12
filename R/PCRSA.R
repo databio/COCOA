@@ -428,7 +428,9 @@ pcEnrichmentProfile = function(loadingMat, mCoord, GRList,
         GRList <- GRangesList(GRList)
     } else if (is(GRList, "list")) {
         #making sure each list item is a GRanges object
-        if (all(sapply(X = GRList, function(x) is(x, "GRanges")))) {
+        # specificy that "logical" outcome is expected from vapply by 
+        # supplying TRUE as last vapply argument (FALSE would work too)
+        if (all(vapply(X = GRList, function(x) is(x, "GRanges"), TRUE))) {
             GRList <- GRangesList(GRList)
         } else {
             stop("GRList should be a GRanges or GRangesList object.")
@@ -455,7 +457,7 @@ pcEnrichmentProfile = function(loadingMat, mCoord, GRList,
                                                     PCsToAnnotate = PCsToAnnotate))
     
     profileList <- lapply(profileList, FUN = makeSymmetric)
-    profileList <- lapply(profileList, function(x) x[, regionGroupID := 1:binNum])
+    profileList <- lapply(profileList, function(x) x[, regionGroupID := seq_len(binNum)])
     
     return(profileList)
 }
@@ -510,6 +512,7 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
     # message("Binning...")
     binnedDT <- rangeDT[, MIRA::binRegion(start, end, 
                                           binCount, get(seqnamesColName))]
+    # output is a list of GRanges objects, does not play well with vapply
     binnedGR <- sapply(split(binnedDT, binnedDT$binID), dtToGr)
     # message("Aggregating...")
     
@@ -703,7 +706,9 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL,
                                   c("chr","start", "end",
                                     "hitCount","readCount", splitFactor))
     
-    colModes <- sapply(BSDT,mode)
+    # specificy that "character" outcome is expected from mode by 
+    # supplying "a" as last vapply argument (any character object would work)
+    colModes <- vapply(BSDT, mode, "a")
     if (is.null(sumCols)) {
         sumCols <- setdiff(colnames(BSDT),c("chr", "start", "end", 
                                             "strand", splitFactor, keepCols))
@@ -722,11 +727,15 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL,
         # if (length(regionsGRL) > 100) {
         #     message("BSAggregate: Calculating sizes. You can speed this up by supplying a regionsGRL.length vector...", appendLF=FALSE)
         # }
-        regionsGRL.length <- sapply(regionsGRL, length)
+        # specify that output should be numeric with vapply 
+        # (any number would work instead of 1)
+        regionsGRL.length <- vapply(regionsGRL, length, 1)
         # message("Done counting regionsGRL lengths.")
     }
     
     # Build a table to keep track of which regions belong to which group
+    # BIOC note: sapply returns a list where each item is of different length
+    # therefore, I'm not using vapply
     region2group <- data.table(
         regionID=seq_along(regionsGR), 
         chr=as.vector(seqnames(regionsGR)), 
@@ -919,7 +928,7 @@ rsRankingIndex <- function(rsScores, PCsToAnnotate) {
     
     # so by references changes will not be a problem
     rsScores <- copy(rsScores)
-    rsScores[, rsIndex := 1:nrow(rsScores)]
+    rsScores[, rsIndex := seq_len(nrow(rsScores))]
     
     PCsToAnnotate <- PCsToAnnotate[PCsToAnnotate %in% colnames(rsScores)]
     
@@ -1003,7 +1012,7 @@ cpgOLMetrics <- function(dataDT, regionGR, metrics=c("mean", "sd"),
     
     
     
-    nonOLCpG <- (1:nrow(dataDT))[-olCpG]
+    nonOLCpG <- (seq_len(nrow(dataDT)))[-olCpG]
     
     # gets metrics for all columns except chr, start, end
     testCols <- colnames(dataDT)[!(colnames(dataDT) %in% 
@@ -1026,13 +1035,17 @@ cpgOLMetrics <- function(dataDT, regionGR, metrics=c("mean", "sd"),
     # if (!is.null())
     #
     # formatting so there is one row per PC/testCol
-    olResults <- sapply(X = metrics, 
-                        FUN = function(x) as.numeric(olMetrics[, grepl(pattern = x, colnames(olMetrics))]))
+    # output is a matrix with ncol = length(metrics)
+    # for vapply, FUN.VALUE should have length equal to a single output of FUN
+    olResults <- vapply(X = metrics, 
+                        FUN = function(x) as.numeric(olMetrics[, grepl(pattern = x, colnames(olMetrics))]),
+                        as.numeric(seq_along(testCols)))
     olResults <- as.data.table(olResults)
     setnames(olResults, old = colnames(olResults), new = paste0(colnames(olResults), "_OL"))
     
-    nonOLResults <- sapply(X = metrics, 
-                           FUN = function(x) as.numeric(nonOLMetrics[, grepl(pattern = x, colnames(nonOLMetrics))]))
+    nonOLResults <- vapply(X = metrics, 
+                           FUN = function(x) as.numeric(nonOLMetrics[, grepl(pattern = x, colnames(nonOLMetrics))]),
+                           as.numeric(seq_along(testCols)))
     nonOLResults <- as.data.table(nonOLResults)
     setnames(nonOLResults, old = colnames(nonOLResults), new = paste0(colnames(nonOLResults), "_nonOL"))
     
@@ -1083,7 +1096,7 @@ rsWilcox <- function(dataDT, regionGR, ...) {
     
     # get indices for overlapping and non overlapping CpGs
     olCpG <- subjectHits(OL)
-    nonOLCpG <- (1:nrow(dataDT))[-olCpG]
+    nonOLCpG <- (seq_len(nrow(dataDT)))[-olCpG]
     
     # get info on degree of overlap
     # number of CpGs that overlap

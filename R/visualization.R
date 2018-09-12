@@ -228,7 +228,7 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
     for (i in seq_along(PCsToAnnotate)) {
         # first convert to rank
         setorderv(rsScores, PCsToAnnotate[i], order = -1L) # descending order
-        rsScores[, PCsToAnnotate[i] := 1:rsNum]
+        rsScores[, PCsToAnnotate[i] := seq_len(rsNum)]
         
         # center around zero
         rsScores[, PCsToAnnotate[i] := ((rsNum + 1) / 2) - get(PCsToAnnotate[i])]
@@ -241,7 +241,7 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
     rsScores[, c(rsNameCol) := NULL]
     rsScores <- as.matrix(rsScores)
     row.names(rsScores) <- rowNames
-    Heatmap(rsScores[1:topX, ], cluster_rows = cluster_rows, 
+    Heatmap(rsScores[seq_len(topX), ], cluster_rows = cluster_rows, 
             cluster_columns = cluster_columns, 
             show_row_names = show_row_names, 
             row_names_max_width = row_names_max_width, 

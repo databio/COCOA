@@ -7,9 +7,9 @@ One plot for each region set}
 \usage{
 regionQuantileByPC(loadingMat, mCoord, regionSet, rsName = "",
   PCsToAnnotate = paste0("PC", 1:5), maxRegionsToPlot = 8000,
-  cluster_rows = TRUE, cluster_columns = FALSE, column_title = rsName,
-  name = "Percentile of Loading Scores in PC", col = c("skyblue", "yellow"),
-  ...)
+  cluster_rows = TRUE, cluster_columns = FALSE,
+  column_title = rsName, name = "Percentile of Loading Scores in PC",
+  col = c("skyblue", "yellow"), ...)
 }
 \arguments{
 \item{loadingMat}{matrix of loadings (the coefficients of 
