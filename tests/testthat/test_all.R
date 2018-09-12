@@ -99,37 +99,37 @@ test_that("aggregateLoadings and scoring metrics", {
     
     
     
-    # test raw scoring method, average first within region, then
+    # test rsMean scoring method, average first within region, then
     # between regions
-    rawRes = PCRSA:::aggregateLoadings(loadingMat = loadingMatW, 
+    rsMeanRes = PCRSA:::aggregateLoadings(loadingMat = loadingMatW, 
                               mCoord = coordinateDTW, 
                               regionSet = regionSetW, 
                               PCsToAnnotate = c("PC2", "PC3"), 
-                              metric = "raw")
+                              metric = "rsMean")
     PC2R = mean(c(2, mean(c(0, 1))))
     PC3R = mean(c(8, mean(c(6, 5))))
     expect_equal(c(PC2R, PC3R, 3, 2, 2, mean(width(regionSetW))), 
-                 c(rawRes$PC2, rawRes$PC3, rawRes$cytosine_coverage, 
-                   rawRes$region_coverage, 
-                   rawRes$total_region_number, 
-                   rawRes$mean_region_size))
+                 c(rsMeanRes$PC2, rsMeanRes$PC3, rsMeanRes$cytosine_coverage, 
+                   rsMeanRes$region_coverage, 
+                   rsMeanRes$total_region_number, 
+                   rsMeanRes$mean_region_size))
     
-    ########### test raw_CpG scoring method ################
+    ########### test cpgMean scoring method ################
     # this is a mean of CpG loading values just like "raw" but instead
     # of averaging within regions then averaging regions together, this 
     # method does the simple average of all CpGs within the region set
-    rawResCpG = PCRSA:::aggregateLoadings(loadingMat = loadingMatW, 
+    cpgMeanRes = PCRSA:::aggregateLoadings(loadingMat = loadingMatW, 
                                        mCoord = coordinateDTW, 
                                        regionSet = regionSetW, 
                                        PCsToAnnotate = c("PC2", "PC3"), 
-                                       metric = "raw_CpG")
+                                       metric = "cpgMean")
     PC2RC = mean(c(2, 0, 1))
     PC3RC = mean(c(8, 6, 5))
     expect_equal(c(PC2RC, PC3RC, 3, 2, 2, mean(width(regionSetW))), 
-                 c(rawResCpG$PC2, rawResCpG$PC3, rawResCpG$cytosine_coverage, 
-                   rawResCpG$region_coverage, 
-                   rawResCpG$total_region_number, 
-                   rawResCpG$mean_region_size))
+                 c(cpgMeanRes$PC2, cpgMeanRes$PC3, cpgMeanRes$cytosine_coverage, 
+                   cpgMeanRes$region_coverage, 
+                   cpgMeanRes$total_region_number, 
+                   cpgMeanRes$mean_region_size))
     
 
     # test mean difference scoring method
@@ -173,24 +173,63 @@ test_that("aggregateLoadings and scoring metrics", {
     
 })
 
-# test_that("", {
-#     
-#     expect_equal()
-#     
-# })
-# 
-# test_that("", {
-#     
-#     expect_equal()
-#     
-# })
-# 
-# test_that("", {
-#     
-#     expect_equal()
-#     
-# })
+test_that("averageByRegion", {
+    loadingMatABR = loadingMat
+    loadingMatABR[1, "PC1"] = 3
+    loadingMatABR[32, "PC1"] = 2
+    abr <- PCRSA:::averageByRegion(loadingMat = loadingMatABR, mCoord = PCRSA:::dtToGr(coordinateDT), 
+                            regionSet = regionSet1, PCsToAnnotate = "PC1", 
+                            returnQuantile = FALSE)
+    expect_equal(abr$PC1, c(2, 1, 1, 1.5))
+    
+    # test quantile
+    abrq <- PCRSA:::averageByRegion(loadingMat = loadingMatABR, mCoord = PCRSA:::dtToGr(coordinateDT), 
+                                   regionSet = regionSet1, PCsToAnnotate = "PC1", 
+                                   returnQuantile = TRUE)
+    # the mean values, abr$PC1, converted to quantiles
+    # converting properly to quantiles?
+    expect_equal(abrq$PC1, ecdf(loadingMatABR[, "PC1"])(abr$PC1))
+    
+})
 
-######################### Visualization functions #############################
+test_that("averageByRegion", {
+    loadingMatABR = loadingMat
+    loadingMatABR[1, "PC1"] = 3
+    loadingMatABR[32, "PC1"] = 2
+    abr <- PCRSA:::averageByRegion(loadingMat = loadingMatABR, mCoord = PCRSA:::dtToGr(coordinateDT), 
+                                   regionSet = regionSet1, PCsToAnnotate = "PC1", 
+                                   returnQuantile = FALSE)
+    expect_equal(abr$PC1, c(2, 1, 1, 1.5))
+    
+    # test quantile
+    abrq <- PCRSA:::averageByRegion(loadingMat = loadingMatABR, mCoord = PCRSA:::dtToGr(coordinateDT), 
+                                    regionSet = regionSet1, PCsToAnnotate = "PC1", 
+                                    returnQuantile = TRUE)
+    # the mean values, abr$PC1, converted to quantiles
+    # converting properly to quantiles?
+    expect_equal(abrq$PC1, ecdf(loadingMatABR[, "PC1"])(abr$PC1))
+    
+})
 
-
+test_that("pcEnrichmentProfile", {
+    loadingMatP <- matrix(data = c(1:8, 10, 10, rep(1, 20)), nrow = 30)
+    colnames(loadingMatP) <- "PC1"
+    # two CpGs per bin of regionSetP (with 5 bins)
+    coordinateDTP = data.frame(chr = rep("chr3", nrow(loadingMatP)), 
+                               start = c(seq(from=50, to=950, by = 100),
+                                                   seq(from=2050, to=2950, by = 100),
+                                                   seq(from=4050, to=4950, by = 100)))
+    regionSetP = data.table(chr = rep("chr3", 3), 
+                            start = c(1, 2001, 4001),
+                            end = c(1010, 3010, 5010))
+    regionSetP = PCRSA:::dtToGr(regionSetP)
+     
+    
+    binnedP <- pcEnrichmentProfile(loadingMat = loadingMatP, mCoord = PCRSA:::dtToGr(coordinateDTP), 
+                        GRList = regionSetP, PCsToAnnotate = "PC1", 
+                        binNum = 5)    
+    meanPerBin <- (c(seq(from=1.5, to=7.5, by=2), 10) + rep(1, 5) + rep(1, 5)) / 3
+    # BSBinAggregate averages the profile around the center
+    symmetricalBin <- (meanPerBin + rev(meanPerBin)) / 2
+    expect_equal(binnedP[[1]]$PC1, symmetricalBin)
+})

@@ -2,12 +2,14 @@
 % Please edit documentation in R/visualization.R
 \name{regionQuantileByPC}
 \alias{regionQuantileByPC}
-\title{plot individual region scores/percentiles across PCs for a single region set
+\title{Plot individual region scores/percentiles across PCs for a single region set
 One plot for each region set}
 \usage{
-regionQuantileByPC(loadingMat, mCoord, GRList, rsNames,
+regionQuantileByPC(loadingMat, mCoord, regionSet, rsName = "",
   PCsToAnnotate = paste0("PC", 1:5), maxRegionsToPlot = 8000,
-  cluster_rows = TRUE)
+  cluster_rows = TRUE, cluster_columns = FALSE, column_title = rsName,
+  name = "Percentile of Loading Scores in PC", col = c("skyblue", "yellow"),
+  ...)
 }
 \arguments{
 \item{loadingMat}{matrix of loadings (the coefficients of 
@@ -21,11 +23,10 @@ same order as the methylation data and loadings. If a data.frame,
 must have chr and start columns. If end is included, start 
 and end should be the same. Start coordinate will be used for calculations.}
 
-\item{GRList}{GRangesList object. Each list item is 
-a distinct region set (regions that correspond to 
-the same biological annotation).}
+\item{regionSet}{A genomic ranges object with regions corresponding
+to the same biological annotation.}
 
-\item{rsNames}{character vector. Names of the region sets in the same
+\item{rsName}{character vector. Names of the region sets in the same
 order as GRList. For use as a title for each heatmap.}
 
 \item{PCsToAnnotate}{A character vector with principal components to 
@@ -33,12 +34,59 @@ include. eg c("PC1", "PC2")}
 
 \item{maxRegionsToPlot}{how many top regions from region set to include
 in heatmap. Including too many may slow down computation and increase memory
-use.}
+use. If regionSet has more regions than maxRegionsToPlot, a number of regions 
+equal to maxRegionsToPlot will be randomly sampled from the region set and
+these regions will be plotted.}
 
 \item{cluster_rows}{Boolean, whether to cluster rows or not (may 
 increase computation time significantly for large number of rows)}
+
+\item{cluster_columns}{boolean, whether to cluster columns. It is recommended
+to keep this as FALSE so it will be easier to compare PCs 
+(with cluster_columns = FALSE, they will be in the same specified
+order in different heatmaps)}
+
+\item{column_title}{character object, column title}
+
+\item{name}{character object, legend title}
+
+\item{col}{a vector of colors or a color mapping function which
+will be passed to the ComplexHeatmap::Heatmap() function. See ?Heatmap
+(the "col" parameter) for more details.}
+
+\item{...}{optional parameters for ComplexHeatmap::Heatmap()}
+}
+\value{
+a heatmap. This heatmap allows you to see if some regions are 
+associated with certain PCs but not others. Also, you can see if a subset of 
+regions in the region set are associated with PCs while another subset
+are not associated with any PCs 
+Columns are PCs, rows are regions. To color
+each region, first the absolute loading values within that region are
+averaged. Then this average is compared to the distribution of absolute
+loading values for all individual features to get a quantile/percentile 
+for that region. Colors are based on this quantile/percentile. 
+The output is a Heatmap object (ComplexHeatmap package).
 }
 \description{
-plot individual region scores/percentiles across PCs for a single region set
+Plot individual region scores/percentiles across PCs for a single region set
 One plot for each region set
+}
+\examples{
+data("brcaLoadings1")
+data("brcaCoord1")
+data("esr1_chr1")
+data("brcaPCScores")
+regionByPCHM <- regionQuantileByPC(loadingMat = brcaLoadings1, 
+                                   mCoord = brcaCoord1, 
+                                   regionSet = esr1_chr1, 
+                                   rsName = "Estrogen Receptor Chr1", 
+                                   PCsToAnnotate=paste0("PC", 1:2),
+                                   maxRegionsToPlot = 8000, 
+                                   cluster_rows = TRUE, 
+                                   cluster_columns = FALSE, 
+                                   column_title = rsName, 
+                                   name = "Percentile of Loading Scores in PC")
+                                   
+
 }

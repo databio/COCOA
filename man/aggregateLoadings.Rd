@@ -6,7 +6,7 @@
 and then get p value for each PC based on a permutation}
 \usage{
 aggregateLoadings(loadingMat, mCoord, regionSet, PCsToAnnotate = c("PC1",
-  "PC2"), metric = "raw", pcLoadAv = NULL, verbose = FALSE)
+  "PC2"), metric = "rsMean", pcLoadAv = NULL, verbose = FALSE)
 }
 \arguments{
 \item{loadingMat}{matrix of loadings (the coefficients of 
@@ -26,12 +26,16 @@ to the same biological annotation.}
 \item{PCsToAnnotate}{A character vector with principal components to 
 include. eg c("PC1", "PC2")}
 
-\item{metric}{Scoring metric. "raw" is a simple
-average of the loading values with no normalization (recommended). With
-"raw" score, be cautious in interpretation for
+\item{metric}{Scoring metric. "rsMean" is a weighted
+average of the absolute value of the loadings
+with no normalization (recommended). First loadings are
+averaged within each region, then all the regions are averaged. With
+"rsMean" score, be cautious in interpretation for
  region sets with low number of regions.
 Mean difference ("meanDiff") is also supported but is skewed toward 
-ranking large region sets highly.}
+ranking large region sets highly. Wilcoxon rank sum test ("rankSum")
+also is skewed toward ranking large region sets highly and is
+significantly slower than the "rsMean" method.}
 
 \item{pcLoadAv}{The average absolute loading value for each PC. Will
 significantly speed up computation if this is given.}

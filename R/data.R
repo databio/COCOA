@@ -93,6 +93,30 @@ NULL
 #' @format A matrix object
 NULL
 
+#' A data.frame with principal component scores for 
+#' PCs 1-4 for 657 breast cancer patients as well
+#' as a column with estrogen receptor status.
+#' 
+#' This object contains PC scores for 657 patients
+#' for PCs 1-4. Columns are PCs as well
+#' as a column with estrogen receptor status. Rows are patients,
+#' with TCGA patient identifiers as row names. Patients
+#' were selected from all BRCA patients in TCGA based on having complete
+#' metadata information for estrogen receptor status 
+#' and progesterone receptor status as well as 
+#' having 450k microarray data. 
+#' PCA was done on the Illumina 450k
+#' DNA methlyation  
+#' microarray data (TCGA-BRCA, https://portal.gdc.cancer.gov/).
+#'
+#'
+#' @docType data
+#' @keywords datasets
+#' @name brcaPCScores657
+#' @usage data(brcaPCScores657)
+#' @format A data.frame object
+NULL
+
 #' Estrogen receptor alpha binding regions.
 #' 
 #' Binding regions for estrogen receptor alpha (ESR1).
@@ -145,6 +169,21 @@ NULL
 #' @format A GRanges object
 NULL
 
+#' Example PCRSA Results (made up)
+#' 
+#' A data.frame with example PCRSA results.
+#' 5 region sets with names given by rsScores$rsName.
+#' Each region set has a score for each PC. Scores
+#' for real region sets would normally be orders of 
+#' magnitude smaller.
+#'
+#' @docType data
+#' @keywords datasets
+#' @name rsScores
+#' @usage data(rsScores)
+#' @format A data.frame object
+NULL
+
 # # script for generating package data
 # # restricting data to reduce how much memory the package takes up
 # # first run part of 02-brca_PCRSA to get brcaMList and filteredMData
@@ -163,11 +202,16 @@ NULL
 # 
 # # region sets
 # # some of the top ranked region sets for PC1 (in top 5)
-# esr1 <- GRList[rsName == "Human_MCF-7_ESR1_E2-45min_Brown.bed"][[1]]
-# gata3 <- GRList[rsName == "wgEncodeAwgTfbsSydhMcf7Gata3UcdUniPk.narrowPeak"][[1]]
-# # some of the bottom ranked region sets for PC1 (in bottom 1% of >2200 region sets)
-# nrf1 <- GRList[rsName == "wgEncodeAwgTfbsSydhHepg2Nrf1IggrabUniPk.narrowPeak"][[1]]
-# atf3 <- GRList[rsName == "wgEncodeAwgTfbsSydhK562Atf3UniPk.narrowPeak"][[1]]
+# esr1 <- GRList[rsName == 
+#                    "Human_MCF-7_ESR1_E2-45min_Brown.bed"][[1]]
+# gata3 <- GRList[rsName == 
+#                     "wgEncodeAwgTfbsSydhMcf7Gata3UcdUniPk.narrowPeak"][[1]]
+# # some of the bottom ranked region sets 
+# # for PC1 (in bottom 1% of >2200 region sets)
+# nrf1 <- GRList[rsName == 
+#                    "wgEncodeAwgTfbsSydhHepg2Nrf1IggrabUniPk.narrowPeak"][[1]]
+# atf3 <- GRList[rsName == 
+#                    "wgEncodeAwgTfbsSydhK562Atf3UniPk.narrowPeak"][[1]]
 # 
 # 
 # # restrict to chromosome 22 (reduce file sizes)
@@ -177,7 +221,9 @@ NULL
 # load22 <- loadingMat[chr22Ind, paste0("PC", 1:4)]
 # 
 # grList <- GRangesList(er, gata, nrf1, atf3)
-# ol22 <- lapply(X = grList, function(x) findOverlaps(query = x, subject = MIRA:::dtToGr(coord22)))
+# ol22 <- lapply(X = grList, 
+#                function(x) findOverlaps(query = x, 
+#                                         subject = MIRA:::dtToGr(coord22)))
 # 
 # 
 # # restrict to chromosome 1 (reduce file sizes)
@@ -188,7 +234,9 @@ NULL
 # 
 # # restrict region sets to chr1
 # grList <- GRangesList(er, gata3, nrf1, atf3)
-# ol1 <- lapply(X = grList, function(x) findOverlaps(query = x, subject = MIRA:::dtToGr(coord1)))
+# ol1 <- lapply(X = grList, 
+#               function(x) findOverlaps(query = x, 
+#                                        subject = MIRA:::dtToGr(coord1)))
 # 
 # # to restrict to chr1
 # esr1_chr1 <- esr1[ seqnames(esr1) == "chr1"]
@@ -197,7 +245,9 @@ NULL
 # atf3_chr1 <- atf3[ seqnames(atf3) == "chr1"]
 # 
 # # save("", file = "coord1.RData") # reduce ~4x from in-memory size
-# save("brcaLoadings1", file = "brcaLoadings1.RData", compress = "xz") # reduce ~7x
+# save("brcaLoadings1", 
+#      file = "brcaLoadings1.RData", 
+#      compress = "xz") # reduce ~7x
 # save("brcaCoord1", file = "brcaCoord1.RData", compress = "xz")
 # 
 # save("esr1_chr1", file = "esr1_chr1.RData", compress = "xz")
@@ -209,8 +259,8 @@ NULL
 # filteredMData <- cbind(brcaMList[["coordinates"]], filteredMData)
 # chr1MData <- filteredMData[filteredMData$chr == "chr1", ]
 # 
-# # selecting patients to include based on PC1, two with low PC scores, two with 
-# # high PC scores
+# # selecting patients to include based on PC1, two with low PC scores, 
+# # and two with high PC scores
 # pc1Order <- sort(mPCA$x[, "PC1"], decreasing = FALSE)
 # lowScore <- names(pc1Order)[1:2]
 # highScore <- names(pc1Order)[(length(pc1Order) - 1):length(pc1Order)]
@@ -222,3 +272,20 @@ NULL
 # ## also getting PC scores for PC 1-4 for these patients
 # brcaPCScores <- mPCA$x[c(lowScore, highScore), paste0("PC", 1:4)]
 # save("brcaPCScores", file="brcaPCScores.RData", compress="xz")
+
+############ data for rsRankingIndex
+# setwd("/data")
+# PC1 <- c(1, 2, 3, 5, 7)
+# PC2 <- c(5, 1, 3, 2, 4)
+# rsName <- c("rs1", "rs2", "rs3", "rs4", "rs5")
+# rsScores <- data.frame(PC1, PC2, rsName)
+# save(rsScores, file = "rsScores.RData", compress = "xz")
+# rsRankingIndex(rsScores = rsScores, PCsToAnnotate = c("PC1", "PC2"))
+
+############ brcaPCScores657
+# # first load patient metadata and PCA for the 657 patients
+# brcaPCScores657 <- as.data.frame(allMPCA$x[, c("PC1", "PC2", "PC3", "PC4")])
+# patientMetadata <- as.data.frame(patientMetadata)
+# row.names(patientMetadata) <- patientMetadata$subject_ID
+# brcaPCScores657 <- cbind(brcaPCScores657, ER_Status = patientMetadata[row.names(brcaPCScores657), "ER_status"])
+# save(brcaPCScores657, file="brcaPCScores657.RData", compress = "xz")

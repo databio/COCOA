@@ -5,7 +5,7 @@
 \title{Do PCRSA for many region sets}
 \usage{
 pcRegionSetEnrichment(loadingMat, mCoord, GRList, PCsToAnnotate = c("PC1",
-  "PC2"), scoringMetric = "raw", verbose = TRUE)
+  "PC2"), scoringMetric = "rsMean", verbose = TRUE)
 }
 \arguments{
 \item{loadingMat}{matrix of loadings (the coefficients of 
@@ -26,12 +26,16 @@ the same biological annotation).}
 \item{PCsToAnnotate}{A character vector with principal components to 
 include. eg c("PC1", "PC2")}
 
-\item{scoringMetric}{Scoring metric. "raw" is a simple
-average of the loading values with no normalization (recommended). With
-"raw" score, be cautious in interpretation for
+\item{scoringMetric}{Scoring metric. "rsMean" is a weighted
+average of the absolute value of the loadings
+with no normalization (recommended). First loadings are
+averaged within each region, then all the regions are averaged. With
+"rsMean" score, be cautious in interpretation for
  region sets with low number of regions.
 Mean difference ("meanDiff") is also supported but is skewed toward 
-ranking large region sets highly.}
+ranking large region sets highly. Wilcoxon rank sum test ("rankSum")
+also is skewed toward ranking large region sets highly and is
+significantly slower than the "rsMean" method.}
 
 \item{verbose}{A boolean. Whether progress 
 of the function should be shown, one
@@ -60,9 +64,11 @@ data("brcaCoord1")
 data("brcaLoadings1")
 data("esr1_chr1")
 data("nrf1_chr1")
-GRList = GenomicRanges::GRangesList(esr1_chr1, nrf1_chr1)
-pcRegionSetEnrichment(loadingMat=brcaLoadings1, mCoord=brcaCoord1, 
-                      GRList=GRList, PCsToAnnotate=c("PC1", "PC2"), 
-                      scoringMetric="raw")
+GRList <- GenomicRanges::GRangesList(esr1_chr1, nrf1_chr1)
+rsScores <- pcRegionSetEnrichment(loadingMat=brcaLoadings1, 
+                                 mCoord=brcaCoord1, 
+                                 GRList=GRList, 
+                                 PCsToAnnotate=c("PC1", "PC2"), 
+                                 scoringMetric="rsMean")
 
 }
