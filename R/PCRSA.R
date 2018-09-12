@@ -1039,13 +1039,13 @@ cpgOLMetrics <- function(dataDT, regionGR, metrics=c("mean", "sd"),
     # for vapply, FUN.VALUE should have length equal to a single output of FUN
     olResults <- vapply(X = metrics, 
                         FUN = function(x) as.numeric(olMetrics[, grepl(pattern = x, colnames(olMetrics))]),
-                        seq_along(testCols))
+                        as.numeric(seq_along(testCols)))
     olResults <- as.data.table(olResults)
     setnames(olResults, old = colnames(olResults), new = paste0(colnames(olResults), "_OL"))
     
     nonOLResults <- vapply(X = metrics, 
                            FUN = function(x) as.numeric(nonOLMetrics[, grepl(pattern = x, colnames(nonOLMetrics))]),
-                           seq_along(testCols))
+                           as.numeric(seq_along(testCols)))
     nonOLResults <- as.data.table(nonOLResults)
     setnames(nonOLResults, old = colnames(nonOLResults), new = paste0(colnames(nonOLResults), "_nonOL"))
     
