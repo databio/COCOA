@@ -33,7 +33,7 @@ include. eg c("PC1", "PC2")}
 making the aggregate loading profile. More bins will
 give a higher resolution but perhaps more noisy profile.}
 
-\item{verbose}{A boolean. Whether progress 
+\item{verbose}{A "logical" object. Whether progress 
 of the function should be shown, one
 bar indicates the region set is completed.}
 }

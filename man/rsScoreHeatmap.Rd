@@ -11,9 +11,11 @@ may be passed to this function to modify the heatmap.}
 \usage{
 rsScoreHeatmap(rsScores, PCsToAnnotate = paste0("PC", 1:5),
   orderByPC = "PC1", rsNameCol = "rsName", topX = 20,
-  cluster_rows = FALSE, cluster_columns = FALSE,
-  show_row_names = TRUE, row_names_max_width = unit(1e+05, "mm"),
-  name = "Rank within PC", ...)
+  row_title = "Region Set", column_title = "Principal Component",
+  column_title_side = "bottom", cluster_rows = FALSE,
+  cluster_columns = FALSE, show_row_names = TRUE,
+  row_names_max_width = unit(1e+05, "mm"), name = "Rank within PC",
+  ...)
 }
 \arguments{
 \item{rsScores}{a data.frame with scores for each 
@@ -33,15 +35,22 @@ in the plot.}
 
 \item{topX}{Number of top region sets to include in the heatmap}
 
-\item{cluster_rows}{boolean, whether rows should be clustered. 
+\item{row_title}{character object, row title}
+
+\item{column_title}{character object, column title}
+
+\item{column_title_side}{character object, where to put the column title:
+"top" or "bottom"}
+
+\item{cluster_rows}{"logical" object, whether rows should be clustered. 
 This should be kept as FALSE to keep the correct ranking of region sets.}
 
-\item{cluster_columns}{boolean, whether to cluster columns. It is recommended
+\item{cluster_columns}{"logical" object, whether to cluster columns. It is recommended
 to keep this as FALSE so it will be easier to compare PCs 
 (with cluster_columns = FALSE, they will be in the same specified
 order in different heatmaps)}
 
-\item{show_row_names}{boolean, display row names (ie region set names)}
+\item{show_row_names}{"logical" object, display row names (ie region set names)}
 
 \item{row_names_max_width}{"unit" object. The amount of room to 
 allocate for row names. See ?grid::unit for object type.}

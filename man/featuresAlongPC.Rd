@@ -11,7 +11,8 @@ may be passed to this function to modify the heatmap.}
 \usage{
 featuresAlongPC(methylData, mCoord, regionSet, pcScores,
   orderByPC = "PC1", cluster_columns = FALSE, cluster_rows = FALSE,
-  name = "Feature Value", ...)
+  row_title = "Sample", column_title = "Genomic Feature",
+  column_title_side = "bottom", name = "Feature Value", ...)
 }
 \arguments{
 \item{methylData}{DNA methylation levels (0 to 1) in matrix or data.frame. 
@@ -33,12 +34,19 @@ These same subject_IDs must be column names of methylData}
 \item{orderByPC}{PC to order samples by (order rows of heatmap by PC score, 
 from high to low score)}
 
-\item{cluster_columns}{boolean, whether to cluster columns (the features,
+\item{cluster_columns}{"logical" object, whether to cluster columns (the features,
 eg DNA methylation values for each CpG).}
 
-\item{cluster_rows}{boolean, whether rows should be clustered. 
+\item{cluster_rows}{"logical" object, whether rows should be clustered. 
 This should be kept as FALSE to keep the correct ranking of 
 samples/observations according to their PC score.}
+
+\item{row_title}{character object, row title}
+
+\item{column_title}{character object, column title}
+
+\item{column_title_side}{character object, where to put the column title:
+"top" or "bottom"}
 
 \item{name}{character object, legend title}
 
@@ -65,10 +73,10 @@ data("brcaMethylData1")
 data("brcaCoord1")
 data("esr1_chr1")
 data("brcaPCScores")
-featuresAlongPC(methylData=brcaMethylData1,
-                mCoord=brcaCoord1,
-                regionSet=esr1_chr1,
-                pcScores=brcaPCScores,
-                orderByPC="PC1", cluster_columns=TRUE)
+featureHM <- featuresAlongPC(methylData=brcaMethylData1,
+                             mCoord=brcaCoord1,
+                             regionSet=esr1_chr1,
+                             pcScores=brcaPCScores,
+                             orderByPC="PC1", cluster_columns=TRUE)
 
 }

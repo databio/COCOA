@@ -43,7 +43,6 @@
 #' @param column_title character object, column title
 #' @param column_title_side character object, where to put the column title:
 #' "top" or "bottom"
-#' @param character object, row title
 #' @param name character object, legend title
 #' @param ... optional parameters for ComplexHeatmap::Heatmap() (eg change
 #' heatmap colors with "col" parameter)

@@ -38,7 +38,7 @@ ranking large region sets highly. Wilcoxon rank sum test ("rankSum")
 also is skewed toward ranking large region sets highly and is
 significantly slower than the "rsMean" method.}
 
-\item{verbose}{A boolean. Whether progress 
+\item{verbose}{A "logical" object. Whether progress 
 of the function should be shown, one
 bar indicates the region set is completed.}
 }
