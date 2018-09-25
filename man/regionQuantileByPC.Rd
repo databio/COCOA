@@ -7,9 +7,10 @@ One plot for each region set}
 \usage{
 regionQuantileByPC(loadingMat, mCoord, regionSet, rsName = "",
   PCsToAnnotate = paste0("PC", 1:5), maxRegionsToPlot = 8000,
-  cluster_rows = TRUE, cluster_columns = FALSE,
-  column_title = rsName, name = "Percentile of Loading Scores in PC",
-  col = c("skyblue", "yellow"), ...)
+  cluster_rows = TRUE, row_title = "Region", column_title = rsName,
+  column_title_side = "top", cluster_columns = FALSE,
+  name = "Percentile of Loading Scores in PC", col = c("skyblue",
+  "yellow"), ...)
 }
 \arguments{
 \item{loadingMat}{matrix of loadings (the coefficients of 
@@ -38,15 +39,20 @@ use. If regionSet has more regions than maxRegionsToPlot, a number of regions
 equal to maxRegionsToPlot will be randomly sampled from the region set and
 these regions will be plotted.}
 
-\item{cluster_rows}{Boolean, whether to cluster rows or not (may 
+\item{cluster_rows}{"logical" object, whether to cluster rows or not (may 
 increase computation time significantly for large number of rows)}
 
-\item{cluster_columns}{boolean, whether to cluster columns. It is recommended
+\item{row_title}{character object, row title}
+
+\item{column_title}{character object, column title}
+
+\item{column_title_side}{character object, where to put the column title:
+"top" or "bottom"}
+
+\item{cluster_columns}{"logical" object, whether to cluster columns. It is recommended
 to keep this as FALSE so it will be easier to compare PCs 
 (with cluster_columns = FALSE, they will be in the same specified
 order in different heatmaps)}
-
-\item{column_title}{character object, column title}
 
 \item{name}{character object, legend title}
 

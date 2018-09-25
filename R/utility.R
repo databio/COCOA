@@ -37,7 +37,7 @@ BSdtToGRanges <- function(dtList) {
 # Also can convert GPos objects to a data.table.
 # 
 # @param GR A GRanges object
-# @param includeStrand Boolean, whether to include strand from GR in output DT
+# @param includeStrand "logical" object, whether to include strand from GR in output DT
 # @return A data.table object with columns:
 # "chr", "start", and "end" (possibly strand)
 grToDt <- function(GR, includeStrand = FALSE) {

@@ -16,4 +16,4 @@ or locally after downloading/cloning the source code:
 install.packages("path/to/PCRSA/directory", repos=NULL, type="source")
 
 ## Learning How to Use PCRSA
-A vignette is included with the package that shows how to use the main PCRSA functions and walks you through an example application [(here)](./vignettes/IntroToPCRSA.Rmd). An additional vignette that shows how to use PCRSA with a region set database as you normally would in an analysis is [(here)](./vignettes/PCRSA_Workflow.Rmd).
+A vignette is included with the package that shows [how to use the main PCRSA functions](http://code.databio.org/PCRSA/articles/IntroToPCRSA.html) and walks you through an example application. An additional vignette shows [how to use PCRSA with a region set database](http://code.databio.org/PCRSA/articles/PCRSA_Workflow.html) as you normally would in an analysis.

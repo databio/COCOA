@@ -34,11 +34,15 @@
 #' These same subject_IDs must be column names of methylData
 #' @param orderByPC PC to order samples by (order rows of heatmap by PC score, 
 #' from high to low score)
-#' @param cluster_columns boolean, whether to cluster columns (the features,
-#' eg DNA methylation values for each CpG).
-#' @param cluster_rows boolean, whether rows should be clustered. 
+#' @param cluster_rows "logical" object, whether rows should be clustered. 
 #' This should be kept as FALSE to keep the correct ranking of 
 #' samples/observations according to their PC score.
+#' @param cluster_columns "logical" object, whether to cluster columns (the features,
+#' eg DNA methylation values for each CpG).
+#' @param row_title character object, row title
+#' @param column_title character object, column title
+#' @param column_title_side character object, where to put the column title:
+#' "top" or "bottom"
 #' @param name character object, legend title
 #' @param ... optional parameters for ComplexHeatmap::Heatmap() (eg change
 #' heatmap colors with "col" parameter)
@@ -52,17 +56,21 @@
 #' data("brcaCoord1")
 #' data("esr1_chr1")
 #' data("brcaPCScores")
-#' featuresAlongPC(methylData=brcaMethylData1,
-#'                 mCoord=brcaCoord1,
-#'                 regionSet=esr1_chr1,
-#'                 pcScores=brcaPCScores,
-#'                 orderByPC="PC1", cluster_columns=TRUE)
+#' featureHM <- featuresAlongPC(methylData=brcaMethylData1,
+#'                              mCoord=brcaCoord1,
+#'                              regionSet=esr1_chr1,
+#'                              pcScores=brcaPCScores,
+#'                              orderByPC="PC1", cluster_columns=TRUE)
 #' 
 #' @export
 # previously called rsMethylHeatmap
 featuresAlongPC <- function(methylData, mCoord, regionSet, 
                             pcScores, orderByPC="PC1", cluster_columns = FALSE, 
-                            cluster_rows = FALSE, name = "Feature Value", ...) {
+                            cluster_rows = FALSE, 
+                            row_title = "Sample",
+                            column_title = "Genomic Feature", 
+                            column_title_side = "bottom",
+                            name = "Feature Value", ...) {
     
 
     if (!(is(methylData, "matrix") || is(methylData, "data.frame"))) {
@@ -116,6 +124,9 @@ featuresAlongPC <- function(methylData, mCoord, regionSet,
     message(paste0("Number of cytosines: ", ncol(thisRSMData)))
     message(paste0("Number of regions: ", length(unique(queryHits(olList)))))
     ComplexHeatmap::Heatmap(thisRSMData, 
+                            row_title = row_title,
+                            column_title = column_title,
+                            column_title_side = column_title_side,
                             cluster_rows = cluster_rows, 
                             cluster_columns = cluster_columns, 
                             name = name, ...)
@@ -141,13 +152,17 @@ featuresAlongPC <- function(methylData, mCoord, regionSet,
 #' names/identifiers for the region sets so this information can be included 
 #' in the plot.
 #' @param topX Number of top region sets to include in the heatmap
-#' @param cluster_rows boolean, whether rows should be clustered. 
+#' @param row_title character object, row title
+#' @param column_title character object, column title
+#' @param column_title_side character object, where to put the column title:
+#' "top" or "bottom"
+#' @param cluster_rows "logical" object, whether rows should be clustered. 
 #' This should be kept as FALSE to keep the correct ranking of region sets.
-#' @param cluster_columns boolean, whether to cluster columns. It is recommended
+#' @param cluster_columns "logical" object, whether to cluster columns. It is recommended
 #' to keep this as FALSE so it will be easier to compare PCs 
 #' (with cluster_columns = FALSE, they will be in the same specified
 #' order in different heatmaps)
-#' @param show_row_names boolean, display row names (ie region set names)
+#' @param show_row_names "logical" object, display row names (ie region set names)
 #' @param row_names_max_width "unit" object. The amount of room to 
 #' allocate for row names. See ?grid::unit for object type.
 #' @param name character object, legend title
@@ -167,7 +182,9 @@ featuresAlongPC <- function(methylData, mCoord, regionSet,
 
 rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
                             orderByPC="PC1", rsNameCol = "rsName", topX = 20, 
-                           cluster_rows = FALSE, cluster_columns = FALSE, 
+                           row_title = "Region Set", column_title = "Principal Component",
+                           column_title_side = "bottom",
+                           cluster_rows = FALSE, cluster_columns = FALSE,
                            show_row_names = TRUE, 
                            row_names_max_width = unit(100000, "mm"), 
                            name="Rank within PC", ...) {
@@ -241,8 +258,11 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
     rsScores[, c(rsNameCol) := NULL]
     rsScores <- as.matrix(rsScores)
     row.names(rsScores) <- rowNames
-    Heatmap(rsScores[seq_len(topX), ], cluster_rows = cluster_rows, 
+    Heatmap(rsScores[seq_len(topX), ], 
+            row_title = row_title, column_title = column_title, 
+            cluster_rows = cluster_rows, 
             cluster_columns = cluster_columns, 
+            column_title_side = column_title_side,
             show_row_names = show_row_names, 
             row_names_max_width = row_names_max_width, 
             name = name, ...)
@@ -272,13 +292,16 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
 #' use. If regionSet has more regions than maxRegionsToPlot, a number of regions 
 #' equal to maxRegionsToPlot will be randomly sampled from the region set and
 #' these regions will be plotted.
-#' @param cluster_rows Boolean, whether to cluster rows or not (may 
+#' @param row_title character object, row title
+#' @param column_title character object, column title
+#' @param column_title_side character object, where to put the column title:
+#' "top" or "bottom"
+#' @param cluster_rows "logical" object, whether to cluster rows or not (may 
 #' increase computation time significantly for large number of rows)
-#' @param cluster_columns boolean, whether to cluster columns. It is recommended
+#' @param cluster_columns "logical" object, whether to cluster columns. It is recommended
 #' to keep this as FALSE so it will be easier to compare PCs 
 #' (with cluster_columns = FALSE, they will be in the same specified
 #' order in different heatmaps)
-#' @param column_title character object, column title
 #' @param name character object, legend title
 #' @param col a vector of colors or a color mapping function which
 #' will be passed to the ComplexHeatmap::Heatmap() function. See ?Heatmap
@@ -315,7 +338,9 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
 regionQuantileByPC <- function(loadingMat, mCoord, regionSet, 
                                rsName = "", PCsToAnnotate=paste0("PC", 1:5),
                                maxRegionsToPlot = 8000, cluster_rows = TRUE, 
-                               cluster_columns = FALSE, column_title = rsName, 
+                               row_title = "Region", column_title = rsName,
+                               column_title_side = "top",
+                               cluster_columns = FALSE, 
                                name = "Percentile of Loading Scores in PC", 
                                col = c("skyblue", "yellow"), ...) {
     
@@ -358,7 +383,9 @@ regionQuantileByPC <- function(loadingMat, mCoord, regionSet,
     
     # the heatmap
     Heatmap(matrix = as.matrix(rsRegionAverage[, PCsToAnnotate, with=FALSE]), 
-            column_title = rsName, 
+            row_title = row_title,
+            column_title = rsName,
+            column_title_side = column_title_side,
             cluster_rows = cluster_rows,
             cluster_columns = cluster_columns, 
             name = name, 

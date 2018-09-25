@@ -40,7 +40,7 @@ significantly slower than the "rsMean" method.}
 \item{pcLoadAv}{The average absolute loading value for each PC. Will
 significantly speed up computation if this is given.}
 
-\item{verbose}{A boolean. Whether progress 
+\item{verbose}{A "logical" object. Whether progress 
 of the function should be shown, one
 bar indicates the region set is completed. Useful when using 
 aggregateLoadings with 'apply' to do many region sets at a time.}
