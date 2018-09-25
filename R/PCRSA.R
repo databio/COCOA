@@ -80,7 +80,7 @@ if (getRversion() >= "2.15.1") {
 #' significantly slower than the "rsMean" method.
 #' @param pcLoadAv The average absolute loading value for each PC. Will
 #' significantly speed up computation if this is given.
-#' @param verbose A boolean. Whether progress 
+#' @param verbose A "logical" object. Whether progress 
 #' of the function should be shown, one
 #' bar indicates the region set is completed. Useful when using 
 #' aggregateLoadings with 'apply' to do many region sets at a time.
@@ -287,7 +287,7 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
 #' ranking large region sets highly. Wilcoxon rank sum test ("rankSum")
 #' also is skewed toward ranking large region sets highly and is
 #' significantly slower than the "rsMean" method.
-#' @param verbose A boolean. Whether progress 
+#' @param verbose A "logical" object. Whether progress 
 #' of the function should be shown, one
 #' bar indicates the region set is completed.
 #' @return data.frame of results, one row for each region set. 
@@ -386,7 +386,7 @@ pcRegionSetEnrichment <- function(loadingMat, mCoord, GRList,
 #' @param binNum Number of bins to split the regions into when
 #' making the aggregate loading profile. More bins will
 #' give a higher resolution but perhaps more noisy profile.
-#' @param verbose A boolean. Whether progress 
+#' @param verbose A "logical" object. Whether progress 
 #' of the function should be shown, one
 #' bar indicates the region set is completed.
 #' @return A list of data.tables each data.table for
@@ -486,7 +486,7 @@ makeSymmetric <- function(prof) {
 # @param minReads Filter out bins with fewer than X reads before returning.
 # @param PCsToAnnotate A character vector with principal components to 
 # analyze. eg c("PC1", "PC2")
-# @param verbose A boolean. Whether progress 
+# @param verbose A "logical" object. Whether progress 
 # of the function should be shown, one
 # bar indicates the region set is completed.
 # useful when using BSBinAggregate with 'apply' to do many 
@@ -549,7 +549,7 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
 # to the same biological annotation.
 # @param PCsToAnnotate A character vector with principal components to 
 # include. eg c("PC1", "PC2")
-# @param returnQuantile Boolean. If FALSE, return region averages. If TRUE,
+# @param returnQuantile "logical" object. If FALSE, return region averages. If TRUE,
 # for each region, return the quantile of that region's average value
 # based on the distribution of individual cytosine values
 # @return a data.table with region coordinates and average loading 
