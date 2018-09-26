@@ -33,6 +33,6 @@ License: GPL-3
 biocViews: PrincipalComponent, GenomicVariation, DNAMethylation, GeneRegulation, GenomeAnnotation, 
 	   SystemsBiology, FunctionalGenomics, ChIPSeq, 
            MethylSeq, Sequencing, Epigenetics
-URL: http://github.com/databio/PCRSA
+URL: http://code.databio.org/PCRSA/
 BugReports: https://github.com/databio/PCRSA
 RoxygenNote: 6.1.0
