@@ -1,5 +1,6 @@
 # PACKAGE DOCUMENTATION
-#' Principal Component Region Set Analysis (PCRSA)
+#' Coordinate Covariation Analysis (COCOA)
+#'
 #' 
 #'A method for annotating principal components of DNA methylation data 
 #'with region sets. A region set is a set of genomic regions that share 
@@ -8,7 +9,7 @@
 #'and understanding of variation in the data. 
 #'
 #' @docType package
-#' @name PCRSA
+#' @name CoCoA
 #' @author John Lawson
 #' @author Nathan Sheffield
 #'
