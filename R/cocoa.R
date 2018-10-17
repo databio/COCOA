@@ -154,7 +154,7 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
     loadingDT <- data.table(coordinateDT, 
                             loadingDT[, PCsToAnnotate, with=FALSE])
     # naming does not work if only using one PC so add this line for that case
-    setnames(loadingDT, c("chr", "start", PCsToAnnotate))
+    setnames(loadingDT, c(colnames(coordinateDT), PCsToAnnotate))
     
     # would rounding speed up aggregation?, potentially make a sparse matrix
     # if a lot of entries became 0
