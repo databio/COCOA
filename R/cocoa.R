@@ -29,8 +29,6 @@
 #' @author Nathan Sheffield
 #'
 #' @references \url{http://github.com/databio}
-#' @importFrom GenomicRanges GRanges GRangesList elementMetadata strand
-#'             seqnames granges
 #' @importFrom ggplot2 ggplot aes facet_wrap geom_boxplot geom_jitter geom_line
 #'             theme_classic xlab ylab geom_hline ylim scale_color_discrete
 #'             scale_x_discrete scale_fill_brewer scale_color_manual
@@ -51,6 +49,9 @@
 #' @importFrom methods hasArg
 NULL
 
+# now package lists GenomicRanges in "Depends" instead of "Imports"
+# @importFrom GenomicRanges GRanges GRangesList elementMetadata strand
+#             seqnames granges
 
 # Because of some issues, 
 # (see here: http://stackoverflow.com/questions/9439256/)
@@ -332,7 +333,7 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
 #' data("brcaLoadings1")
 #' data("esr1_chr1")
 #' data("nrf1_chr1")
-#' GRList <- GenomicRanges::GRangesList(esr1_chr1, nrf1_chr1)
+#' GRList <- GRangesList(esr1_chr1, nrf1_chr1)
 #' rsScores <- pcRegionSetEnrichment(loadingMat=brcaLoadings1, 
 #'                                  mCoord=brcaCoord1, 
 #'                                  GRList=GRList, 
@@ -437,7 +438,7 @@ pcRegionSetEnrichment <- function(loadingMat, mCoord, GRList,
 #' data("brcaLoadings1")
 #' data("esr1_chr1")
 #' data("nrf1_chr1")
-#' GRList = GenomicRanges::GRangesList(esr1_chr1, nrf1_chr1)
+#' GRList = GRangesList(esr1_chr1, nrf1_chr1)
 #' pcEnrichmentProfile(loadingMat=brcaLoadings1, 
 #'                     mCoord=brcaCoord1, 
 #'                     GRList=GRList, 
@@ -665,7 +666,7 @@ averageByRegion <- function(loadingMat,
 
 # support is just number of regions from each input region set that overlap at all with
 # the cytosines that have loading values 
-# GenomicRanges::findOverlaps(regionSet, dtToGr(coordinateDT)) 
+# findOverlaps(regionSet, dtToGr(coordinateDT)) 
 
 ###########################################################################
 
@@ -686,7 +687,7 @@ averageByRegion <- function(loadingMat,
 # to splitFactor.
 # @param regionsGRL Regions across which you want to aggregate. Should be 
 # from a single region set. eg GRangesList(regionSet)
-# @param excludeGR A GenomicRanges object with regions you want to 
+# @param excludeGR A GRanges object with regions you want to 
 # exclude from the aggregation function. These regions will be eliminated
 # from the input table and not counted.
 # @param jExpr You can pass a custom command in the j slot to data.table
@@ -1003,7 +1004,7 @@ rsRankingIndex <- function(rsScores, PCsToAnnotate) {
 # except chr, start, and end will be considered 
 # columns to get the metrics from so no unnecessary columns should be
 # included.
-# @param regionGR GenomicRanges object. Metrics will be calculated on
+# @param regionGR GRanges object. Metrics will be calculated on
 # only coordinates within this region set (and optionally separately
 # on those outside this region set with alsoNonOLMet parameter)
 # @param metrics character vector with the name of a function or functions
@@ -1104,7 +1105,7 @@ cpgOLMetrics <- function(dataDT, regionGR, metrics=c("mean", "sd"),
 # except chr, start, and end will be considered 
 # columns to get the metrics from so no unnecessary columns should be
 # included.
-# @param regionGR Region set, GenomicRanges object
+# @param regionGR Region set, GRanges object
 # @param ... Additional parameters of wilcox.test function. See ?wilcox.test.
 # For instance specify alternative hypothesis: alternative = "greater".
 # @return A vector with a p value for each column other than chr, start or end. 

@@ -1,15 +1,14 @@
-Package: PCRSA
-Version: 0.99.1
-Date: 2018-09-25
-Title: Principal Component Region Set Analysis
-Description: A method for annotating principal components of DNA methylation data with region sets. A region set is a set of genomic regions that share a biological annotation. PCRSA can identify biologically meaningful sources of variation along the PCs, increasing interpretability of the PCs and understanding of variation in the data. 
+Package: cocoa
+Version: 0.99.2
+Date: 2018-10-17
+Title: Coordinate Covariation Analysis
+Description: A method for annotating principal components of DNA methylation data with region sets. A region set is a set of genomic regions that share a biological annotation. cocoa can identify biologically meaningful sources of variation along the PCs, increasing interpretability of the PCs and understanding of variation in the data. 
 Authors@R: c(person("John", "Lawson", email="jtl2hk@virginia.edu", role=c("aut", "cre")), person("Nathan", "Sheffield", role=c("aut"), comment="http://www.databio.org"))
-Depends: R (>= 3.5)
+Depends: R (>= 3.5), GenomicRanges
 Imports:
     BiocGenerics,
     S4Vectors,  
     IRanges,
-    GenomicRanges,
     data.table,
     ggplot2,
     Biobase,
@@ -33,6 +32,6 @@ License: GPL-3
 biocViews: PrincipalComponent, GenomicVariation, DNAMethylation, GeneRegulation, GenomeAnnotation, 
 	   SystemsBiology, FunctionalGenomics, ChIPSeq, 
            MethylSeq, Sequencing, Epigenetics
-URL: http://code.databio.org/PCRSA/
-BugReports: https://github.com/databio/PCRSA
+URL: http://code.databio.org/cocoa/
+BugReports: https://github.com/databio/cocoa
 RoxygenNote: 6.1.0

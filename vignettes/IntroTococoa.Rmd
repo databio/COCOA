@@ -42,7 +42,6 @@ First, we load the example data and required packages:
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 library(Cocoa)
 library(data.table)
-library(GenomicRanges)
 library(ggplot2)
 data("esr1_chr1")
 data("gata3_chr1")

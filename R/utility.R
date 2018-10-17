@@ -32,7 +32,7 @@ BSdtToGRanges <- function(dtList) {
 
 
 
-# Convert a GenomicRanges into a data.table
+# Convert a GRanges object into a data.table
 #
 # Also can convert GPos objects to a data.table.
 # 

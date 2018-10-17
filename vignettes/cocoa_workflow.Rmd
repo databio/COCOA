@@ -25,7 +25,6 @@ To begin, let's load the necessary packages:
 library(LOLA)
 library(Cocoa)
 library(data.table)
-library(GenomicRanges)
 library(ggplot2)
 ```
 
