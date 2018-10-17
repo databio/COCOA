@@ -1,5 +1,5 @@
 ################################################################################
-# functions to visualize results of PCRSA, relevant regions, 
+# functions to visualize results of COCOA, relevant regions, 
 # and variation in the dataset
 ###############################################################################
 # Some imported functions:
@@ -8,7 +8,7 @@
 # ComplexHeatmap
 ###
 
-# functions to visualize results of PCRSA, relevant regions, and variation in the dataset
+# functions to visualize results of COCOA, relevant regions, and variation in the dataset
 # 
 
 # color schemes: red/blue, yellow/red, red/grey, skyblue/coral, skyblue/yellow
@@ -145,7 +145,7 @@ featuresAlongPC <- function(methylData, mCoord, regionSet,
 #' may be passed to this function to modify the heatmap.  
 #' 
 #' @param rsScores a data.frame with scores for each 
-#' region set from main PCRSA function. 
+#' region set from main COCOA function. 
 #' Each row is a region set. Columns are PCs and info on region set overlap
 #' with DNA methylation data. Should be in the same order as GRList (the list of 
 #' region sets used to create it.)

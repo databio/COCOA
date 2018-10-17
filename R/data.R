@@ -176,9 +176,9 @@ NULL
 #' @format A GRanges object
 NULL
 
-#' Example PCRSA Results (made up)
+#' Example COCOA Results (made up)
 #' 
-#' A data.frame with example PCRSA results.
+#' A data.frame with example COCOA results.
 #' 5 region sets with names given by rsScores$rsName.
 #' Each region set has a score for each PC. Scores
 #' for real region sets would normally be orders of 

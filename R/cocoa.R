@@ -1,30 +1,30 @@
 # PACKAGE DOCUMENTATION
-#' Coordinate Covariation Analysis (cocoa)
+#' Coordinate Covariation Analysis (COCOA)
 #'
 #' 
-#' `Cocoa` is a method for understanding variation among samples.
-#' `Cocoa` can be used with data that includes 
+#' COCOA is a method for understanding variation among samples.
+#' COCOA can be used with data that includes 
 #' genomic coordinates such as DNA methylation. 
-#' To describe the method on a high level, `cocoa` uses a database of 
+#' To describe the method on a high level, COCOA uses a database of 
 #' "region sets" and principal component analysis (PCA) of the data 
 #' to identify sources of variation among samples. A region set is a set of 
 #' genomic regions that share a biological annotation, 
 #' for instance transcription factor (TF) binding regions, 
 #' histone modification regions, or open chromatin regions. 
-#' In contrast to some other common techniques, `cocoa` is unsupervised, 
+#' In contrast to some other common techniques, COCOA is unsupervised, 
 #' meaning that samples do not have to be divided into groups 
-#' such as case/control or healthy/disease, although `cocoa` works in 
-#' those situations as well. Also, `cocoa` focuses on continuous variation 
-#' between samples instead of having cutoffs. Because of this, `cocoa` can 
+#' such as case/control or healthy/disease, although COCOA works in 
+#' those situations as well. Also, COCOA focuses on continuous variation 
+#' between samples instead of having cutoffs. Because of this, COCOA can 
 #' be used as a complementary method alongside "differential" methods 
 #' that find discrete differences between groups of samples and 
 #' it can also be used in situations where there are no groups.  
-#' `Cocoa` can identify biologically meaningful 
+#' COCOA can identify biologically meaningful 
 #' sources of variation between samples abd increase understanding of 
 #' variation in the data. 
 #'
 #' @docType package
-#' @name cocoa
+#' @name COCOA
 #' @author John Lawson
 #' @author Nathan Sheffield
 #'
@@ -515,7 +515,7 @@ makeSymmetric <- function(prof) {
 
 # Produced originally for binning Ewing RRBS data across various region sets
 #
-# @param BSDT A data.table. For PCRSA, a data.table of loading values
+# @param BSDT A data.table. For COCOA, a data.table of loading values
 # with the PCs to be annotated. One column for the loadings of each PC
 # and also has columns with the coordinates for CpGs that the loadings
 # are for: chr (chromosome) and start column
@@ -933,7 +933,7 @@ BSFilter <- function(BSDT, minReads = 10, excludeGR = NULL) {
 #' easier to get the original indices to select them from a list of region sets.
 #' 
 #' @param rsScores a data.frame with scores for each 
-#' region set from main PCRSA function. 
+#' region set from the main COCOA function. 
 #' Each row is a region set. Columns are PCs and info on region set overlap
 #' with DNA methylation data. Should be in the same order as GRList (the list of 
 #' region sets used to create it.)
