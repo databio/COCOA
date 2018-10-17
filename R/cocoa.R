@@ -1,15 +1,30 @@
 # PACKAGE DOCUMENTATION
-#' Coordinate Covariation Analysis (COCOA)
+#' Coordinate Covariation Analysis (cocoa)
 #'
 #' 
-#'A method for annotating principal components of DNA methylation data 
-#'with region sets. A region set is a set of genomic regions that share 
-#'a biological annotation. PCRSA can identify biologically meaningful 
-#'sources of variation along the PCs, increasing interpretability of the PCs 
-#'and understanding of variation in the data. 
+#' `Cocoa` is a method for understanding variation among samples.
+#' `Cocoa` can be used with data that includes 
+#' genomic coordinates such as DNA methylation. 
+#' To describe the method on a high level, `cocoa` uses a database of 
+#' "region sets" and principal component analysis (PCA) of the data 
+#' to identify sources of variation among samples. A region set is a set of 
+#' genomic regions that share a biological annotation, 
+#' for instance transcription factor (TF) binding regions, 
+#' histone modification regions, or open chromatin regions. 
+#' In contrast to some other common techniques, `cocoa` is unsupervised, 
+#' meaning that samples do not have to be divided into groups 
+#' such as case/control or healthy/disease, although `cocoa` works in 
+#' those situations as well. Also, `cocoa` focuses on continuous variation 
+#' between samples instead of having cutoffs. Because of this, `cocoa` can 
+#' be used as a complementary method alongside "differential" methods 
+#' that find discrete differences between groups of samples and 
+#' it can also be used in situations where there are no groups.  
+#' `Cocoa` can identify biologically meaningful 
+#' sources of variation between samples abd increase understanding of 
+#' variation in the data. 
 #'
 #' @docType package
-#' @name CoCoA
+#' @name cocoa
 #' @author John Lawson
 #' @author Nathan Sheffield
 #'
@@ -52,8 +67,11 @@ if (getRversion() >= "2.15.1") {
 #########################################################################
 
 
-#' Function to aggregate PCA loading weights over a given region set
-#' and then get p value for each PC based on a permutation
+#' Use PCA loadings to score a region set
+#' 
+#' First, this function identifies which loadings are within the region set. 
+#' Then the loadings are used to score the region set 
+#' according to the `metric` parameter.  
 #' 
 #' @param loadingMat matrix of loadings (the coefficients of 
 #' the linear combination that defines each PC). One named column for each PC.
@@ -262,7 +280,11 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
 
 
 
-#' Do PCRSA for many region sets
+#' Do COCOA with many region sets
+#' 
+#' This function will give each region set a score for each PC
+#' in `PCsToAnnotate` based on
+#' the `scoringMetric` parameter.
 #'
 #' @param loadingMat matrix of loadings (the coefficients of 
 #' the linear combination that defines each PC). One named column for each PC.
@@ -364,10 +386,26 @@ pcRegionSetEnrichment <- function(loadingMat, mCoord, GRList,
 
 
 
-#' Function to create "meta-region" loading profile that indicates enrichment 
+#' Create a "meta-region" loading profile 
+#' 
+#' This loading profile can show enrichment 
 #' of cytosines with high loading values in region set but not in
-#' surrounding genome. All regions in a given region set 
-#' are combined into a single aggregate profile.
+#' surrounding genome, suggesting that variation is linked specifically
+#' to that region set. 
+#' 
+#' All regions in a given region set 
+#' are combined into a single aggregate profile. Regions should be
+#' expanded on each side to include a wider area of the genome around
+#' the regions of interest. To make the profile, first we take 
+#' the absolute value of the loadings. Then each region is
+#' split into `binNum` bins. All loadings in each bin are 
+#' averaged to get one value per bin. Finally, corresponding bins from
+#' the different regions are averaged (eg all bin1's averaged with each other, 
+#' all bin2's averaged with each other, etc.) to get a single "meta-region"
+#' loading profile. A peak in the middle of this profile suggests
+#' that variability is specific to the region set of interest and is 
+#' not a product of the surrounding genome. A region set can still be
+#' significant even if it does not have a peak. For example, some
 #'
 #'
 #' @param loadingMat matrix of loadings (the coefficients of 
@@ -884,15 +922,13 @@ BSFilter <- function(BSDT, minReads = 10, excludeGR = NULL) {
 }
 
 
-#' A convenience function to easily get indices for
-#' the top region sets that were enriched for each PC. 
+#' Get indices for top scored region sets 
+#' 
 #' For each PC, get index of original region sets but ordered by rsScores
 #' ranking for each PC. First number in a given column will be 
 #' original index of the region set ranked first for that PC. Second row for a
 #' column will be the original index of the region set that ranked second
-#' for that PC, etc. 
-#' 
-#' Use this function when you want to look at top region sets to make it 
+#' for that PC, etc. Use this function when you want to look at top region sets to make it 
 #' easier to get the original indices to select them from a list of region sets.
 #' 
 #' @param rsScores a data.frame with scores for each 

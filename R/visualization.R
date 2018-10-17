@@ -13,9 +13,11 @@
 
 # color schemes: red/blue, yellow/red, red/grey, skyblue/coral, skyblue/yellow
 
+#' Visualize how features in a region set change along principal component axis
+#' 
 #' Look at features (eg, DNA methylation values) in regions of 
 #' interest across samples, 
-#' with samples ordered according to PC of interest. 
+#' with samples ordered according to score for PC of interest. 
 #' The ComplexHeatmap package
 #' is used and additional parameters for the ComplexHeatmap::Heatmap function
 #' may be passed to this function to modify the heatmap.   
@@ -133,6 +135,8 @@ featuresAlongPC <- function(methylData, mCoord, regionSet,
 }
 
 
+#' Heatmap of region set scores
+#' 
 #' Heatmap of the ranking of region set scores across PCs
 #' A visualization of rank of region sets in each PC, allowing the
 #' user to see if a region set is ranked highly in all PCs or only a subset.
@@ -270,8 +274,15 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
 }
 
 
-#' Plot individual region scores/percentiles across PCs for a single region set
-#' One plot for each region set
+#' Visualize how individual regions are associated with principal components
+#' 
+#' Visualize how much each region in a region set is associated with each PC.
+#' For each PC, the average absolute loading is calculated for 
+#' each region in the region set. Then for a given PC, 
+#' the average loading is converted to a percentile/quantile based 
+#' on the distribution of all loadings for that PC. These values are
+#' plotted in a heatmap.
+#' 
 #' @param loadingMat matrix of loadings (the coefficients of 
 #' the linear combination that defines each PC). One named column for each PC.
 #' One row for each original dimension/variable (should be same order 
