@@ -30,7 +30,8 @@
 #' must have chr and start columns. If end is included, start 
 #' and end should be the same. Start coordinate will be used for calculations.
 #' @param regionSet A genomic ranges object with regions corresponding
-#' to the same biological annotation.
+#' to the same biological annotation. Must be from the same reference genome
+#' as the coordinates for the actual data (mCoord).
 #' @param pcScores A matrix. The principal component scores for the samples 
 #' (ie transformed methylation data). Must have subject_ID as row names,
 #' These same subject_IDs must be column names of methylData
@@ -293,7 +294,8 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
 #' must have chr and start columns. If end is included, start 
 #' and end should be the same. Start coordinate will be used for calculations.
 #' @param regionSet A genomic ranges object with regions corresponding
-#' to the same biological annotation.
+#' to the same biological annotation. Must be from the same reference genome
+#' as the coordinates for the actual data (mCoord).
 #' @param rsName character vector. Names of the region sets in the same
 #' order as GRList. For use as a title for each heatmap.
 #' @param PCsToAnnotate A character vector with principal components to 

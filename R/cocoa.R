@@ -84,7 +84,8 @@ if (getRversion() >= "2.15.1") {
 #' must have chr and start columns. If end is included, start 
 #' and end should be the same. Start coordinate will be used for calculations.
 #' @param regionSet A genomic ranges object with regions corresponding
-#' to the same biological annotation.
+#' to the same biological annotation. Must be from the same reference genome
+#' as the coordinates for the actual data (mCoord).
 #' @param PCsToAnnotate A character vector with principal components to 
 #' include. eg c("PC1", "PC2")
 # #UPDATE: make sure only aggregating PCsToAnnotate to save time
@@ -298,7 +299,8 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
 #' and end should be the same. Start coordinate will be used for calculations.
 #' @param GRList GRangesList object. Each list item is 
 #' a distinct region set to test (region set: regions that correspond to 
-#' the same biological annotation).
+#' the same biological annotation). Must be from the same reference genome
+#' as the coordinates for the actual data (mCoord).
 #' @param PCsToAnnotate A character vector with principal components to 
 #' include. eg c("PC1", "PC2")
 #' @param scoringMetric Scoring metric. "rsMean" is a weighted
@@ -420,7 +422,8 @@ pcRegionSetEnrichment <- function(loadingMat, mCoord, GRList,
 #' and end should be the same. Start coordinate will be used for calculations.
 #' @param GRList GRangesList object. Each list item is 
 #' a distinct region set (regions that correspond to 
-#' the same biological annotation).
+#' the same biological annotation). Must be from the same reference genome
+#' as the coordinates for the actual data (mCoord).
 #' @param PCsToAnnotate A character vector with principal components to 
 #' include. eg c("PC1", "PC2")
 #' @param binNum Number of bins to split the regions into when
