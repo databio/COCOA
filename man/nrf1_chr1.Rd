@@ -10,6 +10,7 @@ data(nrf1_chr1)
 }
 \description{
 Binding regions for Nrf1.
+hg38 genome version.
 Only includes regions in chr1 to keep
 the example data small.
 }

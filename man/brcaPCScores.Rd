@@ -20,6 +20,7 @@ the two lowest PC1 scores are included.
 DNA methlyation data is Illumina 450k 
 microarray data from breast cancer
 patients from The Cancer Genome Atlas
-(TCGA-BRCA, https://portal.gdc.cancer.gov/).
+(TCGA-BRCA, https://portal.gdc.cancer.gov/), 
+hg38 genome.
 }
 \keyword{datasets}

@@ -16,6 +16,7 @@ DNA methlyation data is Illumina 450k
 microarray data from breast cancer
 patients from The Cancer Genome Atlas
 (TCGA-BRCA, https://portal.gdc.cancer.gov/).
+Coordinates correspond to the hg38 genome version.
 Only cytosines on chr1 are included to keep
 the example data small.
 }

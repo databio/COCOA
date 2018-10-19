@@ -131,6 +131,8 @@ dtToGrInternal <- function(DT, chr, start,
         DT[strand == "1", strand := "+"]
         DT[strand == "-1", strand := "-"]
         DT[[`strand`]] <- gsub("[^+-]", "*", DT[[`strand`]])
+        # chr, start, end and strand should be strings with the 
+        # name of the corresponding columns
         gr <- GRanges(seqnames = DT[[`chr`]], 
                       ranges = IRanges(start = DT[[`start`]], end = DT[[`end`]]), 
                       strand = DT[[`strand`]])

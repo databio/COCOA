@@ -15,7 +15,7 @@ for cytosines in chromosome 1 that were covered by
 the DNA methylation microarray (Illumina 450k microarray).
 Each row corresponds to one cytosine and
 the coordinates for these cytosines are
-in the object brcaCoords1, (data("brcaCoords1")). 
+in the object brcaCoords1, (data("brcaCoords1"), hg38 genome). 
 Only cytosines on chr1 are included to keep
 the example data small. Columns are patients,
 with TCGA patient identifiers as column names. The patients

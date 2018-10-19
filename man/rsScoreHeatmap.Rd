@@ -2,12 +2,7 @@
 % Please edit documentation in R/visualization.R
 \name{rsScoreHeatmap}
 \alias{rsScoreHeatmap}
-\title{Heatmap of the ranking of region set scores across PCs
-A visualization of rank of region sets in each PC, allowing the
-user to see if a region set is ranked highly in all PCs or only a subset.
-The ComplexHeatmap package
-is used and additional parameters for the ComplexHeatmap::Heatmap function
-may be passed to this function to modify the heatmap.}
+\title{Heatmap of region set scores}
 \usage{
 rsScoreHeatmap(rsScores, PCsToAnnotate = paste0("PC", 1:5),
   orderByPC = "PC1", rsNameCol = "rsName", topX = 20,
@@ -19,7 +14,7 @@ rsScoreHeatmap(rsScores, PCsToAnnotate = paste0("PC", 1:5),
 }
 \arguments{
 \item{rsScores}{a data.frame with scores for each 
-region set from main PCRSA function. 
+region set from main COCOA function. 
 Each row is a region set. Columns are PCs and info on region set overlap
 with DNA methylation data. Should be in the same order as GRList (the list of 
 region sets used to create it.)}

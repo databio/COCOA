@@ -34,7 +34,7 @@
 #'             scale_x_discrete scale_fill_brewer scale_color_manual
 #'             scale_color_brewer
 #' @importFrom ComplexHeatmap Heatmap draw
-#' @import BiocGenerics S4Vectors IRanges
+#' @import BiocGenerics S4Vectors IRanges GenomicRanges
 #' @importFrom data.table ":=" setDT data.table setkey fread setnames 
 #'             setcolorder rbindlist setattr setorder copy is.data.table 
 #'             setorderv as.data.table
@@ -49,7 +49,8 @@
 #' @importFrom methods hasArg
 NULL
 
-# now package lists GenomicRanges in "Depends" instead of "Imports"
+# now package lists GenomicRanges in "Depends" instead of "Imports" in 
+# DESCRIPTION, still import package with @import though
 # @importFrom GenomicRanges GRanges GRangesList elementMetadata strand
 #             seqnames granges
 
@@ -85,7 +86,7 @@ if (getRversion() >= "2.15.1") {
 #' and end should be the same. Start coordinate will be used for calculations.
 #' @param regionSet A genomic ranges object with regions corresponding
 #' to the same biological annotation. Must be from the same reference genome
-#' as the coordinates for the actual data (mCoord).
+#' as the coordinates for the actual data/samples (mCoord).
 #' @param PCsToAnnotate A character vector with principal components to 
 #' include. eg c("PC1", "PC2")
 # #UPDATE: make sure only aggregating PCsToAnnotate to save time
@@ -286,7 +287,7 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
 #' 
 #' This function will give each region set a score for each PC
 #' in `PCsToAnnotate` based on
-#' the `scoringMetric` parameter.
+#' the `scoringMetric` parameter. 
 #'
 #' @param loadingMat matrix of loadings (the coefficients of 
 #' the linear combination that defines each PC). One named column for each PC.
@@ -300,7 +301,7 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
 #' @param GRList GRangesList object. Each list item is 
 #' a distinct region set to test (region set: regions that correspond to 
 #' the same biological annotation). Must be from the same reference genome
-#' as the coordinates for the actual data (mCoord).
+#' as the coordinates for the actual data/samples (mCoord).
 #' @param PCsToAnnotate A character vector with principal components to 
 #' include. eg c("PC1", "PC2")
 #' @param scoringMetric Scoring metric. "rsMean" is a weighted
@@ -423,7 +424,7 @@ pcRegionSetEnrichment <- function(loadingMat, mCoord, GRList,
 #' @param GRList GRangesList object. Each list item is 
 #' a distinct region set (regions that correspond to 
 #' the same biological annotation). Must be from the same reference genome
-#' as the coordinates for the actual data (mCoord).
+#' as the coordinates for the actual data/samples (mCoord).
 #' @param PCsToAnnotate A character vector with principal components to 
 #' include. eg c("PC1", "PC2")
 #' @param binNum Number of bins to split the regions into when

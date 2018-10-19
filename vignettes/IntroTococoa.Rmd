@@ -12,9 +12,11 @@ vignette: >
 
 # Purpose
 
-**COCOA is a method to understand variation among samples** and can be used with data that includes genomic coordinates such as DNA methylation. To describe the method on a high level, COCOA uses a database of "region sets" and principal component analysis (PCA) of the data to identify sources of variation among samples. A region set is a set of genomic regions that share a biological annotation, for instance transcription factor (TF) binding regions, histone modification regions, or open chromatin regions. For the details of the method, see the "Method Details" section of this vignette. In contrast to some other common techniques, COCOA is unsupervised, meaning that samples do not have to be divided into groups such as case/control or healthy/disease, although COCOA works in those situations as well. Also, COCOA focuses on continuous variation between samples instead of having cutoffs. Because of this, COCOA can be used as a complementary method alongside "differential" methods that find discrete differences between groups of samples and it can also be used in situations where there are no groups.  
+**Coordinate Covariation Analysis (COCOA) is a method to understand variation among samples** and can be used with data that includes genomic coordinates such as DNA methylation. To describe the method on a high level, COCOA uses a database of "region sets" and principal component analysis (PCA) of the data to identify sources of variation among samples. A region set is a set of genomic regions that share a biological annotation, for instance transcription factor (TF) binding regions, histone modification regions, or open chromatin regions. COCOA can identify region sets where there is intersample variation, giving you biologically meaningful insight into variation in your data. For a more in-depth description of the method, see the "Method details" section of this vignette. In contrast to some other common techniques, COCOA is unsupervised, meaning that samples do not have to be divided into groups such as case/control or healthy/disease, although COCOA works in those situations as well. Also, COCOA focuses on continuous variation between samples instead of having cutoffs. Because of this, COCOA can be used as a complementary method alongside "differential" methods that find discrete differences between groups of samples and it can also be used in situations where there are no groups.  
 
 # Our test case
+
+In this vignette, we will see how COCOA can find meaningful sources of intersample variation in breast cancer patients. We will use data from The Cancer Genome Atlas: 450k DNA methylation microarrays for 657 breast cancer patients (TCGA-BRCA, https://portal.gdc.cancer.gov/). This vignette begins after PCA has been performed on the DNA methylation data. As you can see below, PC1 and PC4 cluster patients based on estrogen receptor status which is an important prognostic marker for breast cancer: 
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
 library(COCOA)
@@ -23,11 +25,11 @@ data("brcaPCScores657")
 ggplot(data = brcaPCScores657, mapping = aes(x=PC1, y=PC4, col=ER_Status)) + geom_point() + ggtitle("PCA of DNA methylation data from breast cancer patients")
 ```
 
-For this vignette, we are using data from The Cancer Genome Atlas: 450k DNA methylation microarrays for 657 breast cancer patients (TCGA-BRCA, https://portal.gdc.cancer.gov/). This vignette begins after PCA has been performed on the DNA methylation data. As you can see above, PC1 and PC4 cluster patients based on estrogen receptor status which is an important prognostic marker for breast cancer. Based on this, we might expect that these PCs would be associated with estrogen receptor. We are using an easy example for this vignette but COCOA will still work even if there are not distinct clusters in your PCA plot. We will test a few region sets to see which ones have the highest association with our top PCs.
+Based on this, we might expect that the variation captured by these PCs would be associated with estrogen receptor (consistent with interpatient variation in estrogen receptor status). We are using an easy example for this vignette but COCOA will still work even if there are not distinct clusters in your PCA plot and if you do not have known groups of samples. Outside of this vignette, COCOA was performed with a region set database of over 2000 region sets. To keep things simple for this vignette, we will only use two of the highest scoring region sets and two of the lowest scoring region sets from that analysis to demonstrate how COCOA works.
 
 # Inputs
 
-There are three main inputs:
+There are three main inputs for COCOA:
 
 1. PCA loadings (`prcomp()$rotation`).
 2. Genomic coordinates associated with PCA loadings.
@@ -78,15 +80,19 @@ As an easy way to visualize the results, we can see how the region sets are rank
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 rsScoreHeatmap(regionSetScores, 
                PCsToAnnotate=paste0("PC", 1:4), 
-               orderByPC = "PC1", column_title = "Region sets ordered by score for PC1")
+               rsNameCol = "regionSetName",
+               orderByPC = "PC1", 
+               column_title = "Region sets ordered by score for PC1")
 ```
 
 We can see that Gata3 had the highest score for PCs 1, 3, and 4 but that Esr1 had a higher score for PC2. While you might expect that Esr1 would be ranked first for all PCs, these results actually make sense because Gata3 is known to be associated with breast cancer and Esr1 activity. On a practical note, if you want to arrange the heatmap by region set scores for another PC, you can just change the orderByPC parameter like so:
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 rsScoreHeatmap(regionSetScores, 
-               PCsToAnnotate=paste0("PC", 1:4), 
-               orderByPC = "PC2", column_title = "Region sets ordered by score for PC2")
+               PCsToAnnotate=paste0("PC", 1:4),
+               rsNameCol = "regionSetName",
+               orderByPC = "PC2", 
+               column_title = "Region sets ordered by score for PC2")
 ```
 
 # Understanding the results
@@ -257,20 +263,16 @@ COCOA will use these loadings as feature level information which will be aggrega
 
 COCOA uses a database of region sets to gain biological insight into sources of variability in your data. A region set is a set of genomic regions that share a biological annotation. This includes transcription factor (TF) binding regions (eg from ChIP-seq), regions with a certain histone modification (eg ChIP-seq) or chromatin accessibility regions (eg DNase/ATAC-seq). Most of these region sets are from experimental data but don't necessarily have to be (for instance, you could use predicted TF binding regions based on the TF motif). The big picture goal of using a region set database is to connect variation between samples to an interpretable biological meaning (the known annotation of a region set). For each PC, COCOA will give a score to each region set that quantifies how much that region set is associated with that PC (and therefore with the intersample variation captured by that PC).
 
-COCOA should be done with many region sets (ie hundreds or > 1000). A region set can be a simple ".bed"" file with three columns containing the genomic locations of the regions: chr (for chromosome), start, and end. In R, this data can be represented as a data.frame or as a GRanges object. Publicly available collections of region sets can be found online (eg http://databio.org/regiondb) and region sets can be accessed through Bioconductor packages (eg LOLA  and AnnotationHub). The region sets must be from the same reference genome as your sample data (although you could use [the liftOver tool](https://genome.ucsc.edu/cgi-bin/hgLiftOver) to convert from one genome version to another). The region sets can come from anywhere so if you experimentally or computationally generate your own region sets, you can just include those with the others when running the COCOA analysis. For an example of working with a region set database, see the 'PCRSA_Workflow' vignette.
-
-why you want to use region sets.
-
-Since DNA methylation can correlate with TF binding and with certain histone modifications, finding a region set to have variation in DNA methylation along the PC axis could also imply functional variation of the TF/histone modification/chromatin accessibility along the PC axis. By annotating PCs with region sets, you can identify meaningful sources of variation in your data, increasing your understanding of the epigenetic variation and the biological entity you are studying.
+COCOA should be done with many region sets (ie hundreds or > 1000). A region set can be a simple ".bed"" file with three columns containing the genomic locations of the regions: chr (for chromosome), start, and end. In R, this data can be represented as a data.frame or as a GRanges object. Publicly available collections of region sets can be found online (eg http://databio.org/regiondb) and region sets can be accessed through Bioconductor packages (eg LOLA  and AnnotationHub). The region sets must be from the same reference genome as your sample data (although you could use [the liftOver tool](https://genome.ucsc.edu/cgi-bin/hgLiftOver) to convert from one genome version to another). The region sets can come from anywhere so if you experimentally or computationally generate your own region sets, you can just include those with the others when running the COCOA analysis. For an example of working with a region set database, see the 'COCOA_Workflow' vignette.
 
 ## Aggregating info from individual features
 
-Since differences between samples in individual features (nucleotides/regions) may be hard to interpret, COCOA uses region sets to aggregate feature level info into a more condensed, interpretable form. As mentioned above, each feature has a "loading" for a given PC and the magnitude of the loading represents how much that feature contributes to that PC. Also, each original feature is associated with a genomic coordinate (or a range but ranges are not supported by COCOA in this release version).    
+Since differences between samples in individual features (nucleotides/regions) may be hard to interpret, COCOA uses region sets to aggregate feature level info into a more condensed, interpretable form. As mentioned above, each feature has a "loading" for a given PC and the magnitude of the loading represents how much that feature contributes to that PC. We will use the absolute value of the loading since both a very positive and very negative loading reflect an association between that feature and the PC. Also, each original feature is associated with a genomic coordinate (or a range but ranges are not supported by COCOA in this release version). COCOA will use this information to give each region set in the region set database a score for each PC. For a given PC-region set combination (for example PC1 and the region set esr1_chr1), we first identify all the original features that overlap with the region set. Then the scoring of the region set depends on the scoring metric chosen. The "rsMean" method is described here although the other methods are described in function docs. For the "rsMean" method, we take the PC loadings (eg PC1 loadings) for the features that overlap the region set and average the absolute loadings by region (average loadings in each region to get one value per region of the region set). Then we average the region values to get a single average for that region set which is its score. We repeat this calculation for all PC-region set combinations. Now for a given PC, we can rank the region sets by their score/loading average to see which region sets are most associated with that PC (higher loading average means a greater association with the PC). Since the "rsMean" scoring method only tells you which region sets are *the most* associated with a PC out of those tested, it is important to use a large database of region sets and then to validate by looking at the raw data in these regions which can be done with COCOA visualization functions. Also, you can screen out region sets that have low coverage in your input data (the `region_coverage` column of `pcRegionSetEnrichment()` output) since high scores for these regions are more likely to have happened by chance. The biological annotation of the top ranked region sets for the top PCs can help you understand variation among your samples.     
 
 # Q and A
 
 1. What data types can COCOA be used with?
-So far, COCOA has been validated on single base pair resolution DNA methylation data. Theoretically, COCOA could work with any type of genomic coordinate-based data: data where you have a genomic coordinate or range and an associated value. This could include ATAC-seq data, single nucleotide polymorphism/mutation data, copy number variation etc. Future releases of COCOA will likely have support for more of these data types. If you are interested in using COCOA for these analyses before the next Bioconductor release, you can check out the Github page to see the latest version or download the "dev" version of COCOA from Bioconductor.  
+So far, COCOA has been validated on single base pair resolution DNA methylation data. Theoretically, COCOA could work with any type of genomic coordinate-based data: data where you have a genomic coordinate or range and an associated value. This could include ATAC-seq data, single nucleotide polymorphism/mutation data, copy number variation etc. although COCOA would probably work better for data where smaller regions or single bases are measured. Future releases of COCOA will likely have support for more of these data types. If you are interested in using COCOA for these analyses before the next Bioconductor release, you can check out the Github page to see the latest version or download the "dev" version of COCOA from Bioconductor.  
 
 2. Can COCOA be used with other dimensionality reduction techniques such as t-SNE?
 Short answer for t-SNE: no. In general though, it depends. COCOA must have a score for each original dimension that quantifies how much it contributes to the new dimension. Since t-SNE maps the original dimensions to new dimensions in a nonlinear way, the mappings of the original dimensions to the new dimensions are not comparable to each other and cannot be aggregated into a single score for a region set in a uniform way. 

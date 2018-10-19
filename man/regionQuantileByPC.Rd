@@ -2,8 +2,7 @@
 % Please edit documentation in R/visualization.R
 \name{regionQuantileByPC}
 \alias{regionQuantileByPC}
-\title{Plot individual region scores/percentiles across PCs for a single region set
-One plot for each region set}
+\title{Visualize how individual regions are associated with principal components}
 \usage{
 regionQuantileByPC(loadingMat, mCoord, regionSet, rsName = "",
   PCsToAnnotate = paste0("PC", 1:5), maxRegionsToPlot = 8000,
@@ -25,7 +24,8 @@ must have chr and start columns. If end is included, start
 and end should be the same. Start coordinate will be used for calculations.}
 
 \item{regionSet}{A genomic ranges object with regions corresponding
-to the same biological annotation.}
+to the same biological annotation. Must be from the same reference genome
+as the coordinates for the actual data (mCoord).}
 
 \item{rsName}{character vector. Names of the region sets in the same
 order as GRList. For use as a title for each heatmap.}
@@ -75,8 +75,12 @@ for that region. Colors are based on this quantile/percentile.
 The output is a Heatmap object (ComplexHeatmap package).
 }
 \description{
-Plot individual region scores/percentiles across PCs for a single region set
-One plot for each region set
+Visualize how much each region in a region set is associated with each PC.
+For each PC, the average absolute loading is calculated for 
+each region in the region set. Then for a given PC, 
+the average loading is converted to a percentile/quantile based 
+on the distribution of all loadings for that PC. These values are
+plotted in a heatmap.
 }
 \examples{
 data("brcaLoadings1")

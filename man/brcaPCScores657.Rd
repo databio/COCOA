@@ -21,6 +21,7 @@ and progesterone receptor status as well as
 having 450k microarray data. 
 PCA was done on the Illumina 450k
 DNA methlyation  
-microarray data (TCGA-BRCA, https://portal.gdc.cancer.gov/).
+microarray data (TCGA-BRCA, https://portal.gdc.cancer.gov/),
+hg38 genome.
 }
 \keyword{datasets}
