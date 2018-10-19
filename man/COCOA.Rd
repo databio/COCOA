@@ -24,7 +24,7 @@ be used as a complementary method alongside "differential" methods
 that find discrete differences between groups of samples and 
 it can also be used in situations where there are no groups.  
 COCOA can identify biologically meaningful 
-sources of variation between samples abd increase understanding of 
+sources of variation between samples and increase understanding of 
 variation in the data.
 }
 \references{
