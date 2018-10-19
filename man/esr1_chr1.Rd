@@ -10,7 +10,7 @@ data(esr1_chr1)
 }
 \description{
 Binding regions for estrogen receptor alpha (ESR1).
-Only includes regions in chr1 to keep
+hg 38 genome version. Only includes regions in chr1 to keep
 the example data small.
 }
 \keyword{datasets}

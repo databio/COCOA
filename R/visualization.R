@@ -1,5 +1,5 @@
 ################################################################################
-# functions to visualize results of PCRSA, relevant regions, 
+# functions to visualize results of COCOA, relevant regions, 
 # and variation in the dataset
 ###############################################################################
 # Some imported functions:
@@ -8,14 +8,16 @@
 # ComplexHeatmap
 ###
 
-# functions to visualize results of PCRSA, relevant regions, and variation in the dataset
+# functions to visualize results of COCOA, relevant regions, and variation in the dataset
 # 
 
 # color schemes: red/blue, yellow/red, red/grey, skyblue/coral, skyblue/yellow
 
+#' Visualize how features in a region set change along principal component axis
+#' 
 #' Look at features (eg, DNA methylation values) in regions of 
 #' interest across samples, 
-#' with samples ordered according to PC of interest. 
+#' with samples ordered according to score for PC of interest. 
 #' The ComplexHeatmap package
 #' is used and additional parameters for the ComplexHeatmap::Heatmap function
 #' may be passed to this function to modify the heatmap.   
@@ -28,7 +30,8 @@
 #' must have chr and start columns. If end is included, start 
 #' and end should be the same. Start coordinate will be used for calculations.
 #' @param regionSet A genomic ranges object with regions corresponding
-#' to the same biological annotation.
+#' to the same biological annotation. Must be from the same reference genome
+#' as the coordinates for the actual data (mCoord).
 #' @param pcScores A matrix. The principal component scores for the samples 
 #' (ie transformed methylation data). Must have subject_ID as row names,
 #' These same subject_IDs must be column names of methylData
@@ -133,6 +136,8 @@ featuresAlongPC <- function(methylData, mCoord, regionSet,
 }
 
 
+#' Heatmap of region set scores
+#' 
 #' Heatmap of the ranking of region set scores across PCs
 #' A visualization of rank of region sets in each PC, allowing the
 #' user to see if a region set is ranked highly in all PCs or only a subset.
@@ -141,7 +146,7 @@ featuresAlongPC <- function(methylData, mCoord, regionSet,
 #' may be passed to this function to modify the heatmap.  
 #' 
 #' @param rsScores a data.frame with scores for each 
-#' region set from main PCRSA function. 
+#' region set from main COCOA function. 
 #' Each row is a region set. Columns are PCs and info on region set overlap
 #' with DNA methylation data. Should be in the same order as GRList (the list of 
 #' region sets used to create it.)
@@ -270,8 +275,15 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
 }
 
 
-#' Plot individual region scores/percentiles across PCs for a single region set
-#' One plot for each region set
+#' Visualize how individual regions are associated with principal components
+#' 
+#' Visualize how much each region in a region set is associated with each PC.
+#' For each PC, the average absolute loading is calculated for 
+#' each region in the region set. Then for a given PC, 
+#' the average loading is converted to a percentile/quantile based 
+#' on the distribution of all loadings for that PC. These values are
+#' plotted in a heatmap.
+#' 
 #' @param loadingMat matrix of loadings (the coefficients of 
 #' the linear combination that defines each PC). One named column for each PC.
 #' One row for each original dimension/variable (should be same order 
@@ -282,7 +294,8 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
 #' must have chr and start columns. If end is included, start 
 #' and end should be the same. Start coordinate will be used for calculations.
 #' @param regionSet A genomic ranges object with regions corresponding
-#' to the same biological annotation.
+#' to the same biological annotation. Must be from the same reference genome
+#' as the coordinates for the actual data (mCoord).
 #' @param rsName character vector. Names of the region sets in the same
 #' order as GRList. For use as a title for each heatmap.
 #' @param PCsToAnnotate A character vector with principal components to 

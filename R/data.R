@@ -8,7 +8,8 @@
 #' (TCGA-BRCA, https://portal.gdc.cancer.gov/).
 #' Each row corresponds to one cytosine and
 #' the coordinates for these cytosines are
-#' in the object brcaCoords1, (data("brcaCoords1")). 
+#' in the object brcaCoords1, (data("brcaCoords1"),
+#' hg38 genome). 
 #' Only cytosines on chr1 are included to keep
 #' the example data small.
 #'
@@ -29,6 +30,7 @@ NULL
 #' microarray data from breast cancer
 #' patients from The Cancer Genome Atlas
 #' (TCGA-BRCA, https://portal.gdc.cancer.gov/).
+#' Coordinates correspond to the hg38 genome version.
 #' Only cytosines on chr1 are included to keep
 #' the example data small.
 #'
@@ -48,7 +50,7 @@ NULL
 #' the DNA methylation microarray (Illumina 450k microarray).
 #' Each row corresponds to one cytosine and
 #' the coordinates for these cytosines are
-#' in the object brcaCoords1, (data("brcaCoords1")). 
+#' in the object brcaCoords1, (data("brcaCoords1"), hg38 genome). 
 #' Only cytosines on chr1 are included to keep
 #' the example data small. Columns are patients,
 #' with TCGA patient identifiers as column names. The patients
@@ -83,7 +85,8 @@ NULL
 #' DNA methlyation data is Illumina 450k 
 #' microarray data from breast cancer
 #' patients from The Cancer Genome Atlas
-#' (TCGA-BRCA, https://portal.gdc.cancer.gov/).
+#' (TCGA-BRCA, https://portal.gdc.cancer.gov/), 
+#' hg38 genome.
 #'
 #'
 #' @docType data
@@ -107,7 +110,8 @@ NULL
 #' having 450k microarray data. 
 #' PCA was done on the Illumina 450k
 #' DNA methlyation  
-#' microarray data (TCGA-BRCA, https://portal.gdc.cancer.gov/).
+#' microarray data (TCGA-BRCA, https://portal.gdc.cancer.gov/),
+#' hg38 genome.
 #'
 #'
 #' @docType data
@@ -120,7 +124,7 @@ NULL
 #' Estrogen receptor alpha binding regions.
 #' 
 #' Binding regions for estrogen receptor alpha (ESR1).
-#' Only includes regions in chr1 to keep
+#' hg 38 genome version. Only includes regions in chr1 to keep
 #' the example data small.
 #'
 #' @docType data
@@ -133,6 +137,7 @@ NULL
 #' Gata3 binding regions.
 #' 
 #' Binding regions for gata3.
+#' hg38 genome version.
 #' Only includes regions in chr1 to keep
 #' the example data small.
 #'
@@ -146,6 +151,7 @@ NULL
 #' Nrf1 binding regions.
 #' 
 #' Binding regions for Nrf1.
+#' hg38 genome version.
 #' Only includes regions in chr1 to keep
 #' the example data small.
 #'
@@ -159,6 +165,7 @@ NULL
 #' Atf3 binding regions.
 #' 
 #' Binding regions for Atf3.
+#' hg38 genome version.
 #' Only includes regions in chr1 to keep
 #' the example data small.
 #'
@@ -169,9 +176,9 @@ NULL
 #' @format A GRanges object
 NULL
 
-#' Example PCRSA Results (made up)
+#' Example COCOA Results (made up)
 #' 
-#' A data.frame with example PCRSA results.
+#' A data.frame with example COCOA results.
 #' 5 region sets with names given by rsScores$rsName.
 #' Each region set has a score for each PC. Scores
 #' for real region sets would normally be orders of 
@@ -243,6 +250,30 @@ NULL
 # gata3_chr1 <- gata3[ seqnames(gata3) == "chr1"]
 # nrf1_chr1 <- nrf1[ seqnames(nrf1) == "chr1"]
 # atf3_chr1 <- atf3[ seqnames(atf3) == "chr1"]
+
+# # add sequence info (seqInfo)
+# exRSNames <- c("esr1_chr1", "gata3_chr1", "nrf1_chr1", "atf3_chr1")
+# 
+# # to avoid having to retype expression for each region set
+# for (i in seq_along(exRSNames)) {
+#     
+#     # restrict seqinfo to only chromosomes that are present (chr1)
+#     assignString = paste0("seqlevels(", exRSNames[i], ") <- as.character(unique(seqnames(", exRSNames[i], ")))")
+#     eval(parse(text=assignString))
+#     
+#     assignString = paste0("isCircular(", exRSNames[i], ") <- rep(FALSE, length(seqinfo(", exRSNames[i], ")))")
+#     eval(parse(text=assignString))
+#     
+#     # assign reference genome
+#     assignString = paste0("genome(", exRSNames[i], ") <- rep(\"hg38\", length(seqinfo(", exRSNames[i], ")))")
+#     eval(parse(text=assignString))
+# 
+#     # chr1 has length of 248,956,422 based on below link
+#     # https://www.ncbi.nlm.nih.gov/grc/human/data
+#     assignString = paste0("seqlengths(", exRSNames[i], ") <- 248956422")
+#     eval(parse(text=assignString))
+# }
+
 # 
 # # save("", file = "coord1.RData") # reduce ~4x from in-memory size
 # save("brcaLoadings1", 

@@ -10,6 +10,7 @@ data(atf3_chr1)
 }
 \description{
 Binding regions for Atf3.
+hg38 genome version.
 Only includes regions in chr1 to keep
 the example data small.
 }

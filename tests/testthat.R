@@ -1,5 +1,5 @@
 Sys.setenv("R_TESTS" = "")
 library(testthat)
-library(PCRSA)
+library(COCOA)
 
-test_check("PCRSA")
+test_check("COCOA")

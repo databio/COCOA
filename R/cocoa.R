@@ -1,26 +1,40 @@
 # PACKAGE DOCUMENTATION
-#' Principal Component Region Set Analysis (PCRSA)
+#' Coordinate Covariation Analysis (COCOA)
+#'
 #' 
-#'A method for annotating principal components of DNA methylation data 
-#'with region sets. A region set is a set of genomic regions that share 
-#'a biological annotation. PCRSA can identify biologically meaningful 
-#'sources of variation along the PCs, increasing interpretability of the PCs 
-#'and understanding of variation in the data. 
+#' COCOA is a method for understanding variation among samples.
+#' COCOA can be used with data that includes 
+#' genomic coordinates such as DNA methylation. 
+#' To describe the method on a high level, COCOA uses a database of 
+#' "region sets" and principal component analysis (PCA) of the data 
+#' to identify sources of variation among samples. A region set is a set of 
+#' genomic regions that share a biological annotation, 
+#' for instance transcription factor (TF) binding regions, 
+#' histone modification regions, or open chromatin regions. 
+#' In contrast to some other common techniques, COCOA is unsupervised, 
+#' meaning that samples do not have to be divided into groups 
+#' such as case/control or healthy/disease, although COCOA works in 
+#' those situations as well. Also, COCOA focuses on continuous variation 
+#' between samples instead of having cutoffs. Because of this, COCOA can 
+#' be used as a complementary method alongside "differential" methods 
+#' that find discrete differences between groups of samples and 
+#' it can also be used in situations where there are no groups.  
+#' COCOA can identify biologically meaningful 
+#' sources of variation between samples abd increase understanding of 
+#' variation in the data. 
 #'
 #' @docType package
-#' @name PCRSA
+#' @name COCOA
 #' @author John Lawson
 #' @author Nathan Sheffield
 #'
 #' @references \url{http://github.com/databio}
-#' @importFrom GenomicRanges GRanges GRangesList elementMetadata strand
-#'             seqnames granges
 #' @importFrom ggplot2 ggplot aes facet_wrap geom_boxplot geom_jitter geom_line
 #'             theme_classic xlab ylab geom_hline ylim scale_color_discrete
 #'             scale_x_discrete scale_fill_brewer scale_color_manual
 #'             scale_color_brewer
 #' @importFrom ComplexHeatmap Heatmap draw
-#' @import BiocGenerics S4Vectors IRanges
+#' @import BiocGenerics S4Vectors IRanges GenomicRanges
 #' @importFrom data.table ":=" setDT data.table setkey fread setnames 
 #'             setcolorder rbindlist setattr setorder copy is.data.table 
 #'             setorderv as.data.table
@@ -35,6 +49,10 @@
 #' @importFrom methods hasArg
 NULL
 
+# now package lists GenomicRanges in "Depends" instead of "Imports" in 
+# DESCRIPTION, still import package with @import though
+# @importFrom GenomicRanges GRanges GRangesList elementMetadata strand
+#             seqnames granges
 
 # Because of some issues, 
 # (see here: http://stackoverflow.com/questions/9439256/)
@@ -51,8 +69,11 @@ if (getRversion() >= "2.15.1") {
 #########################################################################
 
 
-#' Function to aggregate PCA loading weights over a given region set
-#' and then get p value for each PC based on a permutation
+#' Use PCA loadings to score a region set
+#' 
+#' First, this function identifies which loadings are within the region set. 
+#' Then the loadings are used to score the region set 
+#' according to the `metric` parameter.  
 #' 
 #' @param loadingMat matrix of loadings (the coefficients of 
 #' the linear combination that defines each PC). One named column for each PC.
@@ -64,7 +85,8 @@ if (getRversion() >= "2.15.1") {
 #' must have chr and start columns. If end is included, start 
 #' and end should be the same. Start coordinate will be used for calculations.
 #' @param regionSet A genomic ranges object with regions corresponding
-#' to the same biological annotation.
+#' to the same biological annotation. Must be from the same reference genome
+#' as the coordinates for the actual data/samples (mCoord).
 #' @param PCsToAnnotate A character vector with principal components to 
 #' include. eg c("PC1", "PC2")
 # #UPDATE: make sure only aggregating PCsToAnnotate to save time
@@ -134,7 +156,7 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
     loadingDT <- data.table(coordinateDT, 
                             loadingDT[, PCsToAnnotate, with=FALSE])
     # naming does not work if only using one PC so add this line for that case
-    setnames(loadingDT, c("chr", "start", PCsToAnnotate))
+    setnames(loadingDT, c(colnames(coordinateDT), PCsToAnnotate))
     
     # would rounding speed up aggregation?, potentially make a sparse matrix
     # if a lot of entries became 0
@@ -261,7 +283,11 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
 
 
 
-#' Do PCRSA for many region sets
+#' Do COCOA with many region sets
+#' 
+#' This function will give each region set a score for each PC
+#' in `PCsToAnnotate` based on
+#' the `scoringMetric` parameter. 
 #'
 #' @param loadingMat matrix of loadings (the coefficients of 
 #' the linear combination that defines each PC). One named column for each PC.
@@ -274,7 +300,8 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
 #' and end should be the same. Start coordinate will be used for calculations.
 #' @param GRList GRangesList object. Each list item is 
 #' a distinct region set to test (region set: regions that correspond to 
-#' the same biological annotation).
+#' the same biological annotation). Must be from the same reference genome
+#' as the coordinates for the actual data/samples (mCoord).
 #' @param PCsToAnnotate A character vector with principal components to 
 #' include. eg c("PC1", "PC2")
 #' @param scoringMetric Scoring metric. "rsMean" is a weighted
@@ -309,7 +336,7 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
 #' data("brcaLoadings1")
 #' data("esr1_chr1")
 #' data("nrf1_chr1")
-#' GRList <- GenomicRanges::GRangesList(esr1_chr1, nrf1_chr1)
+#' GRList <- GRangesList(esr1_chr1, nrf1_chr1)
 #' rsScores <- pcRegionSetEnrichment(loadingMat=brcaLoadings1, 
 #'                                  mCoord=brcaCoord1, 
 #'                                  GRList=GRList, 
@@ -363,10 +390,26 @@ pcRegionSetEnrichment <- function(loadingMat, mCoord, GRList,
 
 
 
-#' Function to create "meta-region" loading profile that indicates enrichment 
+#' Create a "meta-region" loading profile 
+#' 
+#' This loading profile can show enrichment 
 #' of cytosines with high loading values in region set but not in
-#' surrounding genome. All regions in a given region set 
-#' are combined into a single aggregate profile.
+#' surrounding genome, suggesting that variation is linked specifically
+#' to that region set. 
+#' 
+#' All regions in a given region set 
+#' are combined into a single aggregate profile. Regions should be
+#' expanded on each side to include a wider area of the genome around
+#' the regions of interest. To make the profile, first we take 
+#' the absolute value of the loadings. Then each region is
+#' split into `binNum` bins. All loadings in each bin are 
+#' averaged to get one value per bin. Finally, corresponding bins from
+#' the different regions are averaged (eg all bin1's averaged with each other, 
+#' all bin2's averaged with each other, etc.) to get a single "meta-region"
+#' loading profile. A peak in the middle of this profile suggests
+#' that variability is specific to the region set of interest and is 
+#' not a product of the surrounding genome. A region set can still be
+#' significant even if it does not have a peak. For example, some
 #'
 #'
 #' @param loadingMat matrix of loadings (the coefficients of 
@@ -380,7 +423,8 @@ pcRegionSetEnrichment <- function(loadingMat, mCoord, GRList,
 #' and end should be the same. Start coordinate will be used for calculations.
 #' @param GRList GRangesList object. Each list item is 
 #' a distinct region set (regions that correspond to 
-#' the same biological annotation).
+#' the same biological annotation). Must be from the same reference genome
+#' as the coordinates for the actual data/samples (mCoord).
 #' @param PCsToAnnotate A character vector with principal components to 
 #' include. eg c("PC1", "PC2")
 #' @param binNum Number of bins to split the regions into when
@@ -398,7 +442,7 @@ pcRegionSetEnrichment <- function(loadingMat, mCoord, GRList,
 #' data("brcaLoadings1")
 #' data("esr1_chr1")
 #' data("nrf1_chr1")
-#' GRList = GenomicRanges::GRangesList(esr1_chr1, nrf1_chr1)
+#' GRList = GRangesList(esr1_chr1, nrf1_chr1)
 #' pcEnrichmentProfile(loadingMat=brcaLoadings1, 
 #'                     mCoord=brcaCoord1, 
 #'                     GRList=GRList, 
@@ -475,7 +519,7 @@ makeSymmetric <- function(prof) {
 
 # Produced originally for binning Ewing RRBS data across various region sets
 #
-# @param BSDT A data.table. For PCRSA, a data.table of loading values
+# @param BSDT A data.table. For COCOA, a data.table of loading values
 # with the PCs to be annotated. One column for the loadings of each PC
 # and also has columns with the coordinates for CpGs that the loadings
 # are for: chr (chromosome) and start column
@@ -626,7 +670,7 @@ averageByRegion <- function(loadingMat,
 
 # support is just number of regions from each input region set that overlap at all with
 # the cytosines that have loading values 
-# GenomicRanges::findOverlaps(regionSet, dtToGr(coordinateDT)) 
+# findOverlaps(regionSet, dtToGr(coordinateDT)) 
 
 ###########################################################################
 
@@ -647,7 +691,7 @@ averageByRegion <- function(loadingMat,
 # to splitFactor.
 # @param regionsGRL Regions across which you want to aggregate. Should be 
 # from a single region set. eg GRangesList(regionSet)
-# @param excludeGR A GenomicRanges object with regions you want to 
+# @param excludeGR A GRanges object with regions you want to 
 # exclude from the aggregation function. These regions will be eliminated
 # from the input table and not counted.
 # @param jExpr You can pass a custom command in the j slot to data.table
@@ -883,19 +927,17 @@ BSFilter <- function(BSDT, minReads = 10, excludeGR = NULL) {
 }
 
 
-#' A convenience function to easily get indices for
-#' the top region sets that were enriched for each PC. 
+#' Get indices for top scored region sets 
+#' 
 #' For each PC, get index of original region sets but ordered by rsScores
 #' ranking for each PC. First number in a given column will be 
 #' original index of the region set ranked first for that PC. Second row for a
 #' column will be the original index of the region set that ranked second
-#' for that PC, etc. 
-#' 
-#' Use this function when you want to look at top region sets to make it 
+#' for that PC, etc. Use this function when you want to look at top region sets to make it 
 #' easier to get the original indices to select them from a list of region sets.
 #' 
 #' @param rsScores a data.frame with scores for each 
-#' region set from main PCRSA function. 
+#' region set from the main COCOA function. 
 #' Each row is a region set. Columns are PCs and info on region set overlap
 #' with DNA methylation data. Should be in the same order as GRList (the list of 
 #' region sets used to create it.)
@@ -966,7 +1008,7 @@ rsRankingIndex <- function(rsScores, PCsToAnnotate) {
 # except chr, start, and end will be considered 
 # columns to get the metrics from so no unnecessary columns should be
 # included.
-# @param regionGR GenomicRanges object. Metrics will be calculated on
+# @param regionGR GRanges object. Metrics will be calculated on
 # only coordinates within this region set (and optionally separately
 # on those outside this region set with alsoNonOLMet parameter)
 # @param metrics character vector with the name of a function or functions
@@ -1067,7 +1109,7 @@ cpgOLMetrics <- function(dataDT, regionGR, metrics=c("mean", "sd"),
 # except chr, start, and end will be considered 
 # columns to get the metrics from so no unnecessary columns should be
 # included.
-# @param regionGR Region set, GenomicRanges object
+# @param regionGR Region set, GRanges object
 # @param ... Additional parameters of wilcox.test function. See ?wilcox.test.
 # For instance specify alternative hypothesis: alternative = "greater".
 # @return A vector with a p value for each column other than chr, start or end. 

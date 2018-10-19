@@ -2,12 +2,7 @@
 % Please edit documentation in R/visualization.R
 \name{featuresAlongPC}
 \alias{featuresAlongPC}
-\title{Look at features (eg, DNA methylation values) in regions of 
-interest across samples, 
-with samples ordered according to PC of interest. 
-The ComplexHeatmap package
-is used and additional parameters for the ComplexHeatmap::Heatmap function
-may be passed to this function to modify the heatmap.}
+\title{Visualize how features in a region set change along principal component axis}
 \usage{
 featuresAlongPC(methylData, mCoord, regionSet, pcScores,
   orderByPC = "PC1", cluster_columns = FALSE, cluster_rows = FALSE,
@@ -25,7 +20,8 @@ must have chr and start columns. If end is included, start
 and end should be the same. Start coordinate will be used for calculations.}
 
 \item{regionSet}{A genomic ranges object with regions corresponding
-to the same biological annotation.}
+to the same biological annotation. Must be from the same reference genome
+as the coordinates for the actual data (mCoord).}
 
 \item{pcScores}{A matrix. The principal component scores for the samples 
 (ie transformed methylation data). Must have subject_ID as row names,
@@ -63,7 +59,7 @@ the bottom.
 \description{
 Look at features (eg, DNA methylation values) in regions of 
 interest across samples, 
-with samples ordered according to PC of interest. 
+with samples ordered according to score for PC of interest. 
 The ComplexHeatmap package
 is used and additional parameters for the ComplexHeatmap::Heatmap function
 may be passed to this function to modify the heatmap.

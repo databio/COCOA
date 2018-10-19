@@ -17,7 +17,8 @@ patients from The Cancer Genome Atlas
 (TCGA-BRCA, https://portal.gdc.cancer.gov/).
 Each row corresponds to one cytosine and
 the coordinates for these cytosines are
-in the object brcaCoords1, (data("brcaCoords1")). 
+in the object brcaCoords1, (data("brcaCoords1"),
+hg38 genome). 
 Only cytosines on chr1 are included to keep
 the example data small.
 }
