@@ -7,7 +7,7 @@ for instance transcription factor (TF) binding regions, histone modification reg
 In contrast to some other common techniques, COCOA is unsupervised, meaning that samples do not have to be divided into groups 
 such as case/control or healthy/disease, although COCOA works in those situations as well. Also, COCOA focuses on continuous variation 
 between samples instead of having cutoffs. Because of this, COCOA can be used as a complementary method alongside "differential" methods 
-that find discrete differences between groups of samples and it can also be used in situations where there are no groups.  
+that find discrete differences between groups of samples and it can also be used in situations where there are no groups. 
 COCOA can identify biologically meaningful sources of variation between samples and increase understanding of 
 variation in the data. 
 

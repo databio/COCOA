@@ -13,7 +13,7 @@ navbar:
     href: reference/index.html
   - text: GitHub
     icon: fa-github fa-lg
-    href: https://github.com/databio/PCRSA
+    href: https://github.com/databio/COCOA
   
   right:
   - text: Databio.org
