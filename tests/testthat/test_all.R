@@ -38,12 +38,10 @@ regionSet2 <- MIRA:::dtToGr(regionSet2)
 
 
 # package data to use for tests
-data("brcaMethylData1")
-data("brcaPCScores")
+# don't load unnecessary data in order to save time
 data("brcaCoord1")
 data("brcaLoadings1")
 data("esr1_chr1")
-data("gata3_chr1")
 
 
 # running the tests
@@ -298,41 +296,42 @@ test_that("pcEnrichmentProfile", {
 ################### test function inputs
 # make sure various input formats work
 
-test_that("Input formats", {
-    
-    normalOut <- pcRegionSetEnrichment(loadingMat = brcaLoadings1, 
-                          mCoord = brcaCoord1, 
-                          GRList = GRangesList(esr1_chr1), 
-                          PCsToAnnotate = "PC1", 
-                          scoringMetric = "rsMean")
-    alterOut <- pcRegionSetEnrichment(loadingMat = data.frame(brcaLoadings1), 
-                          mCoord = brcaCoord1, 
-                          GRList = esr1_chr1, 
-                          PCsToAnnotate = "PC1", 
-                          scoringMetric = "rsMean")
-    expect_equal(normalOut, alterOut)
-    
-    alterOut <- pcRegionSetEnrichment(loadingMat = data.frame(brcaLoadings1), 
-                                      mCoord = dtToGr(brcaCoord1), 
-                                      GRList = esr1_chr1, 
-                                      PCsToAnnotate = "PC1", 
-                                      scoringMetric = "rsMean")
-    expect_equal(normalOut, alterOut)
-    
-    #########
-    
-    normalOut <- pcEnrichmentProfile(loadingMat = brcaLoadings1, 
-                                       mCoord = brcaCoord1, 
-                                       GRList = GRangesList(esr1_chr1), 
-                                       PCsToAnnotate = "PC1", 
-                                       binNum = 5)
-    alterOut <- pcEnrichmentProfile(loadingMat = brcaLoadings1, 
-                                    mCoord = COCOA:::dtToGr(brcaCoord1), 
-                                    GRList = esr1_chr1, 
-                                    PCsToAnnotate = "PC1", 
-                                    binNum = 5)
-    expect_equal(normalOut, alterOut)
-
-    
-    
-})
+#### take out these high level tests in order to save time
+# test_that("Input formats", {
+#     
+#     normalOut <- pcRegionSetEnrichment(loadingMat = brcaLoadings1, 
+#                           mCoord = brcaCoord1, 
+#                           GRList = GRangesList(esr1_chr1), 
+#                           PCsToAnnotate = "PC1", 
+#                           scoringMetric = "rsMean")
+#     alterOut <- pcRegionSetEnrichment(loadingMat = data.frame(brcaLoadings1), 
+#                           mCoord = brcaCoord1, 
+#                           GRList = esr1_chr1, 
+#                           PCsToAnnotate = "PC1", 
+#                           scoringMetric = "rsMean")
+#     expect_equal(normalOut, alterOut)
+#     
+#     alterOut <- pcRegionSetEnrichment(loadingMat = data.frame(brcaLoadings1), 
+#                                       mCoord = dtToGr(brcaCoord1), 
+#                                       GRList = esr1_chr1, 
+#                                       PCsToAnnotate = "PC1", 
+#                                       scoringMetric = "rsMean")
+#     expect_equal(normalOut, alterOut)
+#     
+#     #########
+#     
+#     normalOut <- pcEnrichmentProfile(loadingMat = brcaLoadings1, 
+#                                        mCoord = brcaCoord1, 
+#                                        GRList = GRangesList(esr1_chr1), 
+#                                        PCsToAnnotate = "PC1", 
+#                                        binNum = 5)
+#     alterOut <- pcEnrichmentProfile(loadingMat = brcaLoadings1, 
+#                                     mCoord = COCOA:::dtToGr(brcaCoord1), 
+#                                     GRList = esr1_chr1, 
+#                                     PCsToAnnotate = "PC1", 
+#                                     binNum = 5)
+#     expect_equal(normalOut, alterOut)
+# 
+#     
+#     
+# })
