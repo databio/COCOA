@@ -89,7 +89,6 @@ if (getRversion() >= "2.15.1") {
 #' as the coordinates for the actual data/samples (mCoord).
 #' @param PCsToAnnotate A character vector with principal components to 
 #' include. eg c("PC1", "PC2")
-# #UPDATE: make sure only aggregating PCsToAnnotate to save time
 #' @param metric Scoring metric. "rsMean" is a weighted
 #' average of the absolute value of the loadings
 #' with no normalization (recommended). First loadings are
@@ -335,11 +334,9 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
 #' data("brcaCoord1")
 #' data("brcaLoadings1")
 #' data("esr1_chr1")
-#' data("nrf1_chr1")
-#' GRList <- GRangesList(esr1_chr1, nrf1_chr1)
 #' rsScores <- pcRegionSetEnrichment(loadingMat=brcaLoadings1, 
 #'                                  mCoord=brcaCoord1, 
-#'                                  GRList=GRList, 
+#'                                  GRList=GRangesList(esr1_chr1), 
 #'                                  PCsToAnnotate=c("PC1", "PC2"), 
 #'                                  scoringMetric="rsMean")
 #' 
@@ -441,8 +438,7 @@ pcRegionSetEnrichment <- function(loadingMat, mCoord, GRList,
 #' data("brcaCoord1")
 #' data("brcaLoadings1")
 #' data("esr1_chr1")
-#' data("nrf1_chr1")
-#' GRList = GRangesList(esr1_chr1, nrf1_chr1)
+#' GRList = GRangesList(esr1_chr1)
 #' pcEnrichmentProfile(loadingMat=brcaLoadings1, 
 #'                     mCoord=brcaCoord1, 
 #'                     GRList=GRList, 
@@ -732,6 +728,15 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL,
     } else if (!is(regionsGRL, "GRangesList")) {
         stop("regionsGRL is not a GRanges or GRangesList object")
     }
+    
+    # will cause error if BSDT is only a data.frame
+    if (is(BSDT, "data.frame") & !is(BSDT, "data.table")) {
+        BSDT <- as.data.table(BSDT)
+    } 
+    if (!is(BSDT, "data.table"))  {
+        error("BSDT must be a data.table")
+    }
+    
     
     
     if(! is.null(excludeGR)) {

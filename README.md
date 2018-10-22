@@ -1,5 +1,5 @@
 # COCOA: Coordinate Covariation Analysis
-[![Build Status](https://travis-ci.org/databio/PCRSA.svg?branch=master)](https://travis-ci.org/databio/PCRSA)
+[![Build Status](https://travis-ci.org/databio/COCOA.svg?branch=master)](https://travis-ci.org/databio/COCOA)
 **COCOA is a method for understanding variation among samples**. COCOA can be used with data that includes genomic coordinates such as DNA methylation. 
 To describe the method on a high level, COCOA uses a database of "region sets" and principal component analysis (PCA) of the data 
 to identify sources of variation among samples. A region set is a set of genomic regions that share a biological annotation, 

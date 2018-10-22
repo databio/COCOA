@@ -11,6 +11,10 @@
 # methylCount and coverage info is not included in GRanges object.
 BSdtToGRanges <- function(dtList) {
     
+    # if input are data.frame but not data.table then convert to data.table
+    convertInd = sapply(X = dtList, FUN = function(x) is(x, "data.frame") & !is(x, "data.table"))
+    dtList[convertInd] = lapply(X = dtList[convertInd], FUN = as.data.table)  
+    
     gList <- list();
     for (i in seq_along(dtList)) {
         # dt <- dtList[[i]];
