@@ -37,12 +37,7 @@ regionSet2 <- MIRA:::dtToGr(regionSet2)
 
 
 
-# package data to use for tests
-# don't load unnecessary data in order to save time
-data("brcaCoord1")
-data("brcaLoadings1")
-data("esr1_chr1")
-
+# don't use built in package data for tests because it will take longer
 
 # running the tests
 
@@ -281,14 +276,25 @@ test_that("pcEnrichmentProfile", {
                             end = c(1010, 3010, 5010))
     regionSetP <- COCOA:::dtToGr(regionSetP)
      
-    
-    binnedP <- pcEnrichmentProfile(loadingMat = loadingMatP, mCoord = COCOA:::dtToGr(coordinateDTP), 
-                        GRList = regionSetP, PCsToAnnotate = "PC1", 
+    # COCOA:::dtToGr(coordinateDTP)
+    binnedP <- pcEnrichmentProfile(loadingMat = loadingMatP, mCoord = coordinateDTP, 
+                        GRList = GRangesList(regionSetP), PCsToAnnotate = "PC1", 
                         binNum = 5)    
     meanPerBin <- (c(seq(from=1.5, to=7.5, by=2), 10) + rep(1, 5) + rep(1, 5)) / 3
     # BSBinAggregate averages the profile around the center
     symmetricalBin <- (meanPerBin + rev(meanPerBin)) / 2
     expect_equal(binnedP[[1]]$PC1, symmetricalBin)
+    
+    # making sure that different input formats still work
+    #########
+    alterOut <- pcEnrichmentProfile(loadingMat = data.frame(loadingMatP), mCoord = COCOA:::dtToGr(coordinateDTP), 
+                                                   GRList = regionSetP, PCsToAnnotate = "PC1", 
+                                                   binNum = 5)  
+    
+    expect_equal(binnedP, alterOut)
+    
+    
+    
     
 })
 
@@ -296,42 +302,21 @@ test_that("pcEnrichmentProfile", {
 ################### test function inputs
 # make sure various input formats work
 
+
+
 #### take out these high level tests in order to save time
-# test_that("Input formats", {
-#     
-#     normalOut <- pcRegionSetEnrichment(loadingMat = brcaLoadings1, 
-#                           mCoord = brcaCoord1, 
-#                           GRList = GRangesList(esr1_chr1), 
-#                           PCsToAnnotate = "PC1", 
-#                           scoringMetric = "rsMean")
-#     alterOut <- pcRegionSetEnrichment(loadingMat = data.frame(brcaLoadings1), 
-#                           mCoord = brcaCoord1, 
-#                           GRList = esr1_chr1, 
-#                           PCsToAnnotate = "PC1", 
-#                           scoringMetric = "rsMean")
-#     expect_equal(normalOut, alterOut)
-#     
-#     alterOut <- pcRegionSetEnrichment(loadingMat = data.frame(brcaLoadings1), 
-#                                       mCoord = dtToGr(brcaCoord1), 
-#                                       GRList = esr1_chr1, 
-#                                       PCsToAnnotate = "PC1", 
-#                                       scoringMetric = "rsMean")
-#     expect_equal(normalOut, alterOut)
-#     
-#     #########
-#     
-#     normalOut <- pcEnrichmentProfile(loadingMat = brcaLoadings1, 
-#                                        mCoord = brcaCoord1, 
-#                                        GRList = GRangesList(esr1_chr1), 
-#                                        PCsToAnnotate = "PC1", 
-#                                        binNum = 5)
-#     alterOut <- pcEnrichmentProfile(loadingMat = brcaLoadings1, 
-#                                     mCoord = COCOA:::dtToGr(brcaCoord1), 
-#                                     GRList = esr1_chr1, 
-#                                     PCsToAnnotate = "PC1", 
-#                                     binNum = 5)
-#     expect_equal(normalOut, alterOut)
-# 
-#     
-#     
-# })
+test_that("Input formats", {
+
+    normalOut <- pcRegionSetEnrichment(loadingMat = loadingMatW, 
+                                       mCoord = coordinateDTW, 
+                                       GRList = GRangesList(regionSetW), 
+                                       PCsToAnnotate = "PC2", 
+                                       scoringMetric = "rsMean")
+    alterOut <- pcRegionSetEnrichment(loadingMat = data.frame(loadingMatW), 
+                                       mCoord = COCOA:::dtToGr(coordinateDTW), 
+                                       GRList = regionSetW, 
+                                       PCsToAnnotate = "PC2", 
+                                       scoringMetric = "rsMean")
+    expect_equal(normalOut, alterOut)
+
+})

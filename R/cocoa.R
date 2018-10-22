@@ -729,6 +729,15 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL,
         stop("regionsGRL is not a GRanges or GRangesList object")
     }
     
+    # will cause error if BSDT is only a data.frame
+    if (is(BSDT, "data.frame") & !is(BSDT, "data.table")) {
+        BSDT <- as.data.table(BSDT)
+    } 
+    if (!is(BSDT, "data.table"))  {
+        error("BSDT must be a data.table")
+    }
+    
+    
     
     if(! is.null(excludeGR)) {
         BSDT <- BSFilter(BSDT, minReads=0, excludeGR)
