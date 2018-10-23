@@ -1,11 +1,11 @@
 ---
-title: "Cocoa Workflow"
+title: "COCOA Workflow"
 author: "John Lawson"
 date: "`r Sys.Date()`"
 output: 
   BiocStyle::html_document
 vignette: >
-  %\VignetteIndexEntry{Cocoa Workflow}
+  %\VignetteIndexEntry{COCOA Workflow}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -34,7 +34,7 @@ First, we need the results from PCA of the DNA methylation data. We will also ne
 
 ```{r, eval=FALSE, message=FALSE, warning=FALSE}
 # the genomic coordinates
-mCoord <- methylData$coordinates
+signalCoord <- methylData$coordinates
 # consider whether centering or scaling is needed
 mPCA <- prcomp(x=t(methylData$methylProp), center=TRUE, scale.=FALSE)
 ```
@@ -72,20 +72,20 @@ Now we test how much each region set is associated with each principal component
     
 ```{r, eval=FALSE, message=FALSE, warning=FALSE}
 PCsToAnnotate <- paste0("PC", 1:6)
-rsEnrichment <- pcRegionSetEnrichment(loadingMat=mPCA$rotation, 
-                                     mCoord=mCoord, 
-                                     GRList=GRList, 
-                                     PCsToAnnotate=PCsToAnnotate, 
-                                     scoringMetric="rsMean")
-rsEnrichment$rsName <- rsName
-rsEnrichment$rsDescription <- rsDescription
+regionSetScores <- runCOCOA(loadingMat=mPCA$rotation, 
+                            signalCoord=signalCoord, 
+                            GRList=GRList, 
+                            PCsToAnnotate=PCsToAnnotate, 
+                            scoringMetric="regionMean")
+regionSetScores$rsName <- rsName
+regionSetScores$rsDescription <- rsDescription
 ```
 
 We can sort the results to see which region sets are most associated with each PC.
 
 ```{r, eval=FALSE, message=FALSE, warning=FALSE}
-View(rsEnrichment[order(rsEnrichment$PC1, decreasing=TRUE), ])
-View(rsEnrichment[order(rsEnrichment$PC2, decreasing=TRUE), ])
+View(regionSetScores[order(regionSetScores$PC1, decreasing=TRUE), ])
+View(regionSetScores[order(regionSetScores$PC2, decreasing=TRUE), ])
 # etc.
 ```
 
@@ -95,4 +95,4 @@ In the big picture, Cocoa can help you understand sources of variation in your d
 
 # Computational requirements
 
-When using Cocoa with the "rsMean" scoring method (preferred), a database of 2000 region sets, and 450,000 cytosines in the DNA methylation data, it is estimated that Cocoa will take between 30 minutes and 1.5 hours. The computer will need enough memory for the large objects used although some memory could be saved by splitting the region set database into parts, running separately on each part, and then combining the results.  
+When using Cocoa with the "regionMean" scoring method (preferred), a database of 2000 region sets, and 450,000 cytosines in the DNA methylation data, it is estimated that Cocoa will take between 30 minutes and 1.5 hours. The computer will need enough memory for the large objects used although some memory could be saved by splitting the region set database into parts, running separately on each part, and then combining the results.  

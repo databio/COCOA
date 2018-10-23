@@ -4,7 +4,7 @@
 \alias{regionQuantileByPC}
 \title{Visualize how individual regions are associated with principal components}
 \usage{
-regionQuantileByPC(loadingMat, mCoord, regionSet, rsName = "",
+regionQuantileByPC(loadingMat, signalCoord, regionSet, rsName = "",
   PCsToAnnotate = paste0("PC", 1:5), maxRegionsToPlot = 8000,
   cluster_rows = TRUE, row_title = "Region", column_title = rsName,
   column_title_side = "top", cluster_columns = FALSE,
@@ -15,9 +15,9 @@ regionQuantileByPC(loadingMat, mCoord, regionSet, rsName = "",
 \item{loadingMat}{matrix of loadings (the coefficients of 
 the linear combination that defines each PC). One named column for each PC.
 One row for each original dimension/variable (should be same order 
-as original data/mCoord). The x$rotation output of prcomp().}
+as original data/signalCoord). The x$rotation output of prcomp().}
 
-\item{mCoord}{a GRanges object or data frame with coordinates 
+\item{signalCoord}{a GRanges object or data frame with coordinates 
 for the cytosines included in the PCA. Coordinates should be in the 
 same order as the methylation data and loadings. If a data.frame, 
 must have chr and start columns. If end is included, start 
@@ -25,7 +25,7 @@ and end should be the same. Start coordinate will be used for calculations.}
 
 \item{regionSet}{A genomic ranges object with regions corresponding
 to the same biological annotation. Must be from the same reference genome
-as the coordinates for the actual data (mCoord).}
+as the coordinates for the actual data (signalCoord).}
 
 \item{rsName}{character vector. Names of the region sets in the same
 order as GRList. For use as a title for each heatmap.}
@@ -70,7 +70,7 @@ are not associated with any PCs
 Columns are PCs, rows are regions. To color
 each region, first the absolute loading values within that region are
 averaged. Then this average is compared to the distribution of absolute
-loading values for all individual features to get a quantile/percentile 
+loading values for all individual genomic signal values to get a quantile/percentile 
 for that region. Colors are based on this quantile/percentile. 
 The output is a Heatmap object (ComplexHeatmap package).
 }
@@ -88,7 +88,7 @@ data("brcaCoord1")
 data("esr1_chr1")
 data("brcaPCScores")
 regionByPCHM <- regionQuantileByPC(loadingMat = brcaLoadings1, 
-                                   mCoord = brcaCoord1, 
+                                   signalCoord = brcaCoord1, 
                                    regionSet = esr1_chr1, 
                                    rsName = "Estrogen Receptor Chr1", 
                                    PCsToAnnotate=paste0("PC", 1:2),

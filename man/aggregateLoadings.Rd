@@ -4,16 +4,17 @@
 \alias{aggregateLoadings}
 \title{Use PCA loadings to score a region set}
 \usage{
-aggregateLoadings(loadingMat, mCoord, regionSet, PCsToAnnotate = c("PC1",
-  "PC2"), metric = "rsMean", pcLoadAv = NULL, verbose = FALSE)
+aggregateLoadings(loadingMat, signalCoord, regionSet,
+  PCsToAnnotate = c("PC1", "PC2"), scoringMetric = "regionMean",
+  pcLoadAv = NULL, verbose = FALSE)
 }
 \arguments{
 \item{loadingMat}{matrix of loadings (the coefficients of 
 the linear combination that defines each PC). One named column for each PC.
 One row for each original dimension/variable (should be same order 
-as original data/mCoord). The x$rotation output of prcomp().}
+as original data/signalCoord). The x$rotation output of prcomp().}
 
-\item{mCoord}{a GRanges object or data frame with coordinates 
+\item{signalCoord}{a GRanges object or data frame with coordinates 
 for the cytosines included in the PCA. Coordinates should be in the 
 same order as the methylation data and loadings. If a data.frame, 
 must have chr and start columns. If end is included, start 
@@ -21,21 +22,21 @@ and end should be the same. Start coordinate will be used for calculations.}
 
 \item{regionSet}{A genomic ranges object with regions corresponding
 to the same biological annotation. Must be from the same reference genome
-as the coordinates for the actual data/samples (mCoord).}
+as the coordinates for the actual data/samples (signalCoord).}
 
 \item{PCsToAnnotate}{A character vector with principal components to 
 include. eg c("PC1", "PC2")}
 
-\item{metric}{Scoring metric. "rsMean" is a weighted
+\item{scoringMetric}{Scoring metric. "regionMean" is a weighted
 average of the absolute value of the loadings
 with no normalization (recommended). First loadings are
 averaged within each region, then all the regions are averaged. With
-"rsMean" score, be cautious in interpretation for
+"regionMean" score, be cautious in interpretation for
  region sets with low number of regions.
 Mean difference ("meanDiff") is also supported but is skewed toward 
 ranking large region sets highly. Wilcoxon rank sum test ("rankSum")
 also is skewed toward ranking large region sets highly and is
-significantly slower than the "rsMean" method.}
+significantly slower than the "regionMean" method.}
 
 \item{pcLoadAv}{The average absolute loading value for each PC. Will
 significantly speed up computation if this is given.}

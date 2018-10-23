@@ -46,7 +46,7 @@ regionSet2 <- MIRA:::dtToGr(regionSet2)
 #                   coordinateDT = coordinates, 
 #                   regionSet = regionSet)
 
-# cpgOLMetrics
+# signalOLMetrics
 dataDT <- cbind(coordinateDT, as.data.frame(loadingMat))
 
 
@@ -63,7 +63,7 @@ colnames(loadingMatW) <- c("PC2", "PC3")
 loadingMatW[7, "PC3"] <- 10
 dataDTW <- cbind(coordinateDTW, as.data.frame(loadingMatW))
 
-test_that("aggregateLoadings, scoring metrics, and pcRegionSetEnrichment", {
+test_that("aggregateLoadings, scoring metrics, and runCOCOA", {
     
 
     # test wilcoxon rank sum scoring metric
@@ -80,10 +80,10 @@ test_that("aggregateLoadings, scoring metrics, and pcRegionSetEnrichment", {
     # of loadings will be taken), "greater" alternate hypothesis is used in
     # aggregateLoadings
     rsWResults <- COCOA:::aggregateLoadings(loadingMat = loadingMatW, 
-                      mCoord = coordinateDTW, 
+                      signalCoord = coordinateDTW, 
                       regionSet = regionSetW, 
                       PCsToAnnotate = c("PC2", "PC3"), 
-                      metric = "rankSum")    
+                      scoringMetric = "rankSum")    
     PC2W <- wilcox.test(x = c(2, 0, 1), y=c(1, 2:4), alternative = "greater")$p.value
     PC3W <- wilcox.test(x = c(8, 6, 5), y=c(7, 4, 3, 10), alternative = "greater")$p.value
     expect_equal(c(PC2W, PC3W, 3, 2, 2, mean(width(regionSetW))), 
@@ -95,37 +95,37 @@ test_that("aggregateLoadings, scoring metrics, and pcRegionSetEnrichment", {
     
     
     
-    # test rsMean scoring method, average first within region, then
+    # test regionMean scoring method, average first within region, then
     # between regions
-    rsMeanRes <- COCOA:::aggregateLoadings(loadingMat = loadingMatW, 
-                              mCoord = coordinateDTW, 
+    regionMeanRes <- COCOA:::aggregateLoadings(loadingMat = loadingMatW, 
+                              signalCoord = coordinateDTW, 
                               regionSet = regionSetW, 
                               PCsToAnnotate = c("PC2", "PC3"), 
-                              metric = "rsMean")
+                              scoringMetric = "regionMean")
     PC2R <- mean(c(2, mean(c(0, 1))))
     PC3R <- mean(c(8, mean(c(6, 5))))
     expect_equal(c(PC2R, PC3R, 3, 2, 2, mean(width(regionSetW))), 
-                 c(rsMeanRes$PC2, rsMeanRes$PC3, rsMeanRes$cytosine_coverage, 
-                   rsMeanRes$region_coverage, 
-                   rsMeanRes$total_region_number, 
-                   rsMeanRes$mean_region_size))
+                 c(regionMeanRes$PC2, regionMeanRes$PC3, regionMeanRes$cytosine_coverage, 
+                   regionMeanRes$region_coverage, 
+                   regionMeanRes$total_region_number, 
+                   regionMeanRes$mean_region_size))
     
-    ########### test cpgMean scoring method ################
+    ########### test simpleMean scoring method ################
     # this is a mean of CpG loading values just like "raw" but instead
     # of averaging within regions then averaging regions together, this 
     # method does the simple average of all CpGs within the region set
-    cpgMeanRes <- COCOA:::aggregateLoadings(loadingMat = loadingMatW, 
-                                       mCoord = coordinateDTW, 
+    simpleMeanRes <- COCOA:::aggregateLoadings(loadingMat = loadingMatW, 
+                                       signalCoord = coordinateDTW, 
                                        regionSet = regionSetW, 
                                        PCsToAnnotate = c("PC2", "PC3"), 
-                                       metric = "cpgMean")
+                                       scoringMetric = "simpleMean")
     PC2RC <- mean(c(2, 0, 1))
     PC3RC <- mean(c(8, 6, 5))
     expect_equal(c(PC2RC, PC3RC, 3, 2, 2, mean(width(regionSetW))), 
-                 c(cpgMeanRes$PC2, cpgMeanRes$PC3, cpgMeanRes$cytosine_coverage, 
-                   cpgMeanRes$region_coverage, 
-                   cpgMeanRes$total_region_number, 
-                   cpgMeanRes$mean_region_size))
+                 c(simpleMeanRes$PC2, simpleMeanRes$PC3, simpleMeanRes$cytosine_coverage, 
+                   simpleMeanRes$region_coverage, 
+                   simpleMeanRes$total_region_number, 
+                   simpleMeanRes$mean_region_size))
     
 
     # test mean difference scoring method
@@ -139,26 +139,26 @@ test_that("aggregateLoadings, scoring metrics, and pcRegionSetEnrichment", {
     PC2MD <- PC2Num / PC2Denom
     PC3MD <- PC3Num / PC3Denom
     mdRes <- COCOA:::aggregateLoadings(loadingMat = loadingMatW, 
-                                       mCoord = coordinateDTW, 
+                                       signalCoord = coordinateDTW, 
                                        regionSet = regionSetW, 
                                        PCsToAnnotate = c("PC2", "PC3"), 
-                                       metric = "meanDiff")
+                                       scoringMetric = "meanDiff")
     expect_equal(c(PC2MD, PC3MD, 3, 2, 2, mean(width(regionSetW))), 
                  c(mdRes$PC2, mdRes$PC3, mdRes$cytosine_coverage, 
                    mdRes$region_coverage, 
                    mdRes$total_region_number, 
                    mdRes$mean_region_size))
     
-    ################## test pcRegionSetEnrichment with meanDiff test data
+    ################## test runCOCOA with meanDiff test data
     
     coordinateDTW2 <- copy(coordinateDTW)
     coordinateDTW2$end <- coordinateDTW$end  + 1 # so there will be an actual range
     # make sure it works if there is metadata in GRanges object
     extraCol <- rep(0, nrow(coordinateDTW2))
-    mCoordW2 <- COCOA:::dtToGr(coordinateDTW2)
-    mcols(mCoordW2) <- data.frame(extraCol)
-    twoResults <- pcRegionSetEnrichment(loadingMat = loadingMatW, 
-                          mCoord = mCoordW2, 
+    signalCoordW2 <- COCOA:::dtToGr(coordinateDTW2)
+    mcols(signalCoordW2) <- data.frame(extraCol)
+    twoResults <- runCOCOA(loadingMat = loadingMatW, 
+                          signalCoord = signalCoordW2, 
                           GRList = GRangesList(regionSetW, regionSetW), 
                           PCsToAnnotate = c("PC2", "PC3"), 
                           scoringMetric = "meanDiff")
@@ -168,8 +168,8 @@ test_that("aggregateLoadings, scoring metrics, and pcRegionSetEnrichment", {
                    twoResults$total_region_number, 
                    twoResults$mean_region_size))
     
-    ########## testing cpgOLMetrics, used for meanDiff scoring method #######
-    olMetrics <- COCOA:::cpgOLMetrics(dataDT=dataDTW, 
+    ########## testing signalOLMetrics, used for meanDiff scoring method #######
+    olMetrics <- COCOA:::signalOLMetrics(dataDT=dataDTW, 
                  regionGR = regionSetW, 
                  metrics = c("mean", "sd"), 
                  alsoNonOLMet = TRUE)
@@ -206,10 +206,10 @@ test_that("aggregateLoadings and scoring metrics", {
     # of loadings will be taken), "greater" alternate hypothesis is used in
     # aggregateLoadings
     rsWResults <- COCOA:::aggregateLoadings(loadingMat = loadingMatW, 
-                                           mCoord = coordinateDTW, 
+                                           signalCoord = coordinateDTW, 
                                            regionSet = regionSetW, 
                                            PCsToAnnotate = c("PC2", "PC3"), 
-                                           metric = "rankSum")    
+                                           scoringMetric = "rankSum")    
     PC2W <- wilcox.test(x = c(2, 0, 1), y=c(1, 2:4), alternative = "greater")$p.value
     PC3W <- wilcox.test(x = c(8, 6, 5), y=c(7, 4, 3, 10), alternative = "greater")$p.value
     expect_equal(c(PC2W, PC3W, 3, 2, 2, mean(width(regionSetW))), 
@@ -226,13 +226,13 @@ test_that("averageByRegion", {
     loadingMatABR <- loadingMat
     loadingMatABR[1, "PC1"] <- 3
     loadingMatABR[32, "PC1"] <- 2
-    abr <- COCOA:::averageByRegion(loadingMat = loadingMatABR, mCoord = COCOA:::dtToGr(coordinateDT), 
+    abr <- COCOA:::averageByRegion(loadingMat = loadingMatABR, signalCoord = COCOA:::dtToGr(coordinateDT), 
                             regionSet = regionSet1, PCsToAnnotate = "PC1", 
                             returnQuantile = FALSE)
     expect_equal(abr$PC1, c(2, 1, 1, 1.5))
     
     # test quantile
-    abrq <- COCOA:::averageByRegion(loadingMat = loadingMatABR, mCoord = COCOA:::dtToGr(coordinateDT), 
+    abrq <- COCOA:::averageByRegion(loadingMat = loadingMatABR, signalCoord = COCOA:::dtToGr(coordinateDT), 
                                    regionSet = regionSet1, PCsToAnnotate = "PC1", 
                                    returnQuantile = TRUE)
     # the mean values, abr$PC1, converted to quantiles
@@ -245,13 +245,13 @@ test_that("averageByRegion", {
     loadingMatABR <- loadingMat
     loadingMatABR[1, "PC1"] <- 3
     loadingMatABR[32, "PC1"] <- 2
-    abr <- COCOA:::averageByRegion(loadingMat = loadingMatABR, mCoord = COCOA:::dtToGr(coordinateDT), 
+    abr <- COCOA:::averageByRegion(loadingMat = loadingMatABR, signalCoord = COCOA:::dtToGr(coordinateDT), 
                                    regionSet = regionSet1, PCsToAnnotate = "PC1", 
                                    returnQuantile = FALSE)
     expect_equal(abr$PC1, c(2, 1, 1, 1.5))
     
     # test quantile
-    abrq <- COCOA:::averageByRegion(loadingMat = loadingMatABR, mCoord = COCOA:::dtToGr(coordinateDT), 
+    abrq <- COCOA:::averageByRegion(loadingMat = loadingMatABR, signalCoord = COCOA:::dtToGr(coordinateDT), 
                                     regionSet = regionSet1, PCsToAnnotate = "PC1", 
                                     returnQuantile = TRUE)
     # the mean values, abr$PC1, converted to quantiles
@@ -260,7 +260,7 @@ test_that("averageByRegion", {
     
 })
 
-test_that("pcEnrichmentProfile", {
+test_that("getLoadingProfile", {
     loadingMatP <- matrix(data = c(1:8, 10, 10, rep(1, 20)), nrow = 30)
     colnames(loadingMatP) <- "PC1"
     # two CpGs per bin of regionSetP (with 5 bins)
@@ -277,7 +277,7 @@ test_that("pcEnrichmentProfile", {
     regionSetP <- COCOA:::dtToGr(regionSetP)
      
     # COCOA:::dtToGr(coordinateDTP)
-    binnedP <- pcEnrichmentProfile(loadingMat = loadingMatP, mCoord = coordinateDTP, 
+    binnedP <- getLoadingProfile(loadingMat = loadingMatP, signalCoord = coordinateDTP, 
                         GRList = GRangesList(regionSetP), PCsToAnnotate = "PC1", 
                         binNum = 5)    
     meanPerBin <- (c(seq(from=1.5, to=7.5, by=2), 10) + rep(1, 5) + rep(1, 5)) / 3
@@ -287,7 +287,7 @@ test_that("pcEnrichmentProfile", {
     
     # making sure that different input formats still work
     #########
-    alterOut <- pcEnrichmentProfile(loadingMat = data.frame(loadingMatP), mCoord = COCOA:::dtToGr(coordinateDTP), 
+    alterOut <- getLoadingProfile(loadingMat = data.frame(loadingMatP), signalCoord = COCOA:::dtToGr(coordinateDTP), 
                                                    GRList = regionSetP, PCsToAnnotate = "PC1", 
                                                    binNum = 5)  
     
@@ -307,16 +307,16 @@ test_that("pcEnrichmentProfile", {
 #### take out these high level tests in order to save time
 test_that("Input formats", {
 
-    normalOut <- pcRegionSetEnrichment(loadingMat = loadingMatW, 
-                                       mCoord = coordinateDTW, 
+    normalOut <- runCOCOA(loadingMat = loadingMatW, 
+                                       signalCoord = coordinateDTW, 
                                        GRList = GRangesList(regionSetW), 
                                        PCsToAnnotate = "PC2", 
-                                       scoringMetric = "rsMean")
-    alterOut <- pcRegionSetEnrichment(loadingMat = data.frame(loadingMatW), 
-                                       mCoord = COCOA:::dtToGr(coordinateDTW), 
+                                       scoringMetric = "regionMean")
+    alterOut <- runCOCOA(loadingMat = data.frame(loadingMatW), 
+                                       signalCoord = COCOA:::dtToGr(coordinateDTW), 
                                        GRList = regionSetW, 
                                        PCsToAnnotate = "PC2", 
-                                       scoringMetric = "rsMean")
+                                       scoringMetric = "regionMean")
     expect_equal(normalOut, alterOut)
 
 })
