@@ -6,7 +6,7 @@
 \usage{
 rsScoreHeatmap(rsScores, PCsToAnnotate = paste0("PC", 1:5),
   orderByPC = "PC1", rsNameCol = "rsName", topX = 20,
-  col = c("red", "gray", "blue"), row_title = "Region Set",
+  col = c("red", "#EEEEEE", "blue"), row_title = "Region Set",
   column_title = "Principal Component", column_title_side = "bottom",
   cluster_rows = FALSE, cluster_columns = FALSE,
   show_row_names = TRUE, row_names_max_width = unit(10000, "mm"),
@@ -32,7 +32,8 @@ in the plot.}
 
 \item{col}{a vector of colors or a color mapping function which
 will be passed to the ComplexHeatmap::Heatmap() function. See ?Heatmap
-(the "col" parameter) for more details.}
+(the "col" parameter) for more details. "#EEEEEE" is the code for a
+color similar to white.}
 
 \item{row_title}{character object, row title}
 

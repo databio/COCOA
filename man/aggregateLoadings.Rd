@@ -62,3 +62,13 @@ First, this function identifies which loadings are within the region set.
 Then the loadings are used to score the region set 
 according to the `metric` parameter.
 }
+\examples{
+data("brcaMCoord1")
+data("brcaLoadings1")
+data("esr1_chr1")
+rsScores <- aggregateLoadings(loadingMat=brcaLoadings1, 
+                                 signalCoord=brcaMCoord1, 
+                                 regionSet=esr1_chr1, 
+                                 PCsToAnnotate=c("PC1", "PC2"), 
+                                 scoringMetric="regionMean")
+}

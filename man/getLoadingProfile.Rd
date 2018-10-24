@@ -65,7 +65,8 @@ significant even if it does not have a peak. For example, some
 data("brcaMCoord1")
 data("brcaLoadings1")
 data("esr1_chr1")
-GRList = GRangesList(esr1_chr1)
+esr1_chr1_expanded <- resize(esr1_chr1, 14000, fix="center")
+GRList <- GRangesList(esr1_chr1_expanded)
 getLoadingProfile(loadingMat=brcaLoadings1, 
                     signalCoord=brcaMCoord1, 
                     GRList=GRList, 

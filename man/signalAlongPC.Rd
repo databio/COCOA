@@ -7,7 +7,8 @@
 signalAlongPC(genomicSignal, signalCoord, regionSet, pcScores,
   orderByPC = "PC1", cluster_columns = FALSE, cluster_rows = FALSE,
   row_title = "Sample", column_title = "Genomic Signal",
-  column_title_side = "bottom", name = "Genomic Signal Value", ...)
+  column_title_side = "bottom", name = "Genomic Signal Value",
+  col = c("blue", "#EEEEEE", "red"), ...)
 }
 \arguments{
 \item{genomicSignal}{DNA methylation levels (0 to 1) in matrix or data.frame. 
@@ -45,6 +46,11 @@ samples/observations according to their PC score.}
 "top" or "bottom"}
 
 \item{name}{character object, legend title}
+
+\item{col}{a vector of colors or a color mapping function which
+will be passed to the ComplexHeatmap::Heatmap() function. See ?Heatmap
+(the "col" parameter) for more details. "#EEEEEE" is the code for a
+color similar to white.}
 
 \item{...}{optional parameters for ComplexHeatmap::Heatmap() (eg change
 heatmap colors with "col" parameter)}
