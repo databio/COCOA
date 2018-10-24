@@ -84,11 +84,11 @@ plotted in a heatmap.
 }
 \examples{
 data("brcaLoadings1")
-data("brcaCoord1")
+data("brcaMCoord1")
 data("esr1_chr1")
 data("brcaPCScores")
 regionByPCHM <- regionQuantileByPC(loadingMat = brcaLoadings1, 
-                                   signalCoord = brcaCoord1, 
+                                   signalCoord = brcaMCoord1, 
                                    regionSet = esr1_chr1, 
                                    rsName = "Estrogen Receptor Chr1", 
                                    PCsToAnnotate=paste0("PC", 1:2),

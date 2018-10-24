@@ -193,8 +193,9 @@ aggregateLoadings <- function(loadingMat, signalCoord, regionSet,
         
         # average of loadings for all CpGs within region set
         loadMetrics <- signalOLMetrics(dataDT=loadingDT, regionGR=regionSet, 
-                                   metrics="mean", 
-                                   alsoNonOLMet=FALSE)
+                                       signalCols = PCsToAnnotate,
+                                       metrics="mean", 
+                                       alsoNonOLMet=FALSE)
         if (is.null(loadMetrics)) {
             results <- as.data.table(t(rep(NA, length(PCsToAnnotate))))
             setnames(results, PCsToAnnotate)
@@ -224,9 +225,10 @@ aggregateLoadings <- function(loadingMat, signalCoord, regionSet,
         #     pcLoadAv <- apply(X = loadingDT[, PCsToAnnotate, with=FALSE], 
         #                       MARGIN = 2, FUN = mean)
         # }
-        loadMetrics <- signalOLMetrics(dataDT=loadingDT, regionGR=regionSet, 
-                                   metrics=c("mean", "sd"), 
-                                   alsoNonOLMet=TRUE)
+        loadMetrics <- signalOLMetrics(dataDT=loadingDT, regionGR=regionSet,
+                                       signalCols = PCsToAnnotate,
+                                       metrics=c("mean", "sd"), 
+                                       alsoNonOLMet=TRUE)
         if (is.null(loadMetrics)) {
             results <- as.data.table(t(rep(NA, length(PCsToAnnotate))))
             setnames(results, PCsToAnnotate)
@@ -254,7 +256,8 @@ aggregateLoadings <- function(loadingMat, signalCoord, regionSet,
         
     } else if (scoringMetric == "rankSum"){
         # one sided test since I took the absolute value of the loadings 
-        wRes <- rsWilcox(dataDT = loadingDT, regionGR=regionSet, alternative="greater")
+        wRes <- rsWilcox(dataDT = loadingDT, regionGR=regionSet, 
+                         signalCols = PCsToAnnotate, alternative="greater")
         
         if (is.null(wRes)) {
             results <- as.data.table(t(rep(NA, length(PCsToAnnotate))))
@@ -379,7 +382,7 @@ runCOCOA <- function(loadingMat, signalCoord, GRList,
                                                             scoringMetric = scoringMetric, 
                                                             verbose=verbose))
     resultsDT <- do.call(rbind, resultsList) 
-    row.names(resultsDT) <- row.names(GRList)
+    row.names(resultsDT) <- names(GRList)
     
     resultsDF <- as.data.frame(resultsDT)
     return(resultsDF)
@@ -1016,6 +1019,8 @@ rsRankingIndex <- function(rsScores, PCsToAnnotate) {
 # @param regionGR GRanges object. Metrics will be calculated on
 # only coordinates within this region set (and optionally separately
 # on those outside this region set with alsoNonOLMet parameter)
+# @param signalCols the columns to calculate the metrics on. The
+# metrics will be calculated on each one of these columns separately.
 # @param metrics character vector with the name of a function or functions
 # to calculate on selected cytosines. Function should only require one
 # input which should be the values of the cytosines.
@@ -1029,8 +1034,10 @@ rsRankingIndex <- function(rsScores, PCsToAnnotate) {
 
 
 # 
-signalOLMetrics <- function(dataDT, regionGR, metrics=c("mean", "sd"), 
-                         alsoNonOLMet=TRUE) {
+signalOLMetrics <- function(dataDT, regionGR, 
+                            signalCols = colnames(dataDT)[!(colnames(dataDT) %in% c("chr", "start", "end"))], 
+                            metrics=c("mean", "sd"), 
+                            alsoNonOLMet=TRUE) {
     
     # convert DT to GR for finding overlaps
     dataGR <- BSdtToGRanges(list(dataDT))[[1]]
@@ -1062,12 +1069,9 @@ signalOLMetrics <- function(dataDT, regionGR, metrics=c("mean", "sd"),
     nonOLCpG <- (seq_len(nrow(dataDT)))[-olCpG]
     
     # gets metrics for all columns except chr, start, end
-    testCols <- colnames(dataDT)[!(colnames(dataDT) %in% 
-                                       c("chr", "start", "end"))] 
-    
-    jExpr <- buildJ(cols=rep(testCols, each=length(metrics)), 
-                    funcs=rep(metrics, length(testCols)),
-                    newColNames = paste0(rep(testCols, 
+    jExpr <- buildJ(cols=rep(signalCols, each=length(metrics)), 
+                    funcs=rep(metrics, length(signalCols)),
+                    newColNames = paste0(rep(signalCols, 
                                              each=length(metrics)), 
                                          "_", metrics))
     
@@ -1086,17 +1090,17 @@ signalOLMetrics <- function(dataDT, regionGR, metrics=c("mean", "sd"),
     # for vapply, FUN.VALUE should have length equal to a single output of FUN
     olResults <- vapply(X = metrics, 
                         FUN = function(x) as.numeric(olMetrics[, grepl(pattern = x, colnames(olMetrics))]),
-                        as.numeric(seq_along(testCols)))
+                        as.numeric(seq_along(signalCols)))
     olResults <- as.data.table(olResults)
     setnames(olResults, old = colnames(olResults), new = paste0(colnames(olResults), "_OL"))
     
     nonOLResults <- vapply(X = metrics, 
                            FUN = function(x) as.numeric(nonOLMetrics[, grepl(pattern = x, colnames(nonOLMetrics))]),
-                           as.numeric(seq_along(testCols)))
+                           as.numeric(seq_along(signalCols)))
     nonOLResults <- as.data.table(nonOLResults)
     setnames(nonOLResults, old = colnames(nonOLResults), new = paste0(colnames(nonOLResults), "_nonOL"))
     
-    metricDT <- cbind(data.table(testCol=testCols), 
+    metricDT <- cbind(data.table(testCol=signalCols), 
                       olResults, 
                       nonOLResults, 
                       data.table(cytosine_coverage, 
@@ -1115,21 +1119,22 @@ signalOLMetrics <- function(dataDT, regionGR, metrics=c("mean", "sd"),
 # columns to get the metrics from so no unnecessary columns should be
 # included.
 # @param regionGR Region set, GRanges object
+# @param signalCols the columns of interest. You will do ranksum test separately 
+# on each of these columns (given test only uses info in one column)
 # @param ... Additional parameters of wilcox.test function. See ?wilcox.test.
 # For instance specify alternative hypothesis: alternative = "greater".
 # @return A vector with a p value for each column other than chr, start or end. 
 
 # could make this a generic function then apply it across PCs of interest
 
-rsWilcox <- function(dataDT, regionGR, ...) {
+rsWilcox <- function(dataDT, regionGR,
+                     signalCols = colnames(dataDT)[!(colnames(dataDT) %in% c("chr", "start", "end"))], 
+                     ...) {
     
     # region set info
     total_region_number <- length(regionGR)
     mean_region_size <- round(mean(width(regionGR)), 1)
-
-    # columns of interest
-    testCols <- colnames(dataDT)[!(colnames(dataDT) %in% 
-                                       c("chr", "start", "end"))]
+    
     
     # convert DT to GR for finding overlaps
     dataGR <- BSdtToGRanges(list(dataDT))[[1]]
@@ -1153,7 +1158,7 @@ rsWilcox <- function(dataDT, regionGR, ...) {
     
     # calculate Wilcoxon rank sum test for each column
     # additional parameters given with ...
-    pVals <- vapply(X = testCols, FUN = function(x) wilcox.test(x = as.numeric(as.matrix(dataDT[olCpG, x, with=FALSE])), 
+    pVals <- vapply(X = signalCols, FUN = function(x) wilcox.test(x = as.numeric(as.matrix(dataDT[olCpG, x, with=FALSE])), 
                                                y = as.numeric(as.matrix(dataDT[nonOLCpG, x, with=FALSE])), ...)$p.value, 1)
      
     wRes <- data.frame(t(pVals), 

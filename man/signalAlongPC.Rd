@@ -6,8 +6,8 @@
 \usage{
 signalAlongPC(genomicSignal, signalCoord, regionSet, pcScores,
   orderByPC = "PC1", cluster_columns = FALSE, cluster_rows = FALSE,
-  row_title = "Sample", column_title = "Genomic Feature",
-  column_title_side = "bottom", name = "Feature Value", ...)
+  row_title = "Sample", column_title = "Genomic Signal",
+  column_title_side = "bottom", name = "Genomic Signal Value", ...)
 }
 \arguments{
 \item{genomicSignal}{DNA methylation levels (0 to 1) in matrix or data.frame. 
@@ -66,11 +66,11 @@ may be passed to this function to modify the heatmap.
 }
 \examples{
 data("brcaMethylData1")
-data("brcaCoord1")
+data("brcaMCoord1")
 data("esr1_chr1")
 data("brcaPCScores")
 signalHM <- signalAlongPC(genomicSignal=brcaMethylData1,
-                             signalCoord=brcaCoord1,
+                             signalCoord=brcaMCoord1,
                              regionSet=esr1_chr1,
                              pcScores=brcaPCScores,
                              orderByPC="PC1", cluster_columns=TRUE)

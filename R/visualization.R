@@ -171,9 +171,9 @@ signalAlongPC <- function(genomicSignal, signalCoord, regionSet,
 #' @param row_names_max_width "unit" object. The amount of room to 
 #' allocate for row names. See ?grid::unit for object type.
 #' @param name character object, legend title
-# @param col a vector of colors or a color mapping function which
-# will be passed to the ComplexHeatmap::Heatmap() function. See ?Heatmap
-# (the "col" parameter) for more details.
+#' @param col a vector of colors or a color mapping function which
+#' will be passed to the ComplexHeatmap::Heatmap() function. See ?Heatmap
+#' (the "col" parameter) for more details.
 #' @param ... optional parameters for ComplexHeatmap::Heatmap(), 
 #' including "col" to change heatmap color scheme.
 #' @return A heatmap of region set scores across. Each row is a region set,
@@ -187,11 +187,12 @@ signalAlongPC <- function(genomicSignal, signalCoord, regionSet,
 
 rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
                             orderByPC="PC1", rsNameCol = "rsName", topX = 20, 
+                           col=c("red", "gray", "blue"),
                            row_title = "Region Set", column_title = "Principal Component",
                            column_title_side = "bottom",
                            cluster_rows = FALSE, cluster_columns = FALSE,
                            show_row_names = TRUE, 
-                           row_names_max_width = unit(100000, "mm"), 
+                           row_names_max_width = unit(10000, "mm"),
                            name="Rank within PC", ...) {
     
     
@@ -253,24 +254,27 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
         rsScores[, PCsToAnnotate[i] := seq_len(rsNum)]
         
         # center around zero
-        rsScores[, PCsToAnnotate[i] := ((rsNum + 1) / 2) - get(PCsToAnnotate[i])]
+        # rsScores[, PCsToAnnotate[i] := ((rsNum + 1) / 2) - get(PCsToAnnotate[i])]
     }
     
     # heatmap of the centered ranks
-    setorderv(rsScores, orderByPC, order = -1L) # back to first order
+    # back to first order, -1L means decreasing order
+    setorderv(rsScores, orderByPC, order = 1L) 
     rowNames <-  rsScores[, get(rsNameCol)] # redefined/reordered later
     row.names(rsScores) <- rowNames
     rsScores[, c(rsNameCol) := NULL]
     rsScores <- as.matrix(rsScores)
     row.names(rsScores) <- rowNames
     Heatmap(rsScores[seq_len(topX), ], 
+            col = col,
             row_title = row_title, column_title = column_title, 
             cluster_rows = cluster_rows, 
             cluster_columns = cluster_columns, 
             column_title_side = column_title_side,
             show_row_names = show_row_names, 
             row_names_max_width = row_names_max_width, 
-            name = name, ...)
+            name = name,
+            heatmap_legend_param=, ...)
     
 }
 
