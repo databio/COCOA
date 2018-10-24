@@ -11,7 +11,7 @@ vignette: >
 ---
     
     
-This vignette is intended to be a script that can easily be modified for your own Cocoa analysis. It is unevaluated because Cocoa normally involves large objects. For a description of the goals of the method and a practical example with only a few region sets, see the "Introduction to Principal Component Region Set Analysis" vignette. Visualization function can also be found in that vignette.
+This vignette is intended to be a script that can easily be modified for your own COCOA analysis. It is unevaluated because COCOA normally involves large objects. For a description of the goals of the method and a practical example with only a few region sets, see the "Introduction to Coordinate Covariation Analysis" vignette. Visualization functions can also be found in that vignette.
 
 # Inputs
 
@@ -23,7 +23,7 @@ To begin, let's load the necessary packages:
     
 ```{r, eval=FALSE, message=FALSE, warning=FALSE}
 library(LOLA)
-library(Cocoa)
+library(COCOA)
 library(data.table)
 library(ggplot2)
 ```
@@ -41,7 +41,7 @@ mPCA <- prcomp(x=t(methylData$methylProp), center=TRUE, scale.=FALSE)
 
 ## Input 2: Large collection of region sets
 
-Besides the PCA results, we need region sets. Normally we should use Cocoa with a large collection of region sets. The collection of region sets can come from anywhere but we will use the LOLA region set databases which include region sets from public sources such as the ENCODE, Roadmap Epigenomics, and Cistrome Projects. Documentation on LOLA [here](http://bioconductor.org/packages/release/bioc/html/LOLA.html) and region set collections may be found [here](http://databio.org/regiondb). The AnnotationHub package also contains region sets and may be of interest. Let's load the LOLA databases (this may take a minute): 
+Besides the PCA results, we need region sets. Normally we should use COCOA with a large collection of region sets. The collection of region sets can come from anywhere but we will use the LOLA region set databases which include region sets from public sources such as the ENCODE, Roadmap Epigenomics, and Cistrome Projects. Documentation on LOLA [here](http://bioconductor.org/packages/release/bioc/html/LOLA.html) and region set collections may be found [here](http://databio.org/regiondb). The AnnotationHub package also contains region sets and may be of interest. Let's load the LOLA databases (this may take a minute): 
     
 ```{r, eval=FALSE, message=FALSE, warning=FALSE}
 # reading in the region sets
@@ -56,8 +56,8 @@ collections <- c("cistrome_cistrome", "cistrome_epigenome", "encode_segmentation
                 "encode_tfbs", "ucsc_features")
 collectionInd <- lolaCoreRegionAnno$collection %in% collections
 lolaCoreRegionAnno <- lolaCoreRegionAnno[collectionInd, ]
-rsName <- lolaCoreRegionAnno$filename
-rsDescription <- lolaCoreRegionAnno$description
+regionSetName <- lolaCoreRegionAnno$filename
+regionSetDescription <- lolaCoreRegionAnno$description
 
 # the actual region sets
 GRList <- GRangesList(regionSetDB$regionGRL[collectionInd])
@@ -66,7 +66,7 @@ GRList <- GRangesList(regionSetDB$regionGRL[collectionInd])
 rm("regionSetDB")
 ```
 
-# Cocoa
+# COCOA
 
 Now we test how much each region set is associated with each principal component:
     
@@ -77,8 +77,8 @@ regionSetScores <- runCOCOA(loadingMat=mPCA$rotation,
                             GRList=GRList, 
                             PCsToAnnotate=PCsToAnnotate, 
                             scoringMetric="regionMean")
-regionSetScores$rsName <- rsName
-regionSetScores$rsDescription <- rsDescription
+regionSetScores$regionSetName <- regionSetName
+regionSetScores$regionSetDescription <- regionSetDescription
 ```
 
 We can sort the results to see which region sets are most associated with each PC.
@@ -91,8 +91,8 @@ View(regionSetScores[order(regionSetScores$PC2, decreasing=TRUE), ])
 
 # Interpretation
 
-In the big picture, Cocoa can help you understand sources of variation in your data. Top region sets should have DNA methylation changes among samples along the PC axis. You can screen out region sets that have a low number of regions/cytosines covered in the DNA methylation data since these are more likely to be ranked highly by chance. Top region sets may capture some of the DNA methylation changes happening along the PC axes. However, they probably just capture a small window of the broader changes taking place and so it is likely that many other changes are taking place as well. Therefore, top region sets can be interpreted as reflecting broader changes but not necessarily defining a given PC. As further confirmation of your Cocoa results, you can look at the DNA methylation in the regions of your top region sets that have the highest loading values. These regions should show changes in DNA methylation along the PC axis. By identifying region sets where DNA methylation varies along the PC axis, you can understand variation in the data better and this can inspire further directions of research.
+In the big picture, COCOA can help you understand sources of variation in your data. Top region sets should have DNA methylation changes among samples along the PC axis. You can screen out region sets that have a low number of regions/cytosines covered in the DNA methylation data since these are more likely to be ranked highly by chance. Top region sets may capture some of the DNA methylation changes happening along the PC axes. However, they probably just capture a small window of the broader changes taking place and so it is likely that many other changes are taking place as well. Therefore, top region sets can be interpreted as reflecting broader changes but not necessarily defining a given PC. As further confirmation of your COCOA results, you can look at the DNA methylation in the regions of your top region sets that have the highest loading values. These regions should show changes in DNA methylation along the PC axis. By identifying region sets where DNA methylation varies along the PC axis, you can understand variation in the data better and this can inspire further directions of research.
 
 # Computational requirements
 
-When using Cocoa with the "regionMean" scoring method (preferred), a database of 2000 region sets, and 450,000 cytosines in the DNA methylation data, it is estimated that Cocoa will take between 30 minutes and 1.5 hours. The computer will need enough memory for the large objects used although some memory could be saved by splitting the region set database into parts, running separately on each part, and then combining the results.  
+When using COCOA with the "regionMean" scoring method (preferred), a database of 2000 region sets, and 450,000 cytosines in the DNA methylation data, it is estimated that COCOA will take between 30 minutes and 1.5 hours. The computer will need enough memory for the large objects used although some memory could be saved by splitting the region set database into parts, running separately on each part, and then combining the results.  

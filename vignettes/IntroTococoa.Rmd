@@ -63,7 +63,7 @@ GRList <- GRangesList(esr1_chr1, gata3_chr1, nrf1_chr1, atf3_chr1)
 regionSetName <- c("esr1_chr1", "gata3_chr1", "nrf1_chr1", "atf3_chr1")
 ```
 
-Now we see how much each region set is associated with each principal component:
+Now let's see how much each region set is associated with each principal component:
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 PCsToAnnotate <- paste0("PC", 1:4)
@@ -157,7 +157,7 @@ profilePList[[3]]
 profilePList[[4]]
 ```
 
-These plots show that Esr1 and Gata3 binding regions are variable compared to the surrounding genome (because they have a peak in the middle) while Nrf1 and Atf3 are not. Some region sets may have an increased loading but no peak, for example, some histone modification region sets like H3K27me3 or H3K9me3. This doesn't necessarily mean these regions are not relevant. It could just mean that there are larger blocks of variability around these histone modifications. The results from our four region sets suggest that Esr1 and Gata3 regions contribute to the variation along the PCs 1 and 3 (as well as perhaps 4), helping us understand the biological meaning of those PCs (at least partially estrogen receptor-related) and understand sources of variation in our data.
+These plots show that Esr1 and Gata3 binding regions are variable compared to the surrounding genome (because they have a peak in the middle) while Nrf1 and Atf3 are not. Some region sets may have an increased loading but no peak, for example, some histone modification region sets like H3K27me3 or H3K9me3. This doesn't necessarily mean these regions are not relevant. It could just mean that there is variability in larger blocks of the genome around these histone modifications. The results from our four region sets suggest that Esr1 and Gata3 regions contribute to the variation along the PCs 1 and 3 (as well as perhaps 4), helping us understand the biological meaning of those PCs (at least partially estrogen receptor-related) and understand sources of variation in our data.
 
 ## The raw data
 
