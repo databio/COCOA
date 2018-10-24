@@ -47,6 +47,10 @@
 #' @param column_title_side character object, where to put the column title:
 #' "top" or "bottom"
 #' @param name character object, legend title
+#' @param col a vector of colors or a color mapping function which
+#' will be passed to the ComplexHeatmap::Heatmap() function. See ?Heatmap
+#' (the "col" parameter) for more details. "#EEEEEE" is the code for a
+#' color similar to white.
 #' @param ... optional parameters for ComplexHeatmap::Heatmap() (eg change
 #' heatmap colors with "col" parameter)
 #' @return A heatmap of genomic signal values (eg DNA methylation levels) 
@@ -73,7 +77,8 @@ signalAlongPC <- function(genomicSignal, signalCoord, regionSet,
                             row_title = "Sample",
                             column_title = "Genomic Signal", 
                             column_title_side = "bottom",
-                            name = "Genomic Signal Value", ...) {
+                            name = "Genomic Signal Value",
+                            col = c("blue", "#EEEEEE", "red"), ...) {
     
 
     if (!(is(genomicSignal, "matrix") || is(genomicSignal, "data.frame"))) {
@@ -127,6 +132,7 @@ signalAlongPC <- function(genomicSignal, signalCoord, regionSet,
     message(paste0("Number of cytosines: ", ncol(thisRSMData)))
     message(paste0("Number of regions: ", length(unique(queryHits(olList)))))
     ComplexHeatmap::Heatmap(thisRSMData, 
+                            col = col,
                             row_title = row_title,
                             column_title = column_title,
                             column_title_side = column_title_side,
@@ -173,7 +179,8 @@ signalAlongPC <- function(genomicSignal, signalCoord, regionSet,
 #' @param name character object, legend title
 #' @param col a vector of colors or a color mapping function which
 #' will be passed to the ComplexHeatmap::Heatmap() function. See ?Heatmap
-#' (the "col" parameter) for more details.
+#' (the "col" parameter) for more details. "#EEEEEE" is the code for a
+#' color similar to white.
 #' @param ... optional parameters for ComplexHeatmap::Heatmap(), 
 #' including "col" to change heatmap color scheme.
 #' @return A heatmap of region set scores across. Each row is a region set,
@@ -187,7 +194,7 @@ signalAlongPC <- function(genomicSignal, signalCoord, regionSet,
 
 rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
                             orderByPC="PC1", rsNameCol = "rsName", topX = 20, 
-                           col=c("red", "gray", "blue"),
+                           col=c("red", "#EEEEEE", "blue"),
                            row_title = "Region Set", column_title = "Principal Component",
                            column_title_side = "bottom",
                            cluster_rows = FALSE, cluster_columns = FALSE,

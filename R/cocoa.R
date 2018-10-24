@@ -115,6 +115,17 @@ if (getRversion() >= "2.15.1") {
 #' number of regions in regionSet, mean_region_size that has average
 #' size in base pairs of regions in regionSet, the average is based on
 #' all regions in regionSet and not just ones that overlap. 
+#' 
+#' @examples
+#' data("brcaMCoord1")
+#' data("brcaLoadings1")
+#' data("esr1_chr1")
+#' rsScores <- aggregateLoadings(loadingMat=brcaLoadings1, 
+#'                                  signalCoord=brcaMCoord1, 
+#'                                  regionSet=esr1_chr1, 
+#'                                  PCsToAnnotate=c("PC1", "PC2"), 
+#'                                  scoringMetric="regionMean")
+#' @export
 
 aggregateLoadings <- function(loadingMat, signalCoord, regionSet, 
                               PCsToAnnotate = c("PC1", "PC2"), 
@@ -382,7 +393,13 @@ runCOCOA <- function(loadingMat, signalCoord, GRList,
                                                             scoringMetric = scoringMetric, 
                                                             verbose=verbose))
     resultsDT <- do.call(rbind, resultsList) 
-    row.names(resultsDT) <- names(GRList)
+    
+    # add column for names if they are present
+    # #row.names(resultsDT) <- names(GRList)
+    if (!is.null(names(GRList))) {
+        resultsDT[, rsName := names(GRList)]
+    }
+    
     
     resultsDF <- as.data.frame(resultsDT)
     return(resultsDF)
@@ -441,7 +458,8 @@ runCOCOA <- function(loadingMat, signalCoord, GRList,
 #' data("brcaMCoord1")
 #' data("brcaLoadings1")
 #' data("esr1_chr1")
-#' GRList = GRangesList(esr1_chr1)
+#' esr1_chr1_expanded <- resize(esr1_chr1, 14000, fix="center")
+#' GRList <- GRangesList(esr1_chr1_expanded)
 #' getLoadingProfile(loadingMat=brcaLoadings1, 
 #'                     signalCoord=brcaMCoord1, 
 #'                     GRList=GRList, 
@@ -500,7 +518,8 @@ getLoadingProfile <- function(loadingMat, signalCoord, GRList,
                                                     PCsToAnnotate = PCsToAnnotate))
     
     profileList <- lapply(profileList, FUN = makeSymmetric)
-    profileList <- lapply(profileList, function(x) x[, regionGroupID := seq_len(binNum)])
+    profileList <- lapply(profileList, function(x) x[, regionGroupID := seq_len(binNum)][])
+    lapply(X = profileList, FUN = function(x) setnames(x, old = "regionGroupID", new="binID"))
     
     return(profileList)
 }
