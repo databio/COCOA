@@ -22,7 +22,7 @@ In this vignette, we will see how COCOA can find meaningful sources of intersamp
 library(COCOA)
 library(ggplot2)
 data("brcaPCScores657")
-ggplot(data = brcaPCScores657, mapping = aes(x=PC1, y=PC4, col=ER_Status)) + geom_point() + ggtitle("PCA of DNA methylation data from breast cancer patients")
+ggplot(data = brcaPCScores657, mapping = aes(x=PC1, y=PC4, col=ER_Status)) + geom_point() + ggtitle("PCA of DNA methylation data from breast cancer patients") + theme_classic()
 ```
 
 Based on this, we might expect that the variation captured by these PCs would be associated with estrogen receptor (consistent with interpatient variation in estrogen receptor status). We are using an easy example for this vignette but COCOA will still work even if there are not distinct clusters in your PCA plot and if you do not have known groups of samples. Outside of this vignette, COCOA was performed with a region set database of over 2000 region sets. To keep things simple for this vignette, we will only use two of the highest scoring region sets and two of the lowest scoring region sets from that analysis to demonstrate how COCOA works.
@@ -109,9 +109,11 @@ We can see whether variability along the PC is specific to the region of interes
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 wideGRList <- lapply(GRList, resize, width=14000, fix="center")
-loadProfile <- getLoadingProfile(loadingMat=brcaLoadings1, signalCoord=brcaMCoord1,
-                                 GRList=wideGRList, PCsToAnnotate=PCsToAnnotate,
-                                 binNum=21)
+loadProfile <- lapply(wideGRList, function(x) getLoadingProfile(loadingMat=brcaLoadings1,
+                                                                signalCoord=brcaMCoord1,
+                                                                regionSet=x, 
+                                                                PCsToAnnotate=PCsToAnnotate,
+                                                                binNum=21))
 ```
 
 We will normalize the result for each PC so we can better compare them. Here we normalize by subtracting the mean absolute loading of each PC from the region set profiles for the corresponding PC. Then we get the plot scale so we can easily compare the different profiles. 
@@ -121,17 +123,17 @@ We will normalize the result for each PC so we can better compare them. Here we 
 avLoad <- apply(X=brcaLoadings1[, PCsToAnnotate], MARGIN=2, FUN=function(x) mean(abs(x)))
 
 # normalize
-loadProfile <- lapply(loadProfile, FUN=function(x) x[, mapply(FUN=function(y, z) get(y) - z, y=PCsToAnnotate, z=avLoad)])
-loadProfile <- lapply(loadProfile, FUN=function(x) data.table(regionGroupID=1:nrow(x), x))
+loadProfile <- lapply(loadProfile, FUN=function(x) as.data.frame(mapply(FUN = function(y, z) x[, y] - z, y=PCsToAnnotate, z=avLoad)))
+binID = 1:nrow(loadProfile[[1]])
+loadProfile <- lapply(loadProfile, FUN=function(x) cbind(binID, x))
 
 # for the plot scale
-maxVal <- max(sapply(loadProfile, FUN=function(x) max(x[, .SD, .SDcols=PCsToAnnotate])))
-minVal <- min(sapply(loadProfile, FUN=function(x) min(x[, .SD, .SDcols=PCsToAnnotate])))
+maxVal <- max(sapply(loadProfile, FUN=function(x) max(x[, PCsToAnnotate])))
+minVal <- min(sapply(loadProfile, FUN=function(x) min(x[, PCsToAnnotate])))
 
 # convert to long format for plots
 loadProfile <- lapply(X=loadProfile, FUN=function(x) tidyr::gather(data=x, key="PC", value="loading_value", PCsToAnnotate))
-loadProfile <- lapply(X=loadProfile, as.data.table)
-loadProfile <- lapply(loadProfile, function(x) x[, PC := factor(PC, levels=PCsToAnnotate)])
+loadProfile <- lapply(loadProfile, function(x){x$PC <- factor(x$PC, levels=PCsToAnnotate); return(x)})
 ```
 
 Let's look at the plots!
@@ -143,7 +145,7 @@ for (i in seq_along(loadProfile)) {
     
     thisRS <- loadProfile[[i]]
     
-    profilePList[[i]] <- ggplot(data=thisRS, mapping=aes(x=regionGroupID , y=loading_value)) + 
+    profilePList[[i]] <- ggplot(data=thisRS, mapping=aes(x=binID , y=loading_value)) + 
         geom_line() + ylim(c(minVal, maxVal)) + facet_wrap(facets="PC") + 
         ggtitle(label=wrapper(regionSetName[i], width=30)) + xlab("Genome around region set, 14 kb") + 
         ylab("Normalized loading value") + 

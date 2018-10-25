@@ -99,8 +99,8 @@ if (getRversion() >= "2.15.1") {
 #' ranking large region sets highly. Wilcoxon rank sum test ("rankSum")
 #' also is skewed toward ranking large region sets highly and is
 #' significantly slower than the "regionMean" method.
-#' @param pcLoadAv The average absolute loading value for each PC. Will
-#' significantly speed up computation if this is given.
+# @param pcLoadAv The average absolute loading value for each PC. Will
+# significantly speed up computation if this is given.
 #' @param verbose A "logical" object. Whether progress 
 #' of the function should be shown, one
 #' bar indicates the region set is completed. Useful when using 
@@ -394,14 +394,15 @@ runCOCOA <- function(loadingMat, signalCoord, GRList,
                                                             verbose=verbose))
     resultsDT <- do.call(rbind, resultsList) 
     
-    # add column for names if they are present
-    # #row.names(resultsDT) <- names(GRList)
-    if (!is.null(names(GRList))) {
-        resultsDT[, rsName := names(GRList)]
-    }
+    # # add names if they are present
+    # if (!is.null(names(GRList))) {
+    #     # resultsDT[, rsName := names(GRList)]
+    #     row.names(resultsDT) <- names(GRList)
+    # }
     
-    
-    resultsDF <- as.data.frame(resultsDT)
+    # rsName <- row.names(resultsDT)
+    resultsDF <- as.data.frame(resultsDT) #, row.names = rsName)
+
     return(resultsDF)
 }    
 
@@ -432,15 +433,14 @@ runCOCOA <- function(loadingMat, signalCoord, GRList,
 #' @param loadingMat matrix of loadings (the coefficients of 
 #' the linear combination that defines each PC). One named column for each PC.
 #' One row for each original dimension/variable (should be same order 
-#' as original data/signalCoord). The x$rotation output of prcomp().
+#' as original data/signalCoord). Given by prcomp(x)$rotation.
 #' @param signalCoord a GRanges object or data frame with coordinates 
 #' for the cytosines included in the PCA. Coordinates should be in the 
 #' same order as the methylation data and loadings. If a data.frame, 
 #' must have chr and start columns. If end is included, start 
 #' and end should be the same. Start coordinate will be used for calculations.
-#' @param GRList GRangesList object. Each list item is 
-#' a distinct region set (regions that correspond to 
-#' the same biological annotation). Must be from the same reference genome
+#' @param regionSet A genomic ranges object with regions corresponding
+#' to the same biological annotation. Must be from the same reference genome
 #' as the coordinates for the actual data/samples (signalCoord).
 #' @param PCsToAnnotate A character vector with principal components to 
 #' include. eg c("PC1", "PC2")
@@ -449,9 +449,9 @@ runCOCOA <- function(loadingMat, signalCoord, GRList,
 #' give a higher resolution but perhaps more noisy profile.
 #' @param verbose A "logical" object. Whether progress 
 #' of the function should be shown, one
-#' bar indicates the region set is completed.
-#' @return A list of data.tables each data.table for
-#' a separate region set. The data table has the binned loading profile,
+#' bar indicates the region set is completed. Useful when
+#' using `lapply` to get the loading profiles of many region sets.
+#' @return A data.frame with the binned loading profile,
 #' one row per bin.
 #' 
 #' @examples 
@@ -459,15 +459,14 @@ runCOCOA <- function(loadingMat, signalCoord, GRList,
 #' data("brcaLoadings1")
 #' data("esr1_chr1")
 #' esr1_chr1_expanded <- resize(esr1_chr1, 14000, fix="center")
-#' GRList <- GRangesList(esr1_chr1_expanded)
 #' getLoadingProfile(loadingMat=brcaLoadings1, 
 #'                     signalCoord=brcaMCoord1, 
-#'                     GRList=GRList, 
+#'                     regionSet=esr1_chr1_expanded, 
 #'                     PCsToAnnotate=c("PC1", "PC2"), 
 #'                     binNum=25)
 #' @export
 
-getLoadingProfile <- function(loadingMat, signalCoord, GRList,
+getLoadingProfile <- function(loadingMat, signalCoord, regionSet,
                     PCsToAnnotate = c("PC1", "PC2"), binNum = 25,
                     verbose=TRUE) {
     
@@ -484,21 +483,9 @@ getLoadingProfile <- function(loadingMat, signalCoord, GRList,
         stop("signalCoord should be a data.frame or GRanges object.")
     }
     
-    # should be GRangesList
-    if (is(GRList, "GRanges")) {
-        GRList <- GRangesList(GRList)
-    } else if (is(GRList, "list")) {
-        #making sure each list item is a GRanges object
-        # specificy that "logical" outcome is expected from vapply by 
-        # supplying TRUE as last vapply argument (FALSE would work too)
-        if (all(vapply(X = GRList, function(x) is(x, "GRanges"), TRUE))) {
-            GRList <- GRangesList(GRList)
-        } else {
-            stop("GRList should be a GRanges or GRangesList object.")
-        }
-    } else if (!is(GRList, "GRangesList")) {
-        stop("GRList should be a GRanges or GRangesList object.")
-    } 
+    if (!is(regionSet, "GRanges")) {
+        stop("regionSet should be a GRanges object. Check object class.")
+    }
     
     if (!is(PCsToAnnotate, "character")) {
         stop("PCsToAnnotate should be a character object (eg 'PC1').")
@@ -508,20 +495,22 @@ getLoadingProfile <- function(loadingMat, signalCoord, GRList,
     loadingDT <- as.data.table(abs(loadingMat))
     loadingDT <- cbind(coordinateDT, loadingDT)
     
-    GRDTList <- lapply(X = GRList, FUN = grToDt)
-    profileList <- lapply(X = GRDTList, function(x) BSBinAggregate(BSDT = loadingDT, 
-                                                    rangeDT = x, 
-                                                    binCount = binNum, 
-                                                    minReads = 0, 
-                                                    byRegionGroup = TRUE, 
-                                                    splitFactor = NULL,
-                                                    PCsToAnnotate = PCsToAnnotate))
+    GRDT <- grToDt(regionSet)
     
-    profileList <- lapply(profileList, FUN = makeSymmetric)
-    profileList <- lapply(profileList, function(x) x[, regionGroupID := seq_len(binNum)][])
-    lapply(X = profileList, FUN = function(x) setnames(x, old = "regionGroupID", new="binID"))
+    loadProf <- BSBinAggregate(BSDT = loadingDT, 
+                                  rangeDT = GRDT, 
+                                  binCount = binNum, 
+                                  minReads = 0, 
+                                  byRegionGroup = TRUE, 
+                                  splitFactor = NULL,
+                                  PCsToAnnotate = PCsToAnnotate)
     
-    return(profileList)
+    loadProf <- makeSymmetric(loadProf)
+    loadProf[, regionGroupID := seq_len(binNum)][]
+    setnames(loadProf, old = "regionGroupID", new="binID")
+    loadProf <- as.data.frame(loadProf)
+    
+    return(loadProf)
 }
 
 makeSymmetric <- function(prof) {

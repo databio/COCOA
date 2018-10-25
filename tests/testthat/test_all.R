@@ -277,9 +277,12 @@ test_that("getLoadingProfile", {
     regionSetP <- COCOA:::dtToGr(regionSetP)
      
     # COCOA:::dtToGr(coordinateDTP)
-    binnedP <- getLoadingProfile(loadingMat = loadingMatP, signalCoord = coordinateDTP, 
-                        GRList = GRangesList(regionSetP), PCsToAnnotate = "PC1", 
-                        binNum = 5)    
+    binnedP <- lapply(GRangesList(regionSetP), 
+                     function(x) getLoadingProfile(loadingMat = loadingMatP, 
+                                                   signalCoord = coordinateDTP, 
+                                                   regionSet = x, 
+                                                   PCsToAnnotate = "PC1", 
+                                                   binNum = 5))    
     meanPerBin <- (c(seq(from=1.5, to=7.5, by=2), 10) + rep(1, 5) + rep(1, 5)) / 3
     # BSBinAggregate averages the profile around the center
     symmetricalBin <- (meanPerBin + rev(meanPerBin)) / 2
@@ -287,9 +290,12 @@ test_that("getLoadingProfile", {
     
     # making sure that different input formats still work
     #########
-    alterOut <- getLoadingProfile(loadingMat = data.frame(loadingMatP), signalCoord = COCOA:::dtToGr(coordinateDTP), 
-                                                   GRList = regionSetP, PCsToAnnotate = "PC1", 
-                                                   binNum = 5)  
+    alterOut <- lapply(GRangesList(regionSetP), 
+                       function(x) getLoadingProfile(loadingMat = data.frame(loadingMatP), 
+                                                     signalCoord = COCOA:::dtToGr(coordinateDTP), 
+                                                     regionSet = x, 
+                                                     PCsToAnnotate = "PC1", 
+                                                     binNum = 5))  
     
     expect_equal(binnedP, alterOut)
     
