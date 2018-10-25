@@ -13,81 +13,86 @@
 
 # color schemes: red/blue, yellow/red, red/grey, skyblue/coral, skyblue/yellow
 
-#' Visualize how features in a region set change along principal component axis
+#' Visualize how genomic signal in a region set changes along principal component axis
 #' 
-#' Look at features (eg, DNA methylation values) in regions of 
+#' Look at genomic signal (eg, DNA methylation values) in regions of 
 #' interest across samples, 
 #' with samples ordered according to score for PC of interest. 
 #' The ComplexHeatmap package
 #' is used and additional parameters for the ComplexHeatmap::Heatmap function
 #' may be passed to this function to modify the heatmap.   
 #'
-#' @param methylData DNA methylation levels (0 to 1) in matrix or data.frame. 
+#' @param genomicSignal DNA methylation levels (0 to 1) in matrix or data.frame. 
 #' Rows are cytosines. Columns are samples.
-#' @param mCoord a GRanges object or data frame with coordinates 
+#' @param signalCoord a GRanges object or data frame with coordinates 
 #' for the cytosines included in the PCA. Coordinates should be in the 
 #' same order as the methylation data and loadings. If a data.frame, 
 #' must have chr and start columns. If end is included, start 
 #' and end should be the same. Start coordinate will be used for calculations.
 #' @param regionSet A genomic ranges object with regions corresponding
 #' to the same biological annotation. Must be from the same reference genome
-#' as the coordinates for the actual data (mCoord).
+#' as the coordinates for the actual data (signalCoord).
 #' @param pcScores A matrix. The principal component scores for the samples 
 #' (ie transformed methylation data). Must have subject_ID as row names,
-#' These same subject_IDs must be column names of methylData
+#' These same subject_IDs must be column names of genomicSignal
 #' @param orderByPC PC to order samples by (order rows of heatmap by PC score, 
 #' from high to low score)
 #' @param cluster_rows "logical" object, whether rows should be clustered. 
 #' This should be kept as FALSE to keep the correct ranking of 
 #' samples/observations according to their PC score.
-#' @param cluster_columns "logical" object, whether to cluster columns (the features,
+#' @param cluster_columns "logical" object, whether to cluster columns (the genomic signal,
 #' eg DNA methylation values for each CpG).
 #' @param row_title character object, row title
 #' @param column_title character object, column title
 #' @param column_title_side character object, where to put the column title:
 #' "top" or "bottom"
 #' @param name character object, legend title
+#' @param col a vector of colors or a color mapping function which
+#' will be passed to the ComplexHeatmap::Heatmap() function. See ?Heatmap
+#' (the "col" parameter) for more details. "#EEEEEE" is the code for a
+#' color similar to white.
 #' @param ... optional parameters for ComplexHeatmap::Heatmap() (eg change
 #' heatmap colors with "col" parameter)
-#' @return A heatmap of feature values (eg DNA methylation levels) 
+#' @return A heatmap of genomic signal values (eg DNA methylation levels) 
 #' in regions of interest (regionSet).
-#' Each row is a patient/sample and each column is an individual feature. 
+#' Each row is a patient/sample and each column is an individual genomic signal value. 
 #' Rows are ordered by PC score (orderByPC), high scores at top and low at 
 #' the bottom.
 #'
 #' @examples data("brcaMethylData1")
-#' data("brcaCoord1")
+#' data("brcaMCoord1")
 #' data("esr1_chr1")
 #' data("brcaPCScores")
-#' featureHM <- featuresAlongPC(methylData=brcaMethylData1,
-#'                              mCoord=brcaCoord1,
+#' signalHM <- signalAlongPC(genomicSignal=brcaMethylData1,
+#'                              signalCoord=brcaMCoord1,
 #'                              regionSet=esr1_chr1,
 #'                              pcScores=brcaPCScores,
 #'                              orderByPC="PC1", cluster_columns=TRUE)
 #' 
 #' @export
 # previously called rsMethylHeatmap
-featuresAlongPC <- function(methylData, mCoord, regionSet, 
+signalAlongPC <- function(genomicSignal, signalCoord, regionSet, 
                             pcScores, orderByPC="PC1", cluster_columns = FALSE, 
                             cluster_rows = FALSE, 
                             row_title = "Sample",
-                            column_title = "Genomic Feature", 
+                            column_title = "Genomic Signal", 
                             column_title_side = "bottom",
-                            name = "Feature Value", ...) {
+                            name = "Genomic Signal Value",
+                            col = c("blue", "#EEEEEE", "red"), ...) {
     
 
-    if (!(is(methylData, "matrix") || is(methylData, "data.frame"))) {
-        stop("methylData should be a matrix or data.frame. Check object class.")
+    if (!(is(genomicSignal, "matrix") || is(genomicSignal, "data.frame"))) {
+        stop("genomicSignal should be a matrix or data.frame. Check object class.")
     }
     
     # test for appropriateness of inputs/right format
-    if (is(mCoord, "GRanges")) {
-        coordGR <- mCoord
-    } else if (is(mCoord, "data.frame")) {
+    if (is(signalCoord, "GRanges")) {
+        coordGR <- signalCoord
+    } else if (is(signalCoord, "data.frame")) {
         # UPDATE: does the work on data.frames that are not data.tables?
-        coordGR <- dtToGr(mCoord)
+        coordGR <- dtToGr(signalCoord)
     } else {
-        stop("mCoord should be a data.frame or GRanges object.")
+        stop("signalCoord should be a data.frame or GRanges object.")
     }
     
     if (!(is(pcScores, "matrix") || is(pcScores, "data.frame"))) {
@@ -96,8 +101,8 @@ featuresAlongPC <- function(methylData, mCoord, regionSet,
     
     
     # PCA object must have subject_ID as row.names (corresponding 
-    # to column names of methylData)
-    if (sum(row.names(pcScores) %in% colnames(methylData)) < 2) {
+    # to column names of genomicSignal)
+    if (sum(row.names(pcScores) %in% colnames(genomicSignal)) < 2) {
         stop(cleanws("Sample names on pca data (row names) 
                       must match sample names on methylation
                              (column names)"))
@@ -115,9 +120,9 @@ featuresAlongPC <- function(methylData, mCoord, regionSet,
     olList <- findOverlaps(regionSet, coordGR)
     # regionHitInd <- sort(unique(queryHits(olList)))
     cytosineHitInd <- sort(unique(subjectHits(olList)))
-    thisRSMData <- t(methylData[cytosineHitInd, ])
+    thisRSMData <- t(genomicSignal[cytosineHitInd, ])
     subject_ID <- row.names(thisRSMData)
-    # centeredPCAMeth <- t(apply(t(methylData), 1, 
+    # centeredPCAMeth <- t(apply(t(genomicSignal), 1, 
     #                            function(x) x - pcaData$center)) #center first 
     # reducedValsPCA <- centeredPCAMeth %*% pcaData$rotation
     # reducedValsPCA <- pcaData$x
@@ -127,6 +132,7 @@ featuresAlongPC <- function(methylData, mCoord, regionSet,
     message(paste0("Number of cytosines: ", ncol(thisRSMData)))
     message(paste0("Number of regions: ", length(unique(queryHits(olList)))))
     ComplexHeatmap::Heatmap(thisRSMData, 
+                            col = col,
                             row_title = row_title,
                             column_title = column_title,
                             column_title_side = column_title_side,
@@ -171,9 +177,10 @@ featuresAlongPC <- function(methylData, mCoord, regionSet,
 #' @param row_names_max_width "unit" object. The amount of room to 
 #' allocate for row names. See ?grid::unit for object type.
 #' @param name character object, legend title
-# @param col a vector of colors or a color mapping function which
-# will be passed to the ComplexHeatmap::Heatmap() function. See ?Heatmap
-# (the "col" parameter) for more details.
+#' @param col a vector of colors or a color mapping function which
+#' will be passed to the ComplexHeatmap::Heatmap() function. See ?Heatmap
+#' (the "col" parameter) for more details. "#EEEEEE" is the code for a
+#' color similar to white.
 #' @param ... optional parameters for ComplexHeatmap::Heatmap(), 
 #' including "col" to change heatmap color scheme.
 #' @return A heatmap of region set scores across. Each row is a region set,
@@ -187,11 +194,12 @@ featuresAlongPC <- function(methylData, mCoord, regionSet,
 
 rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
                             orderByPC="PC1", rsNameCol = "rsName", topX = 20, 
+                           col=c("red", "#EEEEEE", "blue"),
                            row_title = "Region Set", column_title = "Principal Component",
                            column_title_side = "bottom",
                            cluster_rows = FALSE, cluster_columns = FALSE,
                            show_row_names = TRUE, 
-                           row_names_max_width = unit(100000, "mm"), 
+                           row_names_max_width = unit(10000, "mm"),
                            name="Rank within PC", ...) {
     
     
@@ -253,24 +261,27 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
         rsScores[, PCsToAnnotate[i] := seq_len(rsNum)]
         
         # center around zero
-        rsScores[, PCsToAnnotate[i] := ((rsNum + 1) / 2) - get(PCsToAnnotate[i])]
+        # rsScores[, PCsToAnnotate[i] := ((rsNum + 1) / 2) - get(PCsToAnnotate[i])]
     }
     
     # heatmap of the centered ranks
-    setorderv(rsScores, orderByPC, order = -1L) # back to first order
+    # back to first order, -1L means decreasing order
+    setorderv(rsScores, orderByPC, order = 1L) 
     rowNames <-  rsScores[, get(rsNameCol)] # redefined/reordered later
     row.names(rsScores) <- rowNames
     rsScores[, c(rsNameCol) := NULL]
     rsScores <- as.matrix(rsScores)
     row.names(rsScores) <- rowNames
     Heatmap(rsScores[seq_len(topX), ], 
+            col = col,
             row_title = row_title, column_title = column_title, 
             cluster_rows = cluster_rows, 
             cluster_columns = cluster_columns, 
             column_title_side = column_title_side,
             show_row_names = show_row_names, 
             row_names_max_width = row_names_max_width, 
-            name = name, ...)
+            name = name,
+            heatmap_legend_param=, ...)
     
 }
 
@@ -287,15 +298,15 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
 #' @param loadingMat matrix of loadings (the coefficients of 
 #' the linear combination that defines each PC). One named column for each PC.
 #' One row for each original dimension/variable (should be same order 
-#' as original data/mCoord). The x$rotation output of prcomp().
-#' @param mCoord a GRanges object or data frame with coordinates 
+#' as original data/signalCoord). The x$rotation output of prcomp().
+#' @param signalCoord a GRanges object or data frame with coordinates 
 #' for the cytosines included in the PCA. Coordinates should be in the 
 #' same order as the methylation data and loadings. If a data.frame, 
 #' must have chr and start columns. If end is included, start 
 #' and end should be the same. Start coordinate will be used for calculations.
 #' @param regionSet A genomic ranges object with regions corresponding
 #' to the same biological annotation. Must be from the same reference genome
-#' as the coordinates for the actual data (mCoord).
+#' as the coordinates for the actual data (signalCoord).
 #' @param rsName character vector. Names of the region sets in the same
 #' order as GRList. For use as a title for each heatmap.
 #' @param PCsToAnnotate A character vector with principal components to 
@@ -327,16 +338,16 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
 #' Columns are PCs, rows are regions. To color
 #' each region, first the absolute loading values within that region are
 #' averaged. Then this average is compared to the distribution of absolute
-#' loading values for all individual features to get a quantile/percentile 
+#' loading values for all individual genomic signal values to get a quantile/percentile 
 #' for that region. Colors are based on this quantile/percentile. 
 #' The output is a Heatmap object (ComplexHeatmap package).
 #' 
 #' @examples data("brcaLoadings1")
-#' data("brcaCoord1")
+#' data("brcaMCoord1")
 #' data("esr1_chr1")
 #' data("brcaPCScores")
 #' regionByPCHM <- regionQuantileByPC(loadingMat = brcaLoadings1, 
-#'                                    mCoord = brcaCoord1, 
+#'                                    signalCoord = brcaMCoord1, 
 #'                                    regionSet = esr1_chr1, 
 #'                                    rsName = "Estrogen Receptor Chr1", 
 #'                                    PCsToAnnotate=paste0("PC", 1:2),
@@ -348,7 +359,7 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
 #'                                    
 #' 
 #' @export
-regionQuantileByPC <- function(loadingMat, mCoord, regionSet, 
+regionQuantileByPC <- function(loadingMat, signalCoord, regionSet, 
                                rsName = "", PCsToAnnotate=paste0("PC", 1:5),
                                maxRegionsToPlot = 8000, cluster_rows = TRUE, 
                                row_title = "Region", column_title = rsName,
@@ -363,12 +374,12 @@ regionQuantileByPC <- function(loadingMat, mCoord, regionSet,
         stop("loadingMat should be a matrix or data.frame. Check object class.")
     }
     
-    if (is(mCoord, "GRanges")) {
-        coordinateDT <- grToDt(mCoord)
-    } else if (is(mCoord, "data.frame")) {
-        coordinateDT <- mCoord
+    if (is(signalCoord, "GRanges")) {
+        coordinateDT <- grToDt(signalCoord)
+    } else if (is(signalCoord, "data.frame")) {
+        coordinateDT <- signalCoord
     } else {
-        stop("mCoord should be a data.frame or GRanges object.")
+        stop("signalCoord should be a data.frame or GRanges object.")
     }
     
     if (!is(regionSet, "GRanges")) {
@@ -387,7 +398,7 @@ regionQuantileByPC <- function(loadingMat, mCoord, regionSet,
     
     
     rsRegionAverage <- averageByRegion(loadingMat = loadingMat, 
-                                       mCoord =coordinateDT, 
+                                       signalCoord =coordinateDT, 
                                        regionSet = regionSet, 
                                        PCsToAnnotate = PCsToAnnotate,
                                        returnQuantile = TRUE)

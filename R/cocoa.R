@@ -78,29 +78,29 @@ if (getRversion() >= "2.15.1") {
 #' @param loadingMat matrix of loadings (the coefficients of 
 #' the linear combination that defines each PC). One named column for each PC.
 #' One row for each original dimension/variable (should be same order 
-#' as original data/mCoord). The x$rotation output of prcomp().
-#' @param mCoord a GRanges object or data frame with coordinates 
+#' as original data/signalCoord). The x$rotation output of prcomp().
+#' @param signalCoord a GRanges object or data frame with coordinates 
 #' for the cytosines included in the PCA. Coordinates should be in the 
 #' same order as the methylation data and loadings. If a data.frame, 
 #' must have chr and start columns. If end is included, start 
 #' and end should be the same. Start coordinate will be used for calculations.
 #' @param regionSet A genomic ranges object with regions corresponding
 #' to the same biological annotation. Must be from the same reference genome
-#' as the coordinates for the actual data/samples (mCoord).
+#' as the coordinates for the actual data/samples (signalCoord).
 #' @param PCsToAnnotate A character vector with principal components to 
 #' include. eg c("PC1", "PC2")
-#' @param metric Scoring metric. "rsMean" is a weighted
+#' @param scoringMetric Scoring metric. "regionMean" is a weighted
 #' average of the absolute value of the loadings
 #' with no normalization (recommended). First loadings are
 #' averaged within each region, then all the regions are averaged. With
-#' "rsMean" score, be cautious in interpretation for
+#' "regionMean" score, be cautious in interpretation for
 #'  region sets with low number of regions.
 #' Mean difference ("meanDiff") is also supported but is skewed toward 
 #' ranking large region sets highly. Wilcoxon rank sum test ("rankSum")
 #' also is skewed toward ranking large region sets highly and is
-#' significantly slower than the "rsMean" method.
-#' @param pcLoadAv The average absolute loading value for each PC. Will
-#' significantly speed up computation if this is given.
+#' significantly slower than the "regionMean" method.
+# @param pcLoadAv The average absolute loading value for each PC. Will
+# significantly speed up computation if this is given.
 #' @param verbose A "logical" object. Whether progress 
 #' of the function should be shown, one
 #' bar indicates the region set is completed. Useful when using 
@@ -115,19 +115,30 @@ if (getRversion() >= "2.15.1") {
 #' number of regions in regionSet, mean_region_size that has average
 #' size in base pairs of regions in regionSet, the average is based on
 #' all regions in regionSet and not just ones that overlap. 
+#' 
+#' @examples
+#' data("brcaMCoord1")
+#' data("brcaLoadings1")
+#' data("esr1_chr1")
+#' rsScores <- aggregateLoadings(loadingMat=brcaLoadings1, 
+#'                                  signalCoord=brcaMCoord1, 
+#'                                  regionSet=esr1_chr1, 
+#'                                  PCsToAnnotate=c("PC1", "PC2"), 
+#'                                  scoringMetric="regionMean")
+#' @export
 
-aggregateLoadings <- function(loadingMat, mCoord, regionSet, 
+aggregateLoadings <- function(loadingMat, signalCoord, regionSet, 
                               PCsToAnnotate = c("PC1", "PC2"), 
-                              metric="rsMean", pcLoadAv=NULL,
+                              scoringMetric="regionMean",
                               verbose=FALSE) {
     
 
-    if (is(mCoord, "GRanges")) {
-        coordinateDT <- grToDt(mCoord)
-    } else if (is(mCoord, "data.frame")) {
-        coordinateDT <- mCoord
+    if (is(signalCoord, "GRanges")) {
+        coordinateDT <- grToDt(signalCoord)
+    } else if (is(signalCoord, "data.frame")) {
+        coordinateDT <- signalCoord
     } else {
-        stop("mCoord should be a data.frame or GRanges object.")
+        stop("signalCoord should be a data.frame or GRanges object.")
     }
     
     # preferred as matrix, data.frame works
@@ -166,7 +177,7 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
                                 rep("mean", length(PCsToAnnotate)))
     
     # do the actual aggregation
-    if (metric == "rsMean") {
+    if (scoringMetric == "regionMean") {
         # previously used BSAggregate from RGenomeUtils but now using local, 
         # modified copy
         loadAgMain <- BSAggregate(BSDT = loadingDT, 
@@ -189,12 +200,13 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
             results[, total_region_number := numOfRegions]
             results[, mean_region_size := round(mean(width(regionSet)), 1)]
         }
-    } else if (metric == "cpgMean") {
+    } else if (scoringMetric == "simpleMean") {
         
         # average of loadings for all CpGs within region set
-        loadMetrics <- cpgOLMetrics(dataDT=loadingDT, regionGR=regionSet, 
-                                   metrics="mean", 
-                                   alsoNonOLMet=FALSE)
+        loadMetrics <- signalOLMetrics(dataDT=loadingDT, regionGR=regionSet, 
+                                       signalCols = PCsToAnnotate,
+                                       metrics="mean", 
+                                       alsoNonOLMet=FALSE)
         if (is.null(loadMetrics)) {
             results <- as.data.table(t(rep(NA, length(PCsToAnnotate))))
             setnames(results, PCsToAnnotate)
@@ -218,15 +230,16 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
         }
         
         
-    } else if (metric == "meanDiff") {
+    } else if (scoringMetric == "meanDiff") {
         # if (is.null(pcLoadAv)) {
         #     # calculate (should already be absolute)
         #     pcLoadAv <- apply(X = loadingDT[, PCsToAnnotate, with=FALSE], 
         #                       MARGIN = 2, FUN = mean)
         # }
-        loadMetrics <- cpgOLMetrics(dataDT=loadingDT, regionGR=regionSet, 
-                                   metrics=c("mean", "sd"), 
-                                   alsoNonOLMet=TRUE)
+        loadMetrics <- signalOLMetrics(dataDT=loadingDT, regionGR=regionSet,
+                                       signalCols = PCsToAnnotate,
+                                       metrics=c("mean", "sd"), 
+                                       alsoNonOLMet=TRUE)
         if (is.null(loadMetrics)) {
             results <- as.data.table(t(rep(NA, length(PCsToAnnotate))))
             setnames(results, PCsToAnnotate)
@@ -252,9 +265,10 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
          }
         
         
-    } else if (metric == "rankSum"){
+    } else if (scoringMetric == "rankSum"){
         # one sided test since I took the absolute value of the loadings 
-        wRes <- rsWilcox(dataDT = loadingDT, regionGR=regionSet, alternative="greater")
+        wRes <- rsWilcox(dataDT = loadingDT, regionGR=regionSet, 
+                         signalCols = PCsToAnnotate, alternative="greater")
         
         if (is.null(wRes)) {
             results <- as.data.table(t(rep(NA, length(PCsToAnnotate))))
@@ -267,12 +281,12 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
             results <- as.data.table(wRes)
         }
     } else {
-        stop(cleanws("metric was not recognized. 
+        stop(cleanws("scoringMetric was not recognized. 
                       Check spelling and available options."))
     }
     
     
-    # cpgOLMetrics() # make sure it works with no overlap
+    # signalOLMetrics() # make sure it works with no overlap
     if (verbose) {
         message("|")
     }
@@ -291,8 +305,8 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
 #' @param loadingMat matrix of loadings (the coefficients of 
 #' the linear combination that defines each PC). One named column for each PC.
 #' One row for each original dimension/variable (should be same order 
-#' as original data/mCoord). The x$rotation output of prcomp().
-#' @param mCoord a GRanges object or data frame with coordinates 
+#' as original data/signalCoord). The x$rotation output of prcomp().
+#' @param signalCoord a GRanges object or data frame with coordinates 
 #' for the cytosines included in the PCA. Coordinates should be in the 
 #' same order as the methylation data and loadings. If a data.frame, 
 #' must have chr and start columns. If end is included, start 
@@ -300,19 +314,19 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
 #' @param GRList GRangesList object. Each list item is 
 #' a distinct region set to test (region set: regions that correspond to 
 #' the same biological annotation). Must be from the same reference genome
-#' as the coordinates for the actual data/samples (mCoord).
+#' as the coordinates for the actual data/samples (signalCoord).
 #' @param PCsToAnnotate A character vector with principal components to 
 #' include. eg c("PC1", "PC2")
-#' @param scoringMetric Scoring metric. "rsMean" is a weighted
+#' @param scoringMetric Scoring metric. "regionMean" is a weighted
 #' average of the absolute value of the loadings
 #' with no normalization (recommended). First loadings are
 #' averaged within each region, then all the regions are averaged. With
-#' "rsMean" score, be cautious in interpretation for
+#' "regionMean" score, be cautious in interpretation for
 #'  region sets with low number of regions.
 #' Mean difference ("meanDiff") is also supported but is skewed toward 
 #' ranking large region sets highly. Wilcoxon rank sum test ("rankSum")
 #' also is skewed toward ranking large region sets highly and is
-#' significantly slower than the "rsMean" method.
+#' significantly slower than the "regionMean" method.
 #' @param verbose A "logical" object. Whether progress 
 #' of the function should be shown, one
 #' bar indicates the region set is completed.
@@ -331,31 +345,31 @@ aggregateLoadings <- function(loadingMat, mCoord, regionSet,
 #' not just those that overlap a cytosine).
 #' 
 #' @examples 
-#' data("brcaCoord1")
+#' data("brcaMCoord1")
 #' data("brcaLoadings1")
 #' data("esr1_chr1")
-#' rsScores <- pcRegionSetEnrichment(loadingMat=brcaLoadings1, 
-#'                                  mCoord=brcaCoord1, 
+#' rsScores <- runCOCOA(loadingMat=brcaLoadings1, 
+#'                                  signalCoord=brcaMCoord1, 
 #'                                  GRList=GRangesList(esr1_chr1), 
 #'                                  PCsToAnnotate=c("PC1", "PC2"), 
-#'                                  scoringMetric="rsMean")
+#'                                  scoringMetric="regionMean")
 #' 
 #' @export
 
-pcRegionSetEnrichment <- function(loadingMat, mCoord, GRList, 
-                  PCsToAnnotate = c("PC1", "PC2"), scoringMetric = "rsMean",
+runCOCOA <- function(loadingMat, signalCoord, GRList, 
+                  PCsToAnnotate = c("PC1", "PC2"), scoringMetric = "regionMean",
                   verbose=TRUE) {
     
     if (!(any(c(is(loadingMat, "matrix"), is(loadingMat, "data.frame"))))) {
         warning("loadingMat should be a matrix or data.frame.")
     }
  
-    if (is(mCoord, "GRanges")) {
-        coordinateDT <- grToDt(mCoord)
-    } else if (is(mCoord, "data.frame")) {
-        coordinateDT <- mCoord
+    if (is(signalCoord, "GRanges")) {
+        coordinateDT <- grToDt(signalCoord)
+    } else if (is(signalCoord, "data.frame")) {
+        coordinateDT <- signalCoord
     } else {
-        stop("mCoord should be a data.frame or GRanges object.")
+        stop("signalCoord should be a data.frame or GRanges object.")
     }
     
     # should be GRangesList
@@ -373,15 +387,22 @@ pcRegionSetEnrichment <- function(loadingMat, mCoord, GRList,
     # apply over the list of region sets
     resultsList <- lapplyAlias(GRList, 
                               function(x) aggregateLoadings(loadingMat=loadingMat, 
-                                                            mCoord=coordinateDT, 
+                                                            signalCoord=coordinateDT, 
                                                             regionSet=x, 
                                                             PCsToAnnotate = PCsToAnnotate,
-                                                            metric = scoringMetric, 
+                                                            scoringMetric = scoringMetric, 
                                                             verbose=verbose))
     resultsDT <- do.call(rbind, resultsList) 
-    row.names(resultsDT) <- row.names(GRList)
     
-    resultsDF <- as.data.frame(resultsDT)
+    # # add names if they are present
+    # if (!is.null(names(GRList))) {
+    #     # resultsDT[, rsName := names(GRList)]
+    #     row.names(resultsDT) <- names(GRList)
+    # }
+    
+    # rsName <- row.names(resultsDT)
+    resultsDF <- as.data.frame(resultsDT) #, row.names = rsName)
+
     return(resultsDF)
 }    
 
@@ -412,16 +433,15 @@ pcRegionSetEnrichment <- function(loadingMat, mCoord, GRList,
 #' @param loadingMat matrix of loadings (the coefficients of 
 #' the linear combination that defines each PC). One named column for each PC.
 #' One row for each original dimension/variable (should be same order 
-#' as original data/mCoord). The x$rotation output of prcomp().
-#' @param mCoord a GRanges object or data frame with coordinates 
+#' as original data/signalCoord). Given by prcomp(x)$rotation.
+#' @param signalCoord a GRanges object or data frame with coordinates 
 #' for the cytosines included in the PCA. Coordinates should be in the 
 #' same order as the methylation data and loadings. If a data.frame, 
 #' must have chr and start columns. If end is included, start 
 #' and end should be the same. Start coordinate will be used for calculations.
-#' @param GRList GRangesList object. Each list item is 
-#' a distinct region set (regions that correspond to 
-#' the same biological annotation). Must be from the same reference genome
-#' as the coordinates for the actual data/samples (mCoord).
+#' @param regionSet A genomic ranges object with regions corresponding
+#' to the same biological annotation. Must be from the same reference genome
+#' as the coordinates for the actual data/samples (signalCoord).
 #' @param PCsToAnnotate A character vector with principal components to 
 #' include. eg c("PC1", "PC2")
 #' @param binNum Number of bins to split the regions into when
@@ -429,24 +449,24 @@ pcRegionSetEnrichment <- function(loadingMat, mCoord, GRList,
 #' give a higher resolution but perhaps more noisy profile.
 #' @param verbose A "logical" object. Whether progress 
 #' of the function should be shown, one
-#' bar indicates the region set is completed.
-#' @return A list of data.tables each data.table for
-#' a separate region set. The data table has the binned loading profile,
+#' bar indicates the region set is completed. Useful when
+#' using `lapply` to get the loading profiles of many region sets.
+#' @return A data.frame with the binned loading profile,
 #' one row per bin.
 #' 
 #' @examples 
-#' data("brcaCoord1")
+#' data("brcaMCoord1")
 #' data("brcaLoadings1")
 #' data("esr1_chr1")
-#' GRList = GRangesList(esr1_chr1)
-#' pcEnrichmentProfile(loadingMat=brcaLoadings1, 
-#'                     mCoord=brcaCoord1, 
-#'                     GRList=GRList, 
+#' esr1_chr1_expanded <- resize(esr1_chr1, 14000, fix="center")
+#' getLoadingProfile(loadingMat=brcaLoadings1, 
+#'                     signalCoord=brcaMCoord1, 
+#'                     regionSet=esr1_chr1_expanded, 
 #'                     PCsToAnnotate=c("PC1", "PC2"), 
 #'                     binNum=25)
 #' @export
 
-pcEnrichmentProfile = function(loadingMat, mCoord, GRList,
+getLoadingProfile <- function(loadingMat, signalCoord, regionSet,
                     PCsToAnnotate = c("PC1", "PC2"), binNum = 25,
                     verbose=TRUE) {
     
@@ -455,29 +475,17 @@ pcEnrichmentProfile = function(loadingMat, mCoord, GRList,
     }
     
     # checks for correct input
-    if (is(mCoord, "GRanges")) {
-        coordinateDT <- grToDt(mCoord)
-    } else if (is(mCoord, "data.frame")) {
-        coordinateDT <- mCoord
+    if (is(signalCoord, "GRanges")) {
+        coordinateDT <- grToDt(signalCoord)
+    } else if (is(signalCoord, "data.frame")) {
+        coordinateDT <- signalCoord
     } else {
-        stop("mCoord should be a data.frame or GRanges object.")
+        stop("signalCoord should be a data.frame or GRanges object.")
     }
     
-    # should be GRangesList
-    if (is(GRList, "GRanges")) {
-        GRList <- GRangesList(GRList)
-    } else if (is(GRList, "list")) {
-        #making sure each list item is a GRanges object
-        # specificy that "logical" outcome is expected from vapply by 
-        # supplying TRUE as last vapply argument (FALSE would work too)
-        if (all(vapply(X = GRList, function(x) is(x, "GRanges"), TRUE))) {
-            GRList <- GRangesList(GRList)
-        } else {
-            stop("GRList should be a GRanges or GRangesList object.")
-        }
-    } else if (!is(GRList, "GRangesList")) {
-        stop("GRList should be a GRanges or GRangesList object.")
-    } 
+    if (!is(regionSet, "GRanges")) {
+        stop("regionSet should be a GRanges object. Check object class.")
+    }
     
     if (!is(PCsToAnnotate, "character")) {
         stop("PCsToAnnotate should be a character object (eg 'PC1').")
@@ -487,19 +495,22 @@ pcEnrichmentProfile = function(loadingMat, mCoord, GRList,
     loadingDT <- as.data.table(abs(loadingMat))
     loadingDT <- cbind(coordinateDT, loadingDT)
     
-    GRDTList <- lapply(X = GRList, FUN = grToDt)
-    profileList <- lapply(X = GRDTList, function(x) BSBinAggregate(BSDT = loadingDT, 
-                                                    rangeDT = x, 
-                                                    binCount = binNum, 
-                                                    minReads = 0, 
-                                                    byRegionGroup = TRUE, 
-                                                    splitFactor = NULL,
-                                                    PCsToAnnotate = PCsToAnnotate))
+    GRDT <- grToDt(regionSet)
     
-    profileList <- lapply(profileList, FUN = makeSymmetric)
-    profileList <- lapply(profileList, function(x) x[, regionGroupID := seq_len(binNum)])
+    loadProf <- BSBinAggregate(BSDT = loadingDT, 
+                                  rangeDT = GRDT, 
+                                  binCount = binNum, 
+                                  minReads = 0, 
+                                  byRegionGroup = TRUE, 
+                                  splitFactor = NULL,
+                                  PCsToAnnotate = PCsToAnnotate)
     
-    return(profileList)
+    loadProf <- makeSymmetric(loadProf)
+    loadProf[, regionGroupID := seq_len(binNum)][]
+    setnames(loadProf, old = "regionGroupID", new="binID")
+    loadProf <- as.data.frame(loadProf)
+    
+    return(loadProf)
 }
 
 makeSymmetric <- function(prof) {
@@ -579,8 +590,8 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
 # @param loadingMat matrix of loadings (the coefficients of 
 # the linear combination that defines each PC). One named column for each PC.
 # One row for each original dimension/variable (should be same order 
-# as original data/mCoord). The x$rotation output of prcomp().
-# @param mCoord a GRanges object or data frame with coordinates 
+# as original data/signalCoord). The x$rotation output of prcomp().
+# @param signalCoord a GRanges object or data frame with coordinates 
 # for the cytosines included in the PCA. Coordinates should be in the 
 # same order as the methylation data and loadings. If a data.frame, 
 # must have chr and start columns. If end is included, start 
@@ -601,19 +612,19 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
 # Devel note: I could add a column for how many cytosines are in each region 
 
 averageByRegion <- function(loadingMat, 
-                            mCoord, 
+                            signalCoord, 
                             regionSet, 
                             PCsToAnnotate = c("PC1", "PC2"), 
                             returnQuantile=FALSE) {
     
     
     
-    if (is(mCoord, "GRanges")) {
-        coordinateDT <- grToDt(mCoord)
-    } else if (is(mCoord, "data.frame")) {
-        coordinateDT <- mCoord
+    if (is(signalCoord, "GRanges")) {
+        coordinateDT <- grToDt(signalCoord)
+    } else if (is(signalCoord, "data.frame")) {
+        coordinateDT <- signalCoord
     } else {
-        stop("mCoord should be a data.frame or GRanges object.")
+        stop("signalCoord should be a data.frame or GRanges object.")
     }
     
     # preferred as matrix, data.frame works
@@ -734,7 +745,7 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL,
         BSDT <- as.data.table(BSDT)
     } 
     if (!is(BSDT, "data.table"))  {
-        error("BSDT must be a data.table")
+        stop("BSDT must be a data.table")
     }
     
     
@@ -1016,6 +1027,8 @@ rsRankingIndex <- function(rsScores, PCsToAnnotate) {
 # @param regionGR GRanges object. Metrics will be calculated on
 # only coordinates within this region set (and optionally separately
 # on those outside this region set with alsoNonOLMet parameter)
+# @param signalCols the columns to calculate the metrics on. The
+# metrics will be calculated on each one of these columns separately.
 # @param metrics character vector with the name of a function or functions
 # to calculate on selected cytosines. Function should only require one
 # input which should be the values of the cytosines.
@@ -1029,8 +1042,10 @@ rsRankingIndex <- function(rsScores, PCsToAnnotate) {
 
 
 # 
-cpgOLMetrics <- function(dataDT, regionGR, metrics=c("mean", "sd"), 
-                         alsoNonOLMet=TRUE) {
+signalOLMetrics <- function(dataDT, regionGR, 
+                            signalCols = colnames(dataDT)[!(colnames(dataDT) %in% c("chr", "start", "end"))], 
+                            metrics=c("mean", "sd"), 
+                            alsoNonOLMet=TRUE) {
     
     # convert DT to GR for finding overlaps
     dataGR <- BSdtToGRanges(list(dataDT))[[1]]
@@ -1062,12 +1077,9 @@ cpgOLMetrics <- function(dataDT, regionGR, metrics=c("mean", "sd"),
     nonOLCpG <- (seq_len(nrow(dataDT)))[-olCpG]
     
     # gets metrics for all columns except chr, start, end
-    testCols <- colnames(dataDT)[!(colnames(dataDT) %in% 
-                                       c("chr", "start", "end"))] 
-    
-    jExpr <- buildJ(cols=rep(testCols, each=length(metrics)), 
-                    funcs=rep(metrics, length(testCols)),
-                    newColNames = paste0(rep(testCols, 
+    jExpr <- buildJ(cols=rep(signalCols, each=length(metrics)), 
+                    funcs=rep(metrics, length(signalCols)),
+                    newColNames = paste0(rep(signalCols, 
                                              each=length(metrics)), 
                                          "_", metrics))
     
@@ -1086,17 +1098,17 @@ cpgOLMetrics <- function(dataDT, regionGR, metrics=c("mean", "sd"),
     # for vapply, FUN.VALUE should have length equal to a single output of FUN
     olResults <- vapply(X = metrics, 
                         FUN = function(x) as.numeric(olMetrics[, grepl(pattern = x, colnames(olMetrics))]),
-                        as.numeric(seq_along(testCols)))
+                        as.numeric(seq_along(signalCols)))
     olResults <- as.data.table(olResults)
     setnames(olResults, old = colnames(olResults), new = paste0(colnames(olResults), "_OL"))
     
     nonOLResults <- vapply(X = metrics, 
                            FUN = function(x) as.numeric(nonOLMetrics[, grepl(pattern = x, colnames(nonOLMetrics))]),
-                           as.numeric(seq_along(testCols)))
+                           as.numeric(seq_along(signalCols)))
     nonOLResults <- as.data.table(nonOLResults)
     setnames(nonOLResults, old = colnames(nonOLResults), new = paste0(colnames(nonOLResults), "_nonOL"))
     
-    metricDT <- cbind(data.table(testCol=testCols), 
+    metricDT <- cbind(data.table(testCol=signalCols), 
                       olResults, 
                       nonOLResults, 
                       data.table(cytosine_coverage, 
@@ -1115,21 +1127,22 @@ cpgOLMetrics <- function(dataDT, regionGR, metrics=c("mean", "sd"),
 # columns to get the metrics from so no unnecessary columns should be
 # included.
 # @param regionGR Region set, GRanges object
+# @param signalCols the columns of interest. You will do ranksum test separately 
+# on each of these columns (given test only uses info in one column)
 # @param ... Additional parameters of wilcox.test function. See ?wilcox.test.
 # For instance specify alternative hypothesis: alternative = "greater".
 # @return A vector with a p value for each column other than chr, start or end. 
 
 # could make this a generic function then apply it across PCs of interest
 
-rsWilcox <- function(dataDT, regionGR, ...) {
+rsWilcox <- function(dataDT, regionGR,
+                     signalCols = colnames(dataDT)[!(colnames(dataDT) %in% c("chr", "start", "end"))], 
+                     ...) {
     
     # region set info
     total_region_number <- length(regionGR)
     mean_region_size <- round(mean(width(regionGR)), 1)
-
-    # columns of interest
-    testCols <- colnames(dataDT)[!(colnames(dataDT) %in% 
-                                       c("chr", "start", "end"))]
+    
     
     # convert DT to GR for finding overlaps
     dataGR <- BSdtToGRanges(list(dataDT))[[1]]
@@ -1153,7 +1166,7 @@ rsWilcox <- function(dataDT, regionGR, ...) {
     
     # calculate Wilcoxon rank sum test for each column
     # additional parameters given with ...
-    pVals <- vapply(X = testCols, FUN = function(x) wilcox.test(x = as.numeric(as.matrix(dataDT[olCpG, x, with=FALSE])), 
+    pVals <- vapply(X = signalCols, FUN = function(x) wilcox.test(x = as.numeric(as.matrix(dataDT[olCpG, x, with=FALSE])), 
                                                y = as.numeric(as.matrix(dataDT[nonOLCpG, x, with=FALSE])), ...)$p.value, 1)
      
     wRes <- data.frame(t(pVals), 

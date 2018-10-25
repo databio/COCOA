@@ -8,7 +8,7 @@
 #' (TCGA-BRCA, https://portal.gdc.cancer.gov/).
 #' Each row corresponds to one cytosine and
 #' the coordinates for these cytosines are
-#' in the object brcaCoords1, (data("brcaCoords1"),
+#' in the object brcaMCoord1, (data("brcaMCoord1"),
 #' hg38 genome). 
 #' Only cytosines on chr1 are included to keep
 #' the example data small.
@@ -21,7 +21,7 @@
 #' @format A matrix object
 NULL
 
-#' A data.table, data.frame object with coordinates for cytosines
+#' A data.frame object with coordinates for cytosines
 #' from chr1 included in the PCA. 
 #' 
 #' Corresponds to 
@@ -37,9 +37,9 @@ NULL
 #'
 #' @docType data
 #' @keywords datasets
-#' @name brcaCoord1
-#' @usage data(brcaCoord1)
-#' @format A data.table, data.frame object
+#' @name brcaMCoord1
+#' @usage data(brcaMCoord1)
+#' @format A data.frame object
 NULL
 
 #' A matrix with DNA methylation levels 
@@ -50,7 +50,7 @@ NULL
 #' the DNA methylation microarray (Illumina 450k microarray).
 #' Each row corresponds to one cytosine and
 #' the coordinates for these cytosines are
-#' in the object brcaCoords1, (data("brcaCoords1"), hg38 genome). 
+#' in the object brcaMCoord1, (data("brcaMCoord1"), hg38 genome). 
 #' Only cytosines on chr1 are included to keep
 #' the example data small. Columns are patients,
 #' with TCGA patient identifiers as column names. The patients
@@ -235,7 +235,8 @@ NULL
 # 
 # # restrict to chromosome 1 (reduce file sizes)
 # chr1Ind <- coordinateDT$chr == "chr1"
-# brcaCoord1 <- coordinateDT[chr1Ind,]
+# brcaMCoord1 <- coordinateDT[chr1Ind,]
+# brcaMCoord1 <- as.data.frame(brcaMCoord1)
 # # subset loadings, also restrict PCs
 # brcaLoadings1 <- loadingMat[chr1Ind, paste0("PC", 1:4)]
 # 
@@ -254,7 +255,7 @@ NULL
 # # add sequence info (seqInfo)
 # exRSNames <- c("esr1_chr1", "gata3_chr1", "nrf1_chr1", "atf3_chr1")
 # 
-# # to avoid having to retype expression for each region set
+# # for loop is to avoid having to retype expression for each region set
 # for (i in seq_along(exRSNames)) {
 #     
 #     # restrict seqinfo to only chromosomes that are present (chr1)
@@ -279,7 +280,7 @@ NULL
 # save("brcaLoadings1", 
 #      file = "brcaLoadings1.RData", 
 #      compress = "xz") # reduce ~7x
-# save("brcaCoord1", file = "brcaCoord1.RData", compress = "xz")
+# save("brcaMCoord1", file = "brcaMCoord1.RData", compress = "xz")
 # 
 # save("esr1_chr1", file = "esr1_chr1.RData", compress = "xz")
 # save("gata3_chr1", file = "gata3_chr1.RData", compress = "xz")
