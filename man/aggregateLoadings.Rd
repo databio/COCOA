@@ -38,9 +38,6 @@ ranking large region sets highly. Wilcoxon rank sum test ("rankSum")
 also is skewed toward ranking large region sets highly and is
 significantly slower than the "regionMean" method.}
 
-\item{pcLoadAv}{The average absolute loading value for each PC. Will
-significantly speed up computation if this is given.}
-
 \item{verbose}{A "logical" object. Whether progress 
 of the function should be shown, one
 bar indicates the region set is completed. Useful when using 

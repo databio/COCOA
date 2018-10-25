@@ -745,7 +745,7 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL,
         BSDT <- as.data.table(BSDT)
     } 
     if (!is(BSDT, "data.table"))  {
-        error("BSDT must be a data.table")
+        stop("BSDT must be a data.table")
     }
     
     

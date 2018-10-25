@@ -4,14 +4,14 @@
 \alias{getLoadingProfile}
 \title{Create a "meta-region" loading profile}
 \usage{
-getLoadingProfile(loadingMat, signalCoord, GRList,
+getLoadingProfile(loadingMat, signalCoord, regionSet,
   PCsToAnnotate = c("PC1", "PC2"), binNum = 25, verbose = TRUE)
 }
 \arguments{
 \item{loadingMat}{matrix of loadings (the coefficients of 
 the linear combination that defines each PC). One named column for each PC.
 One row for each original dimension/variable (should be same order 
-as original data/signalCoord). The x$rotation output of prcomp().}
+as original data/signalCoord). Given by prcomp(x)$rotation.}
 
 \item{signalCoord}{a GRanges object or data frame with coordinates 
 for the cytosines included in the PCA. Coordinates should be in the 
@@ -19,9 +19,8 @@ same order as the methylation data and loadings. If a data.frame,
 must have chr and start columns. If end is included, start 
 and end should be the same. Start coordinate will be used for calculations.}
 
-\item{GRList}{GRangesList object. Each list item is 
-a distinct region set (regions that correspond to 
-the same biological annotation). Must be from the same reference genome
+\item{regionSet}{A genomic ranges object with regions corresponding
+to the same biological annotation. Must be from the same reference genome
 as the coordinates for the actual data/samples (signalCoord).}
 
 \item{PCsToAnnotate}{A character vector with principal components to 
@@ -33,11 +32,11 @@ give a higher resolution but perhaps more noisy profile.}
 
 \item{verbose}{A "logical" object. Whether progress 
 of the function should be shown, one
-bar indicates the region set is completed.}
+bar indicates the region set is completed. Useful when
+using `lapply` to get the loading profiles of many region sets.}
 }
 \value{
-A list of data.tables each data.table for
-a separate region set. The data table has the binned loading profile,
+A data.frame with the binned loading profile,
 one row per bin.
 }
 \description{
@@ -66,10 +65,9 @@ data("brcaMCoord1")
 data("brcaLoadings1")
 data("esr1_chr1")
 esr1_chr1_expanded <- resize(esr1_chr1, 14000, fix="center")
-GRList <- GRangesList(esr1_chr1_expanded)
 getLoadingProfile(loadingMat=brcaLoadings1, 
                     signalCoord=brcaMCoord1, 
-                    GRList=GRList, 
+                    regionSet=esr1_chr1_expanded, 
                     PCsToAnnotate=c("PC1", "PC2"), 
                     binNum=25)
 }
