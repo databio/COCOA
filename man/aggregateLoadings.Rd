@@ -6,7 +6,7 @@
 \usage{
 aggregateLoadings(loadingMat, signalCoord, regionSet,
   PCsToAnnotate = c("PC1", "PC2"), scoringMetric = "regionMean",
-  pcLoadAv = NULL, verbose = FALSE)
+  verbose = FALSE)
 }
 \arguments{
 \item{loadingMat}{matrix of loadings (the coefficients of 

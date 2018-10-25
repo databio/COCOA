@@ -129,7 +129,7 @@ if (getRversion() >= "2.15.1") {
 
 aggregateLoadings <- function(loadingMat, signalCoord, regionSet, 
                               PCsToAnnotate = c("PC1", "PC2"), 
-                              scoringMetric="regionMean", pcLoadAv=NULL,
+                              scoringMetric="regionMean",
                               verbose=FALSE) {
     
 
