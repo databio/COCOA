@@ -32,7 +32,7 @@ Based on this, we might expect that the variation captured by these PCs would be
 There are three main inputs for COCOA:
 
 1. PCA loadings (`prcomp()$rotation`).
-2. Genomic coordinates associated with PCA loadings.
+2. Genomic coordinates associated with the PCA loadings and the raw data used for the PCA.
 3. Region sets (normally a database of region sets).
 
 We did PCA with DNA methylation data for all autosomal chromosomes but only the PC loadings and coordinates for cytosines in chromosome 1 are included in this vignette to minimize memory requirements. `brcaLoadings1` has chr1 loadings and corresponding coordinates are in `brcaMCoord1`. In this vignette, we will use only a few region sets to demonstrate how to use the COCOA functions. For actual use, COCOA should be done with many region sets (ie hundreds or > 1000). Publicly available collections of region sets can be found online (eg http://databio.org/regiondb).
@@ -55,7 +55,7 @@ data("brcaPCScores")
 data("brcaMethylData1")
 ```
 
-We have region sets for four transcription factors: Esr1, Gata3, Nrf1, and Atf1.
+We have region sets for four transcription factors from the appropriate reference genome: Esr1, Gata3, Nrf1, and Atf1.
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 # prepare data
@@ -63,7 +63,7 @@ GRList <- GRangesList(esr1_chr1, gata3_chr1, nrf1_chr1, atf3_chr1)
 regionSetName <- c("esr1_chr1", "gata3_chr1", "nrf1_chr1", "atf3_chr1")
 ```
 
-Now let's see how much each region set is associated with each principal component:
+Now let's give each region set a score to quantify how much it is associated with each principal component:
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 PCsToAnnotate <- paste0("PC", 1:4)
@@ -100,7 +100,7 @@ rsScoreHeatmap(regionSetScores,
 We can further understand the variability in these region sets in several ways:
 
 1. Look at whether variability is specific to the regions of interest compared to the genome around these regions. 
-2. Look at the raw DNA methylation in these regions and whether it follows the same trends as the PC scores.
+2. Look at the genomic signal in these regions, in our case DNA methylation, and whether it follows the same trends as the PC scores.
 3. Look at the loadings in each region of a given region set to see whether all regions have high loadings or just a subset the regions. Also we can see if the same regions have high loadings for multiple PCs.
 
 ## Specificity of variation to the regions of interest
@@ -278,6 +278,10 @@ So far, COCOA has been validated on single base pair resolution DNA methylation 
 
 2. Can COCOA be used with other dimensionality reduction techniques such as t-SNE?
 Short answer for t-SNE: no. In general though, it depends. COCOA must have a score for each original dimension that quantifies how much it contributes to the new dimension. Since t-SNE maps the original dimensions to new dimensions in a nonlinear way, the mappings of the original dimensions to the new dimensions are not comparable to each other and cannot be aggregated into a single score for a region set in a uniform way. 
+
+3. Where did the name COCOA come from?
+
+The method is called Coordinate Covariation Analysis because it uses PCA to capture covariation of individual signals/features at genomic coordinates. The top PCs capture both variation between samples and covariation between individual genomic features. COCOA annotates the covariation of individual genomic features with region sets in order to gain insight into variation between samples.
 
 
 # Related references
