@@ -32,10 +32,10 @@ Based on this, we might expect that the variation captured by these PCs would be
 There are three main inputs for COCOA:
 
 1. PCA loadings (`prcomp()$rotation`).
-2. Genomic coordinates associated with the PCA loadings and the raw data used for the PCA.
+2. Genomic coordinates associated with the raw data used for the PCA and with the PCA loadings.
 3. Region sets (normally a database of region sets).
 
-We did PCA with DNA methylation data for all autosomal chromosomes but only the PC loadings and coordinates for cytosines in chromosome 1 are included in this vignette to minimize memory requirements. `brcaLoadings1` has chr1 loadings and corresponding coordinates are in `brcaMCoord1`. In this vignette, we will use only a few region sets to demonstrate how to use the COCOA functions. For actual use, COCOA should be done with many region sets (ie hundreds or > 1000). Publicly available collections of region sets can be found online (eg http://databio.org/regiondb).
+We did PCA with DNA methylation data for all autosomal chromosomes but only the DNA methylation data and loadings for cytosines in chromosome 1 are included in this vignette to minimize memory requirements. `brcaLoadings1` has the chr1 loadings. `brcaMCoord1` has the coordinates for the chr1 DNA methylation data, which are also the coordinates for the chr1 loadings. For more on the relationship between the loadings and the original data see the "Method details" section. In this vignette, we will use only a few region sets to demonstrate how to use the COCOA functions. For actual use, COCOA should be done with many region sets (ie hundreds or > 1000). Publicly available collections of region sets can be found online (eg http://databio.org/regiondb).
 
 # Running COCOA
 
@@ -55,7 +55,7 @@ data("brcaPCScores")
 data("brcaMethylData1")
 ```
 
-We have region sets for four transcription factors from the appropriate reference genome: Esr1, Gata3, Nrf1, and Atf1.
+We have region sets for four transcription factors (with the appropriate reference genome): Esr1, Gata3, Nrf1, and Atf1.
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 # prepare data
@@ -63,7 +63,7 @@ GRList <- GRangesList(esr1_chr1, gata3_chr1, nrf1_chr1, atf3_chr1)
 regionSetName <- c("esr1_chr1", "gata3_chr1", "nrf1_chr1", "atf3_chr1")
 ```
 
-Now let's give each region set a score to quantify how much it is associated with each principal component:
+Now let's give each region set a score with `runCOCOA()` to quantify how much it is associated with each principal component:
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 PCsToAnnotate <- paste0("PC", 1:4)
@@ -116,14 +116,18 @@ loadProfile <- lapply(wideGRList, function(x) getLoadingProfile(loadingMat=brcaL
                                                                 binNum=21))
 ```
 
-We will normalize the result for each PC so we can better compare them. Here we normalize by subtracting the mean absolute loading of each PC from the region set profiles for the corresponding PC. Then we get the plot scale so we can easily compare the different profiles. 
+We will normalize the result for each PC so we can better compare them. Here we normalize by subtracting the mean absolute loading of each PC from the region set profiles for the corresponding PC. Then we get the plot scale so we can easily compare the different profiles. These normalization steps are helpful for comparing the loading profiles but not necessarily required so it's not essential that you understand the below code. 
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 # average loading value from each PC to normalize so PCs can be compared with each other
-avLoad <- apply(X=brcaLoadings1[, PCsToAnnotate], MARGIN=2, FUN=function(x) mean(abs(x)))
+avLoad <- apply(X=brcaLoadings1[, PCsToAnnotate], 
+                MARGIN=2, 
+                FUN=function(x) mean(abs(x)))
 
 # normalize
-loadProfile <- lapply(loadProfile, FUN=function(x) as.data.frame(mapply(FUN = function(y, z) x[, y] - z, y=PCsToAnnotate, z=avLoad)))
+loadProfile <- lapply(loadProfile, 
+                      FUN=function(x) as.data.frame(mapply(FUN = function(y, z) x[, y] - z, 
+                                                           y=PCsToAnnotate, z=avLoad)))
 binID = 1:nrow(loadProfile[[1]])
 loadProfile <- lapply(loadProfile, FUN=function(x) cbind(binID, x))
 
@@ -133,7 +137,8 @@ minVal <- min(sapply(loadProfile, FUN=function(x) min(x[, PCsToAnnotate])))
 
 # convert to long format for plots
 loadProfile <- lapply(X=loadProfile, FUN=function(x) tidyr::gather(data=x, key="PC", value="loading_value", PCsToAnnotate))
-loadProfile <- lapply(loadProfile, function(x){x$PC <- factor(x$PC, levels=PCsToAnnotate); return(x)})
+loadProfile <- lapply(loadProfile, 
+                      function(x){x$PC <- factor(x$PC, levels=PCsToAnnotate); return(x)})
 ```
 
 Let's look at the plots!
@@ -145,11 +150,16 @@ for (i in seq_along(loadProfile)) {
     
     thisRS <- loadProfile[[i]]
     
-    profilePList[[i]] <- ggplot(data=thisRS, mapping=aes(x=binID , y=loading_value)) + 
+    profilePList[[i]] <- ggplot(data=thisRS, 
+                                mapping=aes(x=binID , y=loading_value)) + 
         geom_line() + ylim(c(minVal, maxVal)) + facet_wrap(facets="PC") + 
-        ggtitle(label=wrapper(regionSetName[i], width=30)) + xlab("Genome around region set, 14 kb") + 
+        ggtitle(label=wrapper(regionSetName[i], width=30)) + 
+        xlab("Genome around region set, 14 kb") + 
         ylab("Normalized loading value") + 
-        theme(panel.grid.major.x=element_blank(), panel.grid.minor.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+        theme(panel.grid.major.x=element_blank(), 
+              panel.grid.minor.x=element_blank(), 
+              axis.text.x=element_blank(), 
+              axis.ticks.x=element_blank())
     profilePList[[i]]
 
 }
@@ -181,10 +191,13 @@ Now let's look at one of the region sets, Nrf1, that had a low score for PC1:
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 signalAlongPC(genomicSignal=brcaMethylData1,
-                signalCoord=brcaMCoord1,
-                regionSet=nrf1_chr1,
-                pcScores=brcaPCScores,
-                orderByPC="PC1", cluster_columns=TRUE, name = "DNA methylation level")
+              signalCoord=brcaMCoord1,
+              regionSet=nrf1_chr1,
+              pcScores=brcaPCScores,
+              orderByPC="PC1", 
+              cluster_columns=TRUE, 
+              column_title = "Individual cytosine/CpG",
+              name = "DNA methylation level")
 ```
 
 We can see that there is very little variation in DNA methylation, if any, along the PC1 axis. Therefore, it is not surprising that the Nrf1 region set had a low score for this PC.
@@ -263,13 +276,13 @@ COCOA will use these loadings as feature level information which will be aggrega
 
 ## Region set database
 
-COCOA uses a database of region sets to gain biological insight into sources of variability in your data. A region set is a set of genomic regions that share a biological annotation. This includes transcription factor (TF) binding regions (eg from ChIP-seq), regions with a certain histone modification (eg ChIP-seq) or chromatin accessibility regions (eg DNase/ATAC-seq). Most of these region sets are from experimental data but don't necessarily have to be (for instance, you could use predicted TF binding regions based on the TF motif). The big picture goal of using a region set database is to connect variation between samples to an interpretable biological meaning (the known annotation of a region set). For each PC, COCOA will give a score to each region set that quantifies how much that region set is associated with that PC (and therefore with the intersample variation captured by that PC).
+COCOA uses a database of region sets to gain biological insight into sources of variability in your data. A region set is a set of genomic regions that share a biological annotation. This includes transcription factor (TF) binding regions (eg from ChIP-seq), regions with a certain histone modification (eg ChIP-seq) or chromatin accessibility regions (eg DNase/ATAC-seq). Most of these region sets are from experimental data but don't necessarily have to be. For instance, you could use predicted TF binding regions based on the TF motif. The big picture goal of using a region set database is to connect variation between samples to an interpretable biological meaning: the known annotation of a region set. For each PC, COCOA will give a score to each region set that quantifies how much that region set is associated with that PC (and therefore with the intersample variation captured by that PC).
 
 COCOA should be done with many region sets (ie hundreds or > 1000). A region set can be a simple ".bed"" file with three columns containing the genomic locations of the regions: chr (for chromosome), start, and end. In R, this data can be represented as a data.frame or as a GRanges object. Publicly available collections of region sets can be found online (eg http://databio.org/regiondb) and region sets can be accessed through Bioconductor packages (eg LOLA  and AnnotationHub). The region sets must be from the same reference genome as your sample data (although you could use [the liftOver tool](https://genome.ucsc.edu/cgi-bin/hgLiftOver) to convert from one genome version to another). The region sets can come from anywhere so if you experimentally or computationally generate your own region sets, you can just include those with the others when running the COCOA analysis. For an example of working with a region set database, see the 'COCOA_Workflow' vignette.
 
 ## Aggregating info from individual features
 
-Since differences between samples in individual features (nucleotides/regions) may be hard to interpret, COCOA uses region sets to aggregate feature level info into a more condensed, interpretable form. As mentioned above, each feature has a "loading" for a given PC and the magnitude of the loading represents how much that feature contributes to that PC. We will use the absolute value of the loading since both a very positive and very negative loading reflect an association between that feature and the PC. Also, each original feature is associated with a genomic coordinate (or a range but ranges are not supported by COCOA in this release version). COCOA will use this information to give each region set in the region set database a score for each PC. For a given PC-region set combination (for example PC1 and the region set esr1_chr1), we first identify all the original features that overlap with the region set. Then the scoring of the region set depends on the scoring metric chosen. The "regionMean" method is described here although the other methods are described in function docs. For the "regionMean" method, we take the PC loadings (eg PC1 loadings) for the features that overlap the region set and average the absolute loadings by region (average loadings in each region to get one value per region of the region set). Then we average the region values to get a single average for that region set which is its score. We repeat this calculation for all PC-region set combinations. Now for a given PC, we can rank the region sets by their score/loading average to see which region sets are most associated with that PC (higher loading average means a greater association with the PC). Since the "regionMean" scoring method only tells you which region sets are *the most* associated with a PC out of those tested, it is important to use a large database of region sets and then to validate by looking at the raw data in these regions which can be done with COCOA visualization functions. Also, you can screen out region sets that have low coverage in your input data (the `region_coverage` column of `runCOCOA()` output) since high scores for these regions are more likely to have happened by chance. The biological annotation of the top ranked region sets for the top PCs can help you understand variation among your samples.     
+Since differences between samples in individual features (nucleotides/regions) may be hard to interpret, COCOA uses region sets to aggregate nucleotide/region level info into a more condensed, interpretable form. As mentioned above, each feature has a "loading" for a given PC and the magnitude of the loading represents how much that feature contributes to that PC. We will use the absolute value of the loading since both a very positive and very negative loading reflect an association between that feature and the PC. Also, each original feature is associated with a genomic coordinate (or a range but ranges are not supported by COCOA in this release version). COCOA will use this information to give each region set in the region set database a score for each PC. For a given PC-region set combination (for example PC1 and the region set esr1_chr1), we first identify all the original features that overlap with the region set. Then the scoring of the region set depends on the scoring metric chosen. The "regionMean" method is described here although the other methods are described in function docs. For the "regionMean" method, we take the PC loadings (eg PC1 loadings) for the features that overlap the region set and average the absolute loadings by region (average loadings in each region to get one value per region of the region set). Then we average the region values to get a single average for that region set which is its score. We repeat this calculation for all PC-region set combinations. Now for a given PC, we can rank the region sets by their score/loading average to see which region sets are most associated with that PC (higher loading average means a greater association with the PC). Since the "regionMean" scoring method only tells you which region sets are *the most* associated with a PC out of those tested, it is important to use a large database of region sets and then to validate by looking at the raw data in these regions which can be done with COCOA visualization functions. Also, you can screen out region sets that have low coverage in your input data (the `region_coverage` column of `runCOCOA()` output) since high scores for these regions are more likely to have happened by chance. The biological annotation of the top ranked region sets for the top PCs can help you understand variation among your samples.     
 
 # Q and A
 
