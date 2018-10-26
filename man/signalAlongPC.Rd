@@ -2,7 +2,8 @@
 % Please edit documentation in R/visualization.R
 \name{signalAlongPC}
 \alias{signalAlongPC}
-\title{Visualize how genomic signal in a region set changes along principal component axis}
+\title{Visualize how genomic signal in a region set changes 
+along principal component axis}
 \usage{
 signalAlongPC(genomicSignal, signalCoord, regionSet, pcScores,
   orderByPC = "PC1", cluster_columns = FALSE, cluster_rows = FALSE,
@@ -11,28 +12,36 @@ signalAlongPC(genomicSignal, signalCoord, regionSet, pcScores,
   col = c("blue", "#EEEEEE", "red"), ...)
 }
 \arguments{
-\item{genomicSignal}{DNA methylation levels (0 to 1) in matrix or data.frame. 
-Rows are cytosines. Columns are samples.}
+\item{genomicSignal}{The genomic signal (eg DNA methylation levels) 
+in matrix or data.frame. 
+Rows are individual signal/feature values. Columns are samples.
+Must have sample names/IDs as column names,
+These same sample names must be row names of pcScores.}
 
 \item{signalCoord}{a GRanges object or data frame with coordinates 
-for the cytosines included in the PCA. Coordinates should be in the 
-same order as the methylation data and loadings. If a data.frame, 
+for the genomic signal/original data (eg DNA methylation) 
+included in the PCA. Coordinates should be in the 
+same order as the original data and the loadings 
+(each item/row in signalCoord
+corresponds to a row in loadingMat). If a data.frame, 
 must have chr and start columns. If end is included, start 
 and end should be the same. Start coordinate will be used for calculations.}
 
 \item{regionSet}{A genomic ranges object with regions corresponding
-to the same biological annotation. Must be from the same reference genome
+to the same biological annotation. The regions where you will visualize
+the genomic signal. Must be from the same reference genome
 as the coordinates for the actual data (signalCoord).}
 
 \item{pcScores}{A matrix. The principal component scores for the samples 
-(ie transformed methylation data). Must have subject_ID as row names,
-These same subject_IDs must be column names of genomicSignal}
+(ie transformed methylation data). Must have sample names/IDs as row names,
+These same sample names must be column names of genomicSignal}
 
-\item{orderByPC}{PC to order samples by (order rows of heatmap by PC score, 
-from high to low score)}
+\item{orderByPC}{a character object. PC to order samples by 
+(order rows of heatmap by PC score, from high to low score). 
+Must be the name of a column in pcScores.}
 
-\item{cluster_columns}{"logical" object, whether to cluster columns (the genomic signal,
-eg DNA methylation values for each CpG).}
+\item{cluster_columns}{"logical" object, whether to cluster columns 
+(the genomic signal, eg DNA methylation values for each CpG).}
 
 \item{cluster_rows}{"logical" object, whether rows should be clustered. 
 This should be kept as FALSE to keep the correct ranking of 
@@ -52,14 +61,13 @@ will be passed to the ComplexHeatmap::Heatmap() function. See ?Heatmap
 (the "col" parameter) for more details. "#EEEEEE" is the code for a
 color similar to white.}
 
-\item{...}{optional parameters for ComplexHeatmap::Heatmap() (eg change
-heatmap colors with "col" parameter)}
+\item{...}{optional parameters for ComplexHeatmap::Heatmap()}
 }
 \value{
 A heatmap of genomic signal values (eg DNA methylation levels) 
-in regions of interest (regionSet).
+in regions of interest (regionSet), with rows ordered by PC score.
 Each row is a patient/sample and each column is an individual genomic signal value. 
-Rows are ordered by PC score (orderByPC), high scores at top and low at 
+Rows are ordered by PC score for `orderByPC`, high scores at top and low at 
 the bottom.
 }
 \description{

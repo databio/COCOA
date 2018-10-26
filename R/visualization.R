@@ -13,7 +13,8 @@
 
 # color schemes: red/blue, yellow/red, red/grey, skyblue/coral, skyblue/yellow
 
-#' Visualize how genomic signal in a region set changes along principal component axis
+#' Visualize how genomic signal in a region set changes 
+#' along principal component axis
 #' 
 #' Look at genomic signal (eg, DNA methylation values) in regions of 
 #' interest across samples, 
@@ -22,26 +23,34 @@
 #' is used and additional parameters for the ComplexHeatmap::Heatmap function
 #' may be passed to this function to modify the heatmap.   
 #'
-#' @param genomicSignal DNA methylation levels (0 to 1) in matrix or data.frame. 
-#' Rows are cytosines. Columns are samples.
+#' @param genomicSignal The genomic signal (eg DNA methylation levels) 
+#' in matrix or data.frame. 
+#' Rows are individual signal/feature values. Columns are samples.
+#' Must have sample names/IDs as column names,
+#' These same sample names must be row names of pcScores.
 #' @param signalCoord a GRanges object or data frame with coordinates 
-#' for the cytosines included in the PCA. Coordinates should be in the 
-#' same order as the methylation data and loadings. If a data.frame, 
+#' for the genomic signal/original data (eg DNA methylation) 
+#' included in the PCA. Coordinates should be in the 
+#' same order as the original data and the loadings 
+#' (each item/row in signalCoord
+#' corresponds to a row in loadingMat). If a data.frame, 
 #' must have chr and start columns. If end is included, start 
 #' and end should be the same. Start coordinate will be used for calculations.
 #' @param regionSet A genomic ranges object with regions corresponding
-#' to the same biological annotation. Must be from the same reference genome
+#' to the same biological annotation. The regions where you will visualize
+#' the genomic signal. Must be from the same reference genome
 #' as the coordinates for the actual data (signalCoord).
 #' @param pcScores A matrix. The principal component scores for the samples 
-#' (ie transformed methylation data). Must have subject_ID as row names,
-#' These same subject_IDs must be column names of genomicSignal
-#' @param orderByPC PC to order samples by (order rows of heatmap by PC score, 
-#' from high to low score)
+#' (ie transformed methylation data). Must have sample names/IDs as row names,
+#' These same sample names must be column names of genomicSignal
+#' @param orderByPC a character object. PC to order samples by 
+#' (order rows of heatmap by PC score, from high to low score). 
+#' Must be the name of a column in pcScores.
 #' @param cluster_rows "logical" object, whether rows should be clustered. 
 #' This should be kept as FALSE to keep the correct ranking of 
 #' samples/observations according to their PC score.
-#' @param cluster_columns "logical" object, whether to cluster columns (the genomic signal,
-#' eg DNA methylation values for each CpG).
+#' @param cluster_columns "logical" object, whether to cluster columns 
+#' (the genomic signal, eg DNA methylation values for each CpG).
 #' @param row_title character object, row title
 #' @param column_title character object, column title
 #' @param column_title_side character object, where to put the column title:
@@ -51,12 +60,11 @@
 #' will be passed to the ComplexHeatmap::Heatmap() function. See ?Heatmap
 #' (the "col" parameter) for more details. "#EEEEEE" is the code for a
 #' color similar to white.
-#' @param ... optional parameters for ComplexHeatmap::Heatmap() (eg change
-#' heatmap colors with "col" parameter)
+#' @param ... optional parameters for ComplexHeatmap::Heatmap()
 #' @return A heatmap of genomic signal values (eg DNA methylation levels) 
-#' in regions of interest (regionSet).
+#' in regions of interest (regionSet), with rows ordered by PC score.
 #' Each row is a patient/sample and each column is an individual genomic signal value. 
-#' Rows are ordered by PC score (orderByPC), high scores at top and low at 
+#' Rows are ordered by PC score for `orderByPC`, high scores at top and low at 
 #' the bottom.
 #'
 #' @examples data("brcaMethylData1")
@@ -145,23 +153,28 @@ signalAlongPC <- function(genomicSignal, signalCoord, regionSet,
 #' Heatmap of region set scores
 #' 
 #' Heatmap of the ranking of region set scores across PCs
-#' A visualization of rank of region sets in each PC, allowing the
+#' A visualization of the rank of region sets in each PC, allowing the
 #' user to see if a region set is ranked highly in all PCs or only a subset.
+#' Region sets will be ranked from highest scoring to lowest based on 
+#' their score for `orderByPC`.
 #' The ComplexHeatmap package
 #' is used and additional parameters for the ComplexHeatmap::Heatmap function
 #' may be passed to this function to modify the heatmap.  
 #' 
 #' @param rsScores a data.frame with scores for each 
-#' region set from main COCOA function. 
-#' Each row is a region set. Columns are PCs and info on region set overlap
-#' with DNA methylation data. Should be in the same order as GRList (the list of 
+#' region set from main COCOA function `runCOCOA`. 
+#' Each row is a region set. Columns are scores, one column for each PCs 
+#' Also can have columns with info on region set overlap
+#' with the original data. Should be in the same order as GRList (the list of 
 #' region sets used to create it.)
 #' @param PCsToAnnotate A character vector with principal components to 
-#' include. eg c("PC1", "PC2")
-#' @param orderByPC PC to order by (decreasing order) in heatmap
+#' include. eg c("PC1", "PC2"). Must be column names of rsScores.
+#' @param orderByPC a character object. PC to order by in heatmap 
+#' (arranged in decreasing order for scores so p values should 
+#' be -log transformed). Must be the name of a column in rsScores.
 #' @param rsNameCol character. Name of the column in rsScores that has the
-#' names/identifiers for the region sets so this information can be included 
-#' in the plot.
+#' names/identifiers for the region sets so these can be included 
+#' in the plot as row names.
 #' @param topX Number of top region sets to include in the heatmap
 #' @param row_title character object, row title
 #' @param column_title character object, column title
@@ -181,11 +194,10 @@ signalAlongPC <- function(genomicSignal, signalCoord, regionSet,
 #' will be passed to the ComplexHeatmap::Heatmap() function. See ?Heatmap
 #' (the "col" parameter) for more details. "#EEEEEE" is the code for a
 #' color similar to white.
-#' @param ... optional parameters for ComplexHeatmap::Heatmap(), 
-#' including "col" to change heatmap color scheme.
+#' @param ... optional parameters for ComplexHeatmap::Heatmap().
 #' @return A heatmap of region set scores across. Each row is a region set,
-#' each column is a PC. The color corresponds to a region set's relative
-#' rank for a given PC out of all tested region sets.
+#' each column is a PC. The color corresponds to the relative rank of a 
+#' region set's score for a given PC out of all tested region sets.
 #'
 #' @examples data("rsScores")
 #' scoreHeatmap <- rsScoreHeatmap(rsScores, 
@@ -300,29 +312,36 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
 #' One row for each original dimension/variable (should be same order 
 #' as original data/signalCoord). The x$rotation output of prcomp().
 #' @param signalCoord a GRanges object or data frame with coordinates 
-#' for the cytosines included in the PCA. Coordinates should be in the 
-#' same order as the methylation data and loadings. If a data.frame, 
+#' for the genomic signal/original data (eg DNA methylation) 
+#' included in the PCA. Coordinates should be in the 
+#' same order as the original data and the loadings 
+#' (each item/row in signalCoord
+#' corresponds to a row in loadingMat). If a data.frame, 
 #' must have chr and start columns. If end is included, start 
 #' and end should be the same. Start coordinate will be used for calculations.
 #' @param regionSet A genomic ranges object with regions corresponding
-#' to the same biological annotation. Must be from the same reference genome
+#' to the same biological annotation. These are the regions that will be 
+#' visualized. Must be from the same reference genome
 #' as the coordinates for the actual data (signalCoord).
 #' @param rsName character vector. Names of the region sets in the same
 #' order as GRList. For use as a title for each heatmap.
 #' @param PCsToAnnotate A character vector with principal components to 
-#' include. eg c("PC1", "PC2")
+#' include. eg c("PC1", "PC2") These should be column names of loadingMat.
 #' @param maxRegionsToPlot how many top regions from region set to include
 #' in heatmap. Including too many may slow down computation and increase memory
 #' use. If regionSet has more regions than maxRegionsToPlot, a number of regions 
 #' equal to maxRegionsToPlot will be randomly sampled from the region set and
-#' these regions will be plotted.
+#' these regions will be plotted. Clustering rows is a major limiting factor
+#' on how long it takes to plot the regions so if you want to plot many regions, 
+#' you can also set cluster_rows to FALSE.
 #' @param row_title character object, row title
 #' @param column_title character object, column title
 #' @param column_title_side character object, where to put the column title:
 #' "top" or "bottom"
 #' @param cluster_rows "logical" object, whether to cluster rows or not (may 
 #' increase computation time significantly for large number of rows)
-#' @param cluster_columns "logical" object, whether to cluster columns. It is recommended
+#' @param cluster_columns "logical" object, whether to cluster columns. 
+#' It is recommended
 #' to keep this as FALSE so it will be easier to compare PCs 
 #' (with cluster_columns = FALSE, they will be in the same specified
 #' order in different heatmaps)
@@ -331,14 +350,16 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
 #' will be passed to the ComplexHeatmap::Heatmap() function. See ?Heatmap
 #' (the "col" parameter) for more details.
 #' @param ... optional parameters for ComplexHeatmap::Heatmap()
-#' @return a heatmap. This heatmap allows you to see if some regions are 
+#' @return a heatmap. Columns are PCs, rows are regions. 
+#' This heatmap allows you to see if some regions are 
 #' associated with certain PCs but not others. Also, you can see if a subset of 
 #' regions in the region set are associated with PCs while another subset
 #' are not associated with any PCs 
-#' Columns are PCs, rows are regions. To color
-#' each region, first the absolute loading values within that region are
+#' To color each region, first the absolute loading 
+#' values within that region are
 #' averaged. Then this average is compared to the distribution of absolute
-#' loading values for all individual genomic signal values to get a quantile/percentile 
+#' loading values for all individual genomic signal values to get 
+#' a quantile/percentile 
 #' for that region. Colors are based on this quantile/percentile. 
 #' The output is a Heatmap object (ComplexHeatmap package).
 #' 

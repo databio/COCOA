@@ -6,7 +6,7 @@
 #' COCOA can be used with data that includes 
 #' genomic coordinates such as DNA methylation. 
 #' To describe the method on a high level, COCOA uses a database of 
-#' "region sets" and principal component analysis (PCA) of the data 
+#' "region sets" and principal component analysis (PCA) of your data 
 #' to identify sources of variation among samples. A region set is a set of 
 #' genomic regions that share a biological annotation, 
 #' for instance transcription factor (TF) binding regions, 
@@ -21,7 +21,7 @@
 #' it can also be used in situations where there are no groups.  
 #' COCOA can identify biologically meaningful 
 #' sources of variation between samples and increase understanding of 
-#' variation in the data. 
+#' variation in your data. 
 #'
 #' @docType package
 #' @name COCOA
@@ -73,32 +73,45 @@ if (getRversion() >= "2.15.1") {
 #' 
 #' First, this function identifies which loadings are within the region set. 
 #' Then the loadings are used to score the region set 
-#' according to the `metric` parameter.  
+#' according to the `scoringMetric` parameter.  
 #' 
 #' @param loadingMat matrix of loadings (the coefficients of 
 #' the linear combination that defines each PC). One named column for each PC.
 #' One row for each original dimension/variable (should be same order 
 #' as original data/signalCoord). The x$rotation output of prcomp().
 #' @param signalCoord a GRanges object or data frame with coordinates 
-#' for the cytosines included in the PCA. Coordinates should be in the 
-#' same order as the methylation data and loadings. If a data.frame, 
+#' for the genomic signal/original data (eg DNA methylation) 
+#' included in the PCA. Coordinates should be in the 
+#' same order as the original data and the loadings 
+#' (each item/row in signalCoord
+#' corresponds to a row in loadingMat). If a data.frame, 
 #' must have chr and start columns. If end is included, start 
 #' and end should be the same. Start coordinate will be used for calculations.
-#' @param regionSet A genomic ranges object with regions corresponding
+#' @param regionSet A genomic ranges (GRanges) object with regions corresponding
 #' to the same biological annotation. Must be from the same reference genome
 #' as the coordinates for the actual data/samples (signalCoord).
 #' @param PCsToAnnotate A character vector with principal components to 
-#' include. eg c("PC1", "PC2")
-#' @param scoringMetric Scoring metric. "regionMean" is a weighted
+#' include. eg c("PC1", "PC2") These should be column names of loadingMat.
+#' @param scoringMetric A character object with the scoring metric. 
+#' "regionMean" is a weighted
 #' average of the absolute value of the loadings
 #' with no normalization (recommended). First loadings are
 #' averaged within each region, then all the regions are averaged. With
 #' "regionMean" score, be cautious in interpretation for
-#'  region sets with low number of regions.
-#' Mean difference ("meanDiff") is also supported but is skewed toward 
-#' ranking large region sets highly. Wilcoxon rank sum test ("rankSum")
-#' also is skewed toward ranking large region sets highly and is
-#' significantly slower than the "regionMean" method.
+#' region sets with low number of regions that overlap signalCoord. 
+#' The "simpleMean"
+#' method is just the unweighted average of all absolute loadings that
+#' overlap the given region set. 
+#' Wilcoxon rank sum test ("rankSum") is also supported but is
+#' skewed toward ranking large region sets highly and is
+#' significantly slower than the "regionMean" method. 
+#' For the ranksum method, the absolute loadings for loadings that
+#' overlap the given region set are taken as a group and all the
+#' loadings that do not overlap the region set are taken as
+#' the other group. Then p value is then given as the score.
+#' It is a one sided test, with the alternative hypothesis
+#' that the loadings in the region set will be greater than
+#' the loadings not in the region set.
 # @param pcLoadAv The average absolute loading value for each PC. Will
 # significantly speed up computation if this is given.
 #' @param verbose A "logical" object. Whether progress 
@@ -107,11 +120,14 @@ if (getRversion() >= "2.15.1") {
 #' aggregateLoadings with 'apply' to do many region sets at a time.
 
 #' @return a data.table with one row and the following 
-#' columns: one column for each item of PCsToAnnotate with name given
-#' by the item which have scores for each PC, cytosine_coverage which
-#' has number of cytosines that overlapped with regionSet,
+#' columns: one column for each item of PCsToAnnotate with names given
+#' by PCsToAnnotate. These columns have scores for the region set for each PC.
+#' Other columns: cytosine_coverage which
+#' has number of cytosines that overlapped with regionSet (or in the general case, 
+#' coordinates from signalCoord that overlapped regionSet) 
 #' region_coverage which has number of regions from regionSet
-#' that overlapped any cytosines, total_region_number that has
+#' that overlapped any coordinates from signalCoord, 
+#' total_region_number that has
 #' number of regions in regionSet, mean_region_size that has average
 #' size in base pairs of regions in regionSet, the average is based on
 #' all regions in regionSet and not just ones that overlap. 
@@ -300,33 +316,51 @@ aggregateLoadings <- function(loadingMat, signalCoord, regionSet,
 #' 
 #' This function will give each region set a score for each PC
 #' in `PCsToAnnotate` based on
-#' the `scoringMetric` parameter. 
+#' the `scoringMetric` parameter. Based on these scores, you can determine
+#' which region sets out of a region set database (given by GRList) 
+#' are most associated with the top PCs. See the vignette "Introduction
+#' to Coordinate Covariation Analysis" for help interpreting your 
+#' results. 
 #'
 #' @param loadingMat matrix of loadings (the coefficients of 
 #' the linear combination that defines each PC). One named column for each PC.
 #' One row for each original dimension/variable (should be same order 
 #' as original data/signalCoord). The x$rotation output of prcomp().
 #' @param signalCoord a GRanges object or data frame with coordinates 
-#' for the cytosines included in the PCA. Coordinates should be in the 
-#' same order as the methylation data and loadings. If a data.frame, 
+#' for the genomic signal/original data (eg DNA methylation) 
+#' included in the PCA. Coordinates should be in the 
+#' same order as the original data and the loadings 
+#' (each item/row in signalCoord
+#' corresponds to a row in loadingMat). If a data.frame, 
 #' must have chr and start columns. If end is included, start 
 #' and end should be the same. Start coordinate will be used for calculations.
 #' @param GRList GRangesList object. Each list item is 
 #' a distinct region set to test (region set: regions that correspond to 
-#' the same biological annotation). Must be from the same reference genome
+#' the same biological annotation). The region set database.
+#' Must be from the same reference genome
 #' as the coordinates for the actual data/samples (signalCoord).
-#' @param PCsToAnnotate A character vector with principal components to 
-#' include. eg c("PC1", "PC2")
-#' @param scoringMetric Scoring metric. "regionMean" is a weighted
+#' @param PCsToAnnotate A character vector with principal components to  
+#' include. eg c("PC1", "PC2") These should be column names of loadingMat.
+#' @param scoringMetric A character object with the scoring metric. 
+#' "regionMean" is a weighted
 #' average of the absolute value of the loadings
 #' with no normalization (recommended). First loadings are
 #' averaged within each region, then all the regions are averaged. With
 #' "regionMean" score, be cautious in interpretation for
-#'  region sets with low number of regions.
-#' Mean difference ("meanDiff") is also supported but is skewed toward 
-#' ranking large region sets highly. Wilcoxon rank sum test ("rankSum")
-#' also is skewed toward ranking large region sets highly and is
-#' significantly slower than the "regionMean" method.
+#' region sets with low number of regions that overlap signalCoord. 
+#' The "simpleMean"
+#' method is just the unweighted average of all absolute loadings that
+#' overlap the given region set. 
+#' Wilcoxon rank sum test ("rankSum") is also supported but is
+#' skewed toward ranking large region sets highly and is
+#' significantly slower than the "regionMean" method. 
+#' For the ranksum method, the absolute loadings for loadings that
+#' overlap the given region set are taken as a group and all the
+#' loadings that do not overlap the region set are taken as
+#' the other group. Then p value is then given as the score.
+#' It is a one sided test, with the alternative hypothesis
+#' that the loadings in the region set will be greater than
+#' the loadings not in the region set.
 #' @param verbose A "logical" object. Whether progress 
 #' of the function should be shown, one
 #' bar indicates the region set is completed.
@@ -334,15 +368,16 @@ aggregateLoadings <- function(loadingMat, signalCoord, regionSet,
 #' One column for each PC in PCsToAnnotate
 #' with score for that PC for a given region set (specific score depends
 #' on "scoringMetric" parameter). 
-#' Rows will be in the same order as region sets in GRList 
-#' and will be named if GRList was named
+#' Rows will be in the same order as region sets in GRList
 #' "cytosine_coverage" column has number of cytosines that 
-#' overlapped with the given region set.
+#' overlapped with the given region set (or in the general case, 
+#' coordinates from signalCoord that overlapped regionSet).
 #' "region_coverage" column has number of regions 
-#' that overlapped with any cytosines.
+#' that overlapped any coordinates from signalCoord.
 #' "total_region_number" column has total number of regions. 
 #' "mean_region_size" has average region size (average of all regions,
 #' not just those that overlap a cytosine).
+#' 
 #' 
 #' @examples 
 #' data("brcaMCoord1")
@@ -411,23 +446,28 @@ runCOCOA <- function(loadingMat, signalCoord, GRList,
 #' Create a "meta-region" loading profile 
 #' 
 #' This loading profile can show enrichment 
-#' of cytosines with high loading values in region set but not in
+#' of genomic signals with high loading values in region set but not in
 #' surrounding genome, suggesting that variation is linked specifically
 #' to that region set. 
 #' 
 #' All regions in a given region set 
 #' are combined into a single aggregate profile. Regions should be
 #' expanded on each side to include a wider area of the genome around
-#' the regions of interest. To make the profile, first we take 
+#' the regions of interest (see example and vignettes). 
+#' To make the profile, first we take 
 #' the absolute value of the loadings. Then each region is
 #' split into `binNum` bins. All loadings in each bin are 
 #' averaged to get one value per bin. Finally, corresponding bins from
 #' the different regions are averaged (eg all bin1's averaged with each other, 
 #' all bin2's averaged with each other, etc.) to get a single "meta-region"
-#' loading profile. A peak in the middle of this profile suggests
+#' loading profile. Since DNA strand information is not considered, 
+#' the profile is averaged symmetrically around the center.
+#' A peak in the middle of this profile suggests
 #' that variability is specific to the region set of interest and is 
 #' not a product of the surrounding genome. A region set can still be
 #' significant even if it does not have a peak. For example, some
+#' histone modification region sets may be in large genomic blocks
+#' and not show a peak, despite having variation across samples.
 #'
 #'
 #' @param loadingMat matrix of loadings (the coefficients of 
@@ -435,16 +475,19 @@ runCOCOA <- function(loadingMat, signalCoord, GRList,
 #' One row for each original dimension/variable (should be same order 
 #' as original data/signalCoord). Given by prcomp(x)$rotation.
 #' @param signalCoord a GRanges object or data frame with coordinates 
-#' for the cytosines included in the PCA. Coordinates should be in the 
-#' same order as the methylation data and loadings. If a data.frame, 
+#' for the genomic signal/original data (eg DNA methylation) 
+#' included in the PCA. Coordinates should be in the 
+#' same order as the original data and the loadings 
+#' (each item/row in signalCoord
+#' corresponds to a row in loadingMat). If a data.frame, 
 #' must have chr and start columns. If end is included, start 
 #' and end should be the same. Start coordinate will be used for calculations.
-#' @param regionSet A genomic ranges object with regions corresponding
+#' @param regionSet A genomic ranges (GRanges) object with regions corresponding
 #' to the same biological annotation. Must be from the same reference genome
 #' as the coordinates for the actual data/samples (signalCoord).
-#' @param PCsToAnnotate A character vector with principal components to 
-#' include. eg c("PC1", "PC2")
-#' @param binNum Number of bins to split the regions into when
+#' @param PCsToAnnotate A character vector with principal components to  
+#' include. eg c("PC1", "PC2") These should be column names of loadingMat.
+#' @param binNum Number of bins to split each region into when
 #' making the aggregate loading profile. More bins will
 #' give a higher resolution but perhaps more noisy profile.
 #' @param verbose A "logical" object. Whether progress 
@@ -452,7 +495,8 @@ runCOCOA <- function(loadingMat, signalCoord, GRList,
 #' bar indicates the region set is completed. Useful when
 #' using `lapply` to get the loading profiles of many region sets.
 #' @return A data.frame with the binned loading profile,
-#' one row per bin.
+#' one row per bin. columns: binID and one column for each PC
+#' in PCsToAnnotate. 
 #' 
 #' @examples 
 #' data("brcaMCoord1")
@@ -592,17 +636,20 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
 # One row for each original dimension/variable (should be same order 
 # as original data/signalCoord). The x$rotation output of prcomp().
 # @param signalCoord a GRanges object or data frame with coordinates 
-# for the cytosines included in the PCA. Coordinates should be in the 
-# same order as the methylation data and loadings. If a data.frame, 
+# for the genomic signal/original data (eg DNA methylation) 
+# included in the PCA. Coordinates should be in the 
+# same order as the original data and the loadings 
+# (each item/row in signalCoord
+# corresponds to a row in loadingMat). If a data.frame, 
 # must have chr and start columns. If end is included, start 
 # and end should be the same. Start coordinate will be used for calculations.
 # @param regionSet A GRanges object with regions corresponding
 # to the same biological annotation.
-# @param PCsToAnnotate A character vector with principal components to 
-# include. eg c("PC1", "PC2")
+# @param PCsToAnnotate A character vector with principal components to  
+# include. eg c("PC1", "PC2") These should be column names of loadingMat.
 # @param returnQuantile "logical" object. If FALSE, return region averages. If TRUE,
 # for each region, return the quantile of that region's average value
-# based on the distribution of individual cytosine values
+# based on the distribution of individual genomic signal/feature values
 # @return a data.table with region coordinates and average loading 
 # values for each region. Has columns chr, start, end, and a column for each
 # PC in PCsToAnnotate. Regions are not in order along the rows of the data.table.
@@ -946,21 +993,28 @@ BSFilter <- function(BSDT, minReads = 10, excludeGR = NULL) {
 #' Get indices for top scored region sets 
 #' 
 #' For each PC, get index of original region sets but ordered by rsScores
-#' ranking for each PC. First number in a given column will be 
+#' ranking for each PC. The original index refers to that region set's position
+#' in the `GRList` param given to `runCOCOA` which is also that region set's
+#' row index in the COCOA output. The first number in a given column 
+#' of this function's output will be the
 #' original index of the region set ranked first for that PC. Second row for a
 #' column will be the original index of the region set that ranked second
-#' for that PC, etc. Use this function when you want to look at top region sets to make it 
-#' easier to get the original indices to select them from a list of region sets.
+#' for that PC, etc. You can use this function to make it easier 
+#' when you want to select the top region sets for further analysis or
+#' just for sorting the results. Region set scores are sorted in
+#' decreasing order so if you have p values they should be log transformed:
+#' -log(pval, 10)
 #' 
 #' @param rsScores a data.frame with scores for each 
 #' region set from the main COCOA function. 
 #' Each row is a region set. Columns are PCs and info on region set overlap
 #' with DNA methylation data. Should be in the same order as GRList (the list of 
 #' region sets used to create it.)
-#' @param PCsToAnnotate PCs in rsScores for which you want
-#' the indices of the original region sets
+#' @param PCsToAnnotate a character vector. PCs in rsScores for which you want
+#' the indices of the original region sets (must be column names of rsScores)
+#' eg c("PC1", "PC2")
 #' @return A data.frame with columns PCsToAnnotate. Each column has been 
-#' ranked by enrichment score for region sets for that PC.
+#' sorted by score for region sets for that PC (decreasing order).
 #' Original indices for region sets that were used to create rsScores
 #' are given. 
 #' @examples data("rsScores")

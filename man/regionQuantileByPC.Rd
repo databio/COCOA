@@ -18,26 +18,32 @@ One row for each original dimension/variable (should be same order
 as original data/signalCoord). The x$rotation output of prcomp().}
 
 \item{signalCoord}{a GRanges object or data frame with coordinates 
-for the cytosines included in the PCA. Coordinates should be in the 
-same order as the methylation data and loadings. If a data.frame, 
+for the genomic signal/original data (eg DNA methylation) 
+included in the PCA. Coordinates should be in the 
+same order as the original data and the loadings 
+(each item/row in signalCoord
+corresponds to a row in loadingMat). If a data.frame, 
 must have chr and start columns. If end is included, start 
 and end should be the same. Start coordinate will be used for calculations.}
 
 \item{regionSet}{A genomic ranges object with regions corresponding
-to the same biological annotation. Must be from the same reference genome
+to the same biological annotation. These are the regions that will be 
+visualized. Must be from the same reference genome
 as the coordinates for the actual data (signalCoord).}
 
 \item{rsName}{character vector. Names of the region sets in the same
 order as GRList. For use as a title for each heatmap.}
 
 \item{PCsToAnnotate}{A character vector with principal components to 
-include. eg c("PC1", "PC2")}
+include. eg c("PC1", "PC2") These should be column names of loadingMat.}
 
 \item{maxRegionsToPlot}{how many top regions from region set to include
 in heatmap. Including too many may slow down computation and increase memory
 use. If regionSet has more regions than maxRegionsToPlot, a number of regions 
 equal to maxRegionsToPlot will be randomly sampled from the region set and
-these regions will be plotted.}
+these regions will be plotted. Clustering rows is a major limiting factor
+on how long it takes to plot the regions so if you want to plot many regions, 
+you can also set cluster_rows to FALSE.}
 
 \item{cluster_rows}{"logical" object, whether to cluster rows or not (may 
 increase computation time significantly for large number of rows)}
@@ -49,7 +55,8 @@ increase computation time significantly for large number of rows)}
 \item{column_title_side}{character object, where to put the column title:
 "top" or "bottom"}
 
-\item{cluster_columns}{"logical" object, whether to cluster columns. It is recommended
+\item{cluster_columns}{"logical" object, whether to cluster columns. 
+It is recommended
 to keep this as FALSE so it will be easier to compare PCs 
 (with cluster_columns = FALSE, they will be in the same specified
 order in different heatmaps)}
@@ -63,14 +70,16 @@ will be passed to the ComplexHeatmap::Heatmap() function. See ?Heatmap
 \item{...}{optional parameters for ComplexHeatmap::Heatmap()}
 }
 \value{
-a heatmap. This heatmap allows you to see if some regions are 
+a heatmap. Columns are PCs, rows are regions. 
+This heatmap allows you to see if some regions are 
 associated with certain PCs but not others. Also, you can see if a subset of 
 regions in the region set are associated with PCs while another subset
 are not associated with any PCs 
-Columns are PCs, rows are regions. To color
-each region, first the absolute loading values within that region are
+To color each region, first the absolute loading 
+values within that region are
 averaged. Then this average is compared to the distribution of absolute
-loading values for all individual genomic signal values to get a quantile/percentile 
+loading values for all individual genomic signal values to get 
+a quantile/percentile 
 for that region. Colors are based on this quantile/percentile. 
 The output is a Heatmap object (ComplexHeatmap package).
 }

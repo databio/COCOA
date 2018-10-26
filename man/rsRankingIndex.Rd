@@ -13,22 +13,29 @@ Each row is a region set. Columns are PCs and info on region set overlap
 with DNA methylation data. Should be in the same order as GRList (the list of 
 region sets used to create it.)}
 
-\item{PCsToAnnotate}{PCs in rsScores for which you want
-the indices of the original region sets}
+\item{PCsToAnnotate}{a character vector. PCs in rsScores for which you want
+the indices of the original region sets (must be column names of rsScores)
+eg c("PC1", "PC2")}
 }
 \value{
 A data.frame with columns PCsToAnnotate. Each column has been 
-ranked by enrichment score for region sets for that PC.
+sorted by score for region sets for that PC (decreasing order).
 Original indices for region sets that were used to create rsScores
 are given.
 }
 \description{
 For each PC, get index of original region sets but ordered by rsScores
-ranking for each PC. First number in a given column will be 
+ranking for each PC. The original index refers to that region set's position
+in the `GRList` param given to `runCOCOA` which is also that region set's
+row index in the COCOA output. The first number in a given column 
+of this function's output will be the
 original index of the region set ranked first for that PC. Second row for a
 column will be the original index of the region set that ranked second
-for that PC, etc. Use this function when you want to look at top region sets to make it 
-easier to get the original indices to select them from a list of region sets.
+for that PC, etc. You can use this function to make it easier 
+when you want to select the top region sets for further analysis or
+just for sorting the results. Region set scores are sorted in
+decreasing order so if you have p values they should be log transformed:
+-log(pval, 10)
 }
 \examples{
 data("rsScores")

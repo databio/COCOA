@@ -14,19 +14,22 @@ rsScoreHeatmap(rsScores, PCsToAnnotate = paste0("PC", 1:5),
 }
 \arguments{
 \item{rsScores}{a data.frame with scores for each 
-region set from main COCOA function. 
-Each row is a region set. Columns are PCs and info on region set overlap
-with DNA methylation data. Should be in the same order as GRList (the list of 
+region set from main COCOA function `runCOCOA`. 
+Each row is a region set. Columns are scores, one column for each PCs 
+Also can have columns with info on region set overlap
+with the original data. Should be in the same order as GRList (the list of 
 region sets used to create it.)}
 
 \item{PCsToAnnotate}{A character vector with principal components to 
-include. eg c("PC1", "PC2")}
+include. eg c("PC1", "PC2"). Must be column names of rsScores.}
 
-\item{orderByPC}{PC to order by (decreasing order) in heatmap}
+\item{orderByPC}{a character object. PC to order by in heatmap 
+(arranged in decreasing order for scores so p values should 
+be -log transformed). Must be the name of a column in rsScores.}
 
 \item{rsNameCol}{character. Name of the column in rsScores that has the
-names/identifiers for the region sets so this information can be included 
-in the plot.}
+names/identifiers for the region sets so these can be included 
+in the plot as row names.}
 
 \item{topX}{Number of top region sets to include in the heatmap}
 
@@ -57,18 +60,19 @@ allocate for row names. See ?grid::unit for object type.}
 
 \item{name}{character object, legend title}
 
-\item{...}{optional parameters for ComplexHeatmap::Heatmap(), 
-including "col" to change heatmap color scheme.}
+\item{...}{optional parameters for ComplexHeatmap::Heatmap().}
 }
 \value{
 A heatmap of region set scores across. Each row is a region set,
-each column is a PC. The color corresponds to a region set's relative
-rank for a given PC out of all tested region sets.
+each column is a PC. The color corresponds to the relative rank of a 
+region set's score for a given PC out of all tested region sets.
 }
 \description{
 Heatmap of the ranking of region set scores across PCs
-A visualization of rank of region sets in each PC, allowing the
+A visualization of the rank of region sets in each PC, allowing the
 user to see if a region set is ranked highly in all PCs or only a subset.
+Region sets will be ranked from highest scoring to lowest based on 
+their score for `orderByPC`.
 The ComplexHeatmap package
 is used and additional parameters for the ComplexHeatmap::Heatmap function
 may be passed to this function to modify the heatmap.

@@ -14,19 +14,22 @@ One row for each original dimension/variable (should be same order
 as original data/signalCoord). Given by prcomp(x)$rotation.}
 
 \item{signalCoord}{a GRanges object or data frame with coordinates 
-for the cytosines included in the PCA. Coordinates should be in the 
-same order as the methylation data and loadings. If a data.frame, 
+for the genomic signal/original data (eg DNA methylation) 
+included in the PCA. Coordinates should be in the 
+same order as the original data and the loadings 
+(each item/row in signalCoord
+corresponds to a row in loadingMat). If a data.frame, 
 must have chr and start columns. If end is included, start 
 and end should be the same. Start coordinate will be used for calculations.}
 
-\item{regionSet}{A genomic ranges object with regions corresponding
+\item{regionSet}{A genomic ranges (GRanges) object with regions corresponding
 to the same biological annotation. Must be from the same reference genome
 as the coordinates for the actual data/samples (signalCoord).}
 
-\item{PCsToAnnotate}{A character vector with principal components to 
-include. eg c("PC1", "PC2")}
+\item{PCsToAnnotate}{A character vector with principal components to
+include. eg c("PC1", "PC2") These should be column names of loadingMat.}
 
-\item{binNum}{Number of bins to split the regions into when
+\item{binNum}{Number of bins to split each region into when
 making the aggregate loading profile. More bins will
 give a higher resolution but perhaps more noisy profile.}
 
@@ -37,11 +40,12 @@ using `lapply` to get the loading profiles of many region sets.}
 }
 \value{
 A data.frame with the binned loading profile,
-one row per bin.
+one row per bin. columns: binID and one column for each PC
+in PCsToAnnotate.
 }
 \description{
 This loading profile can show enrichment 
-of cytosines with high loading values in region set but not in
+of genomic signals with high loading values in region set but not in
 surrounding genome, suggesting that variation is linked specifically
 to that region set.
 }
@@ -49,16 +53,21 @@ to that region set.
 All regions in a given region set 
 are combined into a single aggregate profile. Regions should be
 expanded on each side to include a wider area of the genome around
-the regions of interest. To make the profile, first we take 
+the regions of interest (see example and vignettes). 
+To make the profile, first we take 
 the absolute value of the loadings. Then each region is
 split into `binNum` bins. All loadings in each bin are 
 averaged to get one value per bin. Finally, corresponding bins from
 the different regions are averaged (eg all bin1's averaged with each other, 
 all bin2's averaged with each other, etc.) to get a single "meta-region"
-loading profile. A peak in the middle of this profile suggests
+loading profile. Since DNA strand information is not considered, 
+the profile is averaged symmetrically around the center.
+A peak in the middle of this profile suggests
 that variability is specific to the region set of interest and is 
 not a product of the surrounding genome. A region set can still be
 significant even if it does not have a peak. For example, some
+histone modification region sets may be in large genomic blocks
+and not show a peak, despite having variation across samples.
 }
 \examples{
 data("brcaMCoord1")

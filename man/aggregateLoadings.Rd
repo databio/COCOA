@@ -15,28 +15,41 @@ One row for each original dimension/variable (should be same order
 as original data/signalCoord). The x$rotation output of prcomp().}
 
 \item{signalCoord}{a GRanges object or data frame with coordinates 
-for the cytosines included in the PCA. Coordinates should be in the 
-same order as the methylation data and loadings. If a data.frame, 
+for the genomic signal/original data (eg DNA methylation) 
+included in the PCA. Coordinates should be in the 
+same order as the original data and the loadings 
+(each item/row in signalCoord
+corresponds to a row in loadingMat). If a data.frame, 
 must have chr and start columns. If end is included, start 
 and end should be the same. Start coordinate will be used for calculations.}
 
-\item{regionSet}{A genomic ranges object with regions corresponding
+\item{regionSet}{A genomic ranges (GRanges) object with regions corresponding
 to the same biological annotation. Must be from the same reference genome
 as the coordinates for the actual data/samples (signalCoord).}
 
 \item{PCsToAnnotate}{A character vector with principal components to 
-include. eg c("PC1", "PC2")}
+include. eg c("PC1", "PC2") These should be column names of loadingMat.}
 
-\item{scoringMetric}{Scoring metric. "regionMean" is a weighted
+\item{scoringMetric}{A character object with the scoring metric. 
+"regionMean" is a weighted
 average of the absolute value of the loadings
 with no normalization (recommended). First loadings are
 averaged within each region, then all the regions are averaged. With
 "regionMean" score, be cautious in interpretation for
- region sets with low number of regions.
-Mean difference ("meanDiff") is also supported but is skewed toward 
-ranking large region sets highly. Wilcoxon rank sum test ("rankSum")
-also is skewed toward ranking large region sets highly and is
-significantly slower than the "regionMean" method.}
+region sets with low number of regions that overlap signalCoord. 
+The "simpleMean"
+method is just the unweighted average of all absolute loadings that
+overlap the given region set. 
+Wilcoxon rank sum test ("rankSum") is also supported but is
+skewed toward ranking large region sets highly and is
+significantly slower than the "regionMean" method. 
+For the ranksum method, the absolute loadings for loadings that
+overlap the given region set are taken as a group and all the
+loadings that do not overlap the region set are taken as
+the other group. Then p value is then given as the score.
+It is a one sided test, with the alternative hypothesis
+that the loadings in the region set will be greater than
+the loadings not in the region set.}
 
 \item{verbose}{A "logical" object. Whether progress 
 of the function should be shown, one
@@ -45,11 +58,14 @@ aggregateLoadings with 'apply' to do many region sets at a time.}
 }
 \value{
 a data.table with one row and the following 
-columns: one column for each item of PCsToAnnotate with name given
-by the item which have scores for each PC, cytosine_coverage which
-has number of cytosines that overlapped with regionSet,
+columns: one column for each item of PCsToAnnotate with names given
+by PCsToAnnotate. These columns have scores for the region set for each PC.
+Other columns: cytosine_coverage which
+has number of cytosines that overlapped with regionSet (or in the general case, 
+coordinates from signalCoord that overlapped regionSet) 
 region_coverage which has number of regions from regionSet
-that overlapped any cytosines, total_region_number that has
+that overlapped any coordinates from signalCoord, 
+total_region_number that has
 number of regions in regionSet, mean_region_size that has average
 size in base pairs of regions in regionSet, the average is based on
 all regions in regionSet and not just ones that overlap.
@@ -57,7 +73,7 @@ all regions in regionSet and not just ones that overlap.
 \description{
 First, this function identifies which loadings are within the region set. 
 Then the loadings are used to score the region set 
-according to the `metric` parameter.
+according to the `scoringMetric` parameter.
 }
 \examples{
 data("brcaMCoord1")

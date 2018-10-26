@@ -10,7 +10,7 @@ COCOA is a method for understanding variation among samples.
 COCOA can be used with data that includes 
 genomic coordinates such as DNA methylation. 
 To describe the method on a high level, COCOA uses a database of 
-"region sets" and principal component analysis (PCA) of the data 
+"region sets" and principal component analysis (PCA) of your data 
 to identify sources of variation among samples. A region set is a set of 
 genomic regions that share a biological annotation, 
 for instance transcription factor (TF) binding regions, 
@@ -25,7 +25,7 @@ that find discrete differences between groups of samples and
 it can also be used in situations where there are no groups.  
 COCOA can identify biologically meaningful 
 sources of variation between samples and increase understanding of 
-variation in the data.
+variation in your data.
 }
 \references{
 \url{http://github.com/databio}
