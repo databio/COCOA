@@ -1,6 +1,6 @@
 Package: COCOA
-Version: 0.99.8
-Date: 2018-10-24
+Version: 0.99.9
+Date: 2018-10-29
 Title: Coordinate Covariation Analysis
 Description: COCOA is a method for understanding variation among samples
     and can be used with data that includes genomic coordinates

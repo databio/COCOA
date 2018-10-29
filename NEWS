@@ -1,6 +1,13 @@
 # Change log
 Notable changes to this project will be documented in this file.
 
+## [0.99.9] -- 2018-10-29
+
+    - First release version
+    - Name changed to COCOA from PCRSA (Principal Component Region Set Analysis)
+    - Other changes to UI including function names and parameters
+
 ## [0.99.0] -- 2018-09-05
+
     - Submitted to Bioconductor
 
