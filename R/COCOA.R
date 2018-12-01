@@ -654,8 +654,11 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
 # values for each region. Has columns chr, start, end, and a column for each
 # PC in PCsToAnnotate. Regions are not in order along the rows of the data.table.
 #
-# @example averageByRegion(BSDT = BSDT, regionsGRL, 
-#          jCommand = MIRA:::buildJ(cols = "methylProp", "mean")) 
+# @examples data("brcaLoadings1")
+# data("brcaMCoord1")
+# data("esr1_chr1")
+# COCOA:::averageByRegion(loadingMat=brcaLoadings1,
+# signalCoord=brcaMCoord1, regionSet=esr1_chr1, returnQuantile = TRUE)[]
 # Devel note: I could add a column for how many cytosines are in each region 
 
 averageByRegion <- function(loadingMat, 
