@@ -1,5 +1,5 @@
 Package: COCOA
-Version: 1.0.0
+Version: 1.0.1
 Date: 2018-10-29
 Title: Coordinate Covariation Analysis
 Description: COCOA is a method for understanding variation among samples
@@ -43,7 +43,7 @@ VignetteBuilder: knitr
 License: GPL-3
 biocViews: PrincipalComponent, GenomicVariation, DNAMethylation, GeneRegulation, GenomeAnnotation, 
 	   SystemsBiology, FunctionalGenomics, ChIPSeq, 
-           MethylSeq, Sequencing, Epigenetics
+           MethylSeq, Sequencing, Epigenetics, ImmunoOncology
 URL: http://code.databio.org/COCOA/
 BugReports: https://github.com/databio/COCOA
 RoxygenNote: 6.1.0
