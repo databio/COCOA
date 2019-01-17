@@ -855,6 +855,68 @@ getTopRegions <- function(loadingMat,
 }
 
 
+# Get regions that are most associated with PCs of interest
+#
+# Get a GRanges with top regions from the region set based on average
+# loadings for the regions or the quantile of the region's loading.
+# Returns average loading or quantile as GRanges metadata.
+# 
+# @param loadingMat matrix of loadings (the coefficients of 
+# the linear combination that defines each PC). One named column for each PC.
+# One row for each original dimension/variable (should be same order 
+# as original data/signalCoord). The x$rotation output of prcomp().
+# @param signalCoord a GRanges object or data frame with coordinates 
+# for the genomic signal/original data (eg DNA methylation) 
+# included in the PCA. Coordinates should be in the 
+# same order as the original data and the loadings 
+# (each item/row in signalCoord
+# corresponds to a row in loadingMat). If a data.frame, 
+# must have chr and start columns. If end is included, start 
+# and end should be the same. Start coordinate will be used for calculations.
+# @param regionSet A GRanges object with regions corresponding
+# to the same biological annotation.
+# @param PCsToAnnotate A character vector with principal components to  
+# include. eg c("PC1", "PC2") These should be column names of loadingMat.
+# @param returnQuantile "logical" object. If FALSE, return region averages. If TRUE,
+# for each region, return the quantile of that region's average value
+# based on the distribution of individual genomic signal/feature values
+# @return a GRanges object with region coordinates for regions with
+# scores/quantiles above "cutoff" for any PC in PCsToAnnotate. The scores/quantiles
+# for PCsToAnnotate are given as metadata in the GRanges.
+
+# Are regions in order along the rows of the data.table?
+#
+# @examples data("brcaLoadings1")
+# data("brcaMCoord1")
+# data("esr1_chr1")
+# COCOA:::getTopRegions(loadingMat=brcaLoadings1,
+# signalCoord=brcaMCoord1, regionSet=esr1_chr1, returnQuantile = TRUE)
+
+getTopRegions <- function(loadingMat, 
+                          signalCoord, 
+                          regionSet, 
+                          PCsToAnnotate = c("PC1", "PC2"), cutoff = 0.8, 
+                          returnQuantile=TRUE) {
+    
+    
+    regionLoadDT = COCOA:::averageByRegion(loadingMat=loadingMat,
+                            signalCoord=signalCoord, regionSet=regionSet, 
+                            returnQuantile = returnQuantile)[]
+    
+    keepInd = regionLoadDT[, PCsToAnnotate, with=FALSE] >= cutoff
+    
+    # keep region if it is above cutoff in any of the PCs in PCsToAnnotate
+    keepInd = apply(X = keepInd, MARGIN = 1, FUN = any)
+    
+    highGR = COCOA:::dtToGr(regionLoadDT[keepInd, ])
+    
+    values(highGR) <- as.data.frame(regionLoadDT[keepInd, PCsToAnnotate, with=FALSE])
+    
+    return(highGR)
+
+}
+
+
 # different scoring metrics
 # remniscent of LOLA: 
 # support (number of regions, for us regions that have at least 1 cytosine and can be scored)
