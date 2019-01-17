@@ -764,6 +764,7 @@ getTopRegions <- function(loadingMat,
     
     regionLoadDT = COCOA:::averageByRegion(loadingMat=loadingMat,
                             signalCoord=signalCoord, regionSet=regionSet, 
+                            PCsToAnnotate = PCsToAnnotate,
                             returnQuantile = returnQuantile)[]
     
     keepInd = regionLoadDT[, PCsToAnnotate, with=FALSE] >= cutoff
