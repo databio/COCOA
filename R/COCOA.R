@@ -903,103 +903,38 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL,
         hits  <- hits[polap > minOverlap]
         fo    <- hits
     } else if (overlapMethod == "total") {
-        # If the query represents a region, use percent overlap to identify hits
-        # in the regionSet. This approach identifies regionSet regions which 
-        # are covered in aggregate by >= 1 query region.
-        #hits  <- findOverlaps(query = regionsGR, subject = bsgr[[1]])
-        # determine percent overlapping
-        #olap  <- pintersect(regionsGR[queryHits(hits)], bsgr[[1]][subjectHits(hits)])
-        #polap <- width(olap) / width(bsgr[[1]][subjectHits(hits)])
-        # keep only hits greater than some minimum overlap value (default=0.75)
-        #hits  <- hits[polap > minOverlap]
-        # Invert the findings to keep input regions which lead to a minOverlap 
-        # of the total coverage of a region set location
-        hitsTotal  <- findOverlaps(query = regionsGR, subject = bsgr[[1]])
-        olapTotal  <- pintersect(regionsGR[queryHits(hitsTotal)],
-                                 bsgr[[1]][subjectHits(hitsTotal)])
-        polapTotal <- width(olapTotal) / width(bsgr[[1]][subjectHits(hitsTotal)])
-        foT        <- hitsTotal[polapTotal > minOverlap]
-        if (length(foT) > 0) {
-            foTotal <- Hits(from=subjectHits(foT),
-                            to=queryHits(foT),
-                            nLnode=max(subjectHits(foT)),
-                            nRnode=max(queryHits(foT)))
+        # Establish any sufficient overlaps from the "simple" method approach
+        hits  <- findOverlaps(query = bsgr[[1]], subject = regionsGR)
+        olap  <- pintersect(bsgr[[1]][queryHits(hits)],
+                            regionsGR[subjectHits(hits)])
+        polap <- width(olap) / width(regionsGR[subjectHits(hits)])
+        hits  <- hits[polap > minOverlap]
+        # Identify multiple input regions that overlap a single region set location
+        hitsTotal  <- findOverlaps(regionsGR, bsgr[[1]])
+        overlappingRegions <- hitsTotal[duplicated(queryHits(hitsTotal)) | duplicated(queryHits(hitsTotal), fromLast=TRUE)]   
+        # Make DT from overlappingRegions Hits object
+        orDT  <- as.data.table(overlappingRegions)
+        # Calculate size of overlapping regions
+        worDT <- as.data.table(pintersect(bsgr[[1]][subjectHits(overlappingRegions)],
+                                          regionsGR[queryHits(overlappingRegions)]))
+        # Combine this with indicies to create sum by group
+        allDT      <- cbind(worDT, orDT)
+        # Keep subjectHit indicies and determine total coverage by summing
+        # width by queryHits indicies
+        overlap    <- allDT[,.(subjectHits, totalOverlap = sum(width)),by=queryHits]
+        # Calculate the percent overlap
+        pctOverlap <- overlap$totalOverlap / width(regionsGR[queryHits(overlappingRegions)])
+        # Filter by overlaps greater than minOverlap
+        filtered   <- overlap[pctOverlap > minOverlap]
+        # Create findOverlaps Hits object manually
+        if (nrow(filtered) > 0) {
+            fo <- Hits(from=c(filtered$subjectHits, queryHits(hits)),
+                       to=c(filtered$queryHits, subjectHits(hits)),
+                       nLnode=max(sort(c(filtered$subjectHits, queryHits(hits)))),
+                       nRnode=max(sort(c(filtered$queryHits, subjectHits(hits)))))
         } else {
-            foTotal <- foT
+            fo <- hits
         }
-        overlappingRegions <- hitsTotal[duplicated(queryHits(hitsTotal)) | duplicated(queryHits(hitsTotal), fromLast=TRUE)]
-        #print(overlappingRegions)
-        queryIndicies      <- numeric(0)
-        subjectIndicies    <- numeric(0)
-        #while queryHits is same, use subjectHit index to combine the input region into a new total region
-        for (i in 1:length(overlappingRegions)) {
-            index      <- queryHits(overlappingRegions)[i]
-            queryIndex <- queryHits(overlappingRegions)[i]
-            subIndex   <- subjectHits(overlappingRegions)[i]
-            range      <- bsgr[[1]][subjectHits(overlappingRegions)[i]]
-            i          <- i + 1
-            #message(i)
-            if (i > length(overlappingRegions)) {
-                break
-            }
-            newIndex   <- queryHits(overlappingRegions)[i]
-            while (newIndex == index) {
-                newRange   <- bsgr[[1]][subjectHits(overlappingRegions)[i]]
-                range      <- c(range, newRange)
-                queryIndex <- c(queryIndex, newIndex)
-                subIndex   <- c(subIndex, subjectHits(overlappingRegions)[i])
-                i          <- i + 1
-                if (i > length(overlappingRegions)) {
-                    break
-                }
-                newIndex <- queryHits(overlappingRegions)[i]
-            }
-            i     <- i - 1
-            hits  <- findOverlaps(range, regionsGR)
-            olap  <- pintersect(range[queryHits(hits)], regionsGR[subjectHits(hits)])
-            polap <- width(olap) / width(regionsGR[subjectHits(hits)])
-            keep  <- any(polap > 0.75)
-            if (keep) {
-                #message("keep")
-                queryIndicies   <- c(queryIndicies, subIndex)
-                subjectIndicies <- c(subjectIndicies, queryIndex)
-            }
-        }
-        # Combine hits from non-overlapping input regions with overlappingRegions
-        #message("foTotal:")
-        #print(foTotal)
-        #message("queryIndicies:")
-        #print(queryIndicies)
-        #message("subjectIndicies:")
-        #print(subjectIndicies)
-        if (length(foTotal) > 0) {
-            if (length(queryIndicies) > 0 && length(subjectIndicies) > 0) {
-                fo <- Hits(from=c(queryIndicies, queryHits(foTotal)),
-                           to=c(subjectIndicies, subjectHits(foTotal)),
-                           nLnode=max(sort(c(queryIndicies, queryHits(foTotal)))),
-                           nRnode=max(sort(c(subjectIndicies, subjectHits(foTotal)))))
-
-            } else {
-                fo <- foTotal
-            }
-        } else {  # TODO: the 'to' category needs to be the region position!
-            if (length(queryIndicies) > 0 && length(subjectIndicies) > 0) {
-                fo <- Hits(from=sort(queryIndicies),
-                           to=sort(subjectIndicies),
-                           nLnode=max(sort(queryIndicies)),
-                           nRnode=max(sort(subjectIndicies)))
-            } else {
-                fo <- foTotal
-            }
-        }
-        # if (length(hits) != 0) {
-        #     fo <- Hits(from=subjectHits(hits),
-        #                to=queryHits(hits),
-        #                nLnode=max(subjectHits(hits)),
-        #                nRnode=max(queryHits(hits)))
-        # } else {
-        #     fo <- hits  # There were no hits with a total coverage >= minOverlap
-        # }  
     } else {
         stop(paste0("Did not recognize `", overlapMethod, "` as a known method."))
     }
