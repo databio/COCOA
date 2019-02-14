@@ -373,6 +373,18 @@ aggregateLoadings <- function(loadingMat,
 #' @param minOverlap The minimum percent overlap required between the 
 #' genomic signal/original data included in the PCA and the `GRList` region
 #' sets to be called a hit.
+#' @param overlapMethod A character object with the overlap method.
+#' "single" is the default method and is appropriate to use when the start and
+#' end coordinates of the genomic signal/original data included in the PCA are
+#' the same.
+#' "simple" determines whether a single genomic signal included in the PCA that 
+#' spans more than a single position overlaps with a region set location by
+#' the minOverlap parameter.
+#' "total" determines whether a single, or multiple, genomic signal(s) included 
+#' in the PCA that span(s) more than a single position overlap(s) with a region 
+#' set location by the minOverlap parameter. This method includes genomic
+#' signals that when combined sufficiently cover a single region set location
+#' by the minOverlap parameter.
 #' @return data.frame of results, one row for each region set. 
 #' One column for each PC in PCsToAnnotate
 #' with score for that PC for a given region set (specific score depends
@@ -604,12 +616,28 @@ makeSymmetric <- function(prof) {
 # bar indicates the region set is completed.
 # useful when using BSBinAggregate with 'apply' to do many 
 # region sets at a time.
+# @param minOverlap The minimum percent overlap required between the 
+# genomic signal/original data included in the PCA and the `GRList` region
+# sets to be called a hit.
+# @param overlapMethod A character object with the overlap method.
+# "single" is the default method and is appropriate to use when the start and
+# end coordinates of the genomic signal/original data included in the PCA are
+# the same.
+# "simple" determines whether a single genomic signal included in the PCA that 
+# spans more than a single position overlaps with a region set location by
+# the minOverlap parameter.
+# "total" determines whether a single, or multiple, genomic signal(s) included 
+# in the PCA that span(s) more than a single position overlap(s) with a region 
+# set location by the minOverlap parameter. This method includes genomic
+# signals that when combined sufficiently cover a single region set location
+# by the minOverlap parameter.
 BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
                            byRegionGroup = TRUE,
                            splitFactor = NULL,
                            PCsToAnnotate,
-                           verbose=FALSE,
-                           minOverlap = 0.75) {
+                           verbose = FALSE,
+                           minOverlap = 0.75,
+                           overlapMethod = overlapMethod) {
     if (!is(rangeDT, "data.table")) {
     stop("rangeDT must be a data.table")
 }
@@ -672,6 +700,21 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
 # @param returnQuantile "logical" object. If FALSE, return region averages. If TRUE,
 # for each region, return the quantile of that region's average value
 # based on the distribution of individual genomic signal/feature values
+# @param minOverlap The minimum percent overlap required between the 
+# genomic signal/original data included in the PCA and the `GRList` region
+# sets to be called a hit.
+# @param overlapMethod A character object with the overlap method.
+# "single" is the default method and is appropriate to use when the start and
+# end coordinates of the genomic signal/original data included in the PCA are
+# the same.
+# "simple" determines whether a single genomic signal included in the PCA that 
+# spans more than a single position overlaps with a region set location by
+# the minOverlap parameter.
+# "total" determines whether a single, or multiple, genomic signal(s) included 
+# in the PCA that span(s) more than a single position overlap(s) with a region 
+# set location by the minOverlap parameter. This method includes genomic
+# signals that when combined sufficiently cover a single region set location
+# by the minOverlap parameter.
 # @return a data.table with region coordinates and average loading 
 # values for each region. Has columns chr, start, end, and a column for each
 # PC in PCsToAnnotate. Regions are not in order along the rows of the data.table.
@@ -685,7 +728,8 @@ averageByRegion <- function(loadingMat,
                             regionSet,
                             PCsToAnnotate = c("PC1", "PC2"),
                             returnQuantile=FALSE,
-                            minOverlap = 0.75) {
+                            minOverlap = 0.75,
+                            overlapMethod = overlapMethod) {
     
     
     
@@ -801,6 +845,21 @@ averageByRegion <- function(loadingMat,
 # @param returnQuantile Only used if meanPerRegion=TRUE, instead of mean
 # return the quantile/percentile of the mean of each region
 # in relation to the distribution of original values in BSDT
+# @param minOverlap The minimum percent overlap required between the 
+# genomic signal/original data included in the PCA and the `GRList` region
+# sets to be called a hit.
+# @param overlapMethod A character object with the overlap method.
+# "single" is the default method and is appropriate to use when the start and
+# end coordinates of the genomic signal/original data included in the PCA are
+# the same.
+# "simple" determines whether a single genomic signal included in the PCA that 
+# spans more than a single position overlaps with a region set location by
+# the minOverlap parameter.
+# "total" determines whether a single, or multiple, genomic signal(s) included 
+# in the PCA that span(s) more than a single position overlap(s) with a region 
+# set location by the minOverlap parameter. This method includes genomic
+# signals that when combined sufficiently cover a single region set location
+# by the minOverlap parameter.
 #
 # 
 BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL, 
@@ -909,15 +968,21 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL,
                             regionsGR[subjectHits(hits)])
         polap <- width(olap) / width(regionsGR[subjectHits(hits)])
         hits  <- hits[polap > minOverlap]
-        # Identify multiple input regions that overlap a single region set location
-        hitsTotal  <- findOverlaps(regionsGR, bsgr[[1]])
-        overlappingRegions <- hitsTotal[duplicated(queryHits(hitsTotal)) | duplicated(queryHits(hitsTotal), fromLast=TRUE)]   
+
+        # Identify multiple input regions that overlap a single region set 
+        # location by inverting the findOverlaps function
+        hitsTotal          <- findOverlaps(regionsGR, bsgr[[1]])
+        # Isolate those input regions that overlap the same region set
+        # location
+        overlappingRegions <- hitsTotal[duplicated(queryHits(hitsTotal)) |
+                                        duplicated(queryHits(hitsTotal),
+                                        fromLast=TRUE)]   
         # Make DT from overlappingRegions Hits object
         orDT  <- as.data.table(overlappingRegions)
         # Calculate size of overlapping regions
         worDT <- as.data.table(pintersect(bsgr[[1]][subjectHits(overlappingRegions)],
                                           regionsGR[queryHits(overlappingRegions)]))
-        # Combine this with indicies to create sum by group
+        # Combine this with the overlappingRegions indicies to enable sum by group
         allDT      <- cbind(worDT, orDT)
         # Keep subjectHit indicies and determine total coverage by summing
         # width by queryHits indicies
@@ -926,13 +991,15 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL,
         pctOverlap <- overlap$totalOverlap / width(regionsGR[queryHits(overlappingRegions)])
         # Filter by overlaps greater than minOverlap
         filtered   <- overlap[pctOverlap > minOverlap]
-        # Create findOverlaps Hits object manually
+
+        # Recreate findOverlaps Hits object manually that includes any "simple"
+        # method overlaps
         if (nrow(filtered) > 0) {
             fo <- Hits(from=c(filtered$subjectHits, queryHits(hits)),
                        to=c(filtered$queryHits, subjectHits(hits)),
                        nLnode=max(sort(c(filtered$subjectHits, queryHits(hits)))),
                        nRnode=max(sort(c(filtered$queryHits, subjectHits(hits)))))
-        } else {
+        } else {  # If there are no "total" overlaps, only include "simple"
             fo <- hits
         }
     } else {
