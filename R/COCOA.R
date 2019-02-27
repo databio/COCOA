@@ -1051,7 +1051,7 @@ rsRankingIndex <- function(rsScores, PCsToAnnotate) {
     for (i in seq_along(PCsToAnnotate)) {
         
         # -1 for decreasing order of scores
-        setorderv(rsScores, cols = PCsToAnnotate[i], order=-1L)
+        setorderv(rsScores, cols = PCsToAnnotate[i], order=-1L, na.last=TRUE)
         
         rsEnSortedInd[, PCsToAnnotate[i] := rsScores[, rsIndex]]
     }
