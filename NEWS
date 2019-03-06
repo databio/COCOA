@@ -1,6 +1,12 @@
 # Change log
 Notable changes to this project will be documented in this file.
 
+## [1.0.2] -- 2019-03-06
+
+    - Bug fix: getLoadingProfile() had error when no overlap between signalCoord and regionSet. Now returns NULL in that case.
+    - Bug fix: rsRankingIndex() was sorting NA's to the top of results. This is confusing when selecting top region sets for further analysis or visualization. Now NA's are sorted to the bottom.
+    - Bug fix: rsScoreHeatmap() also was sorting NA's to the top of results, which resulted in potentially excluding the real top region sets from the plot. Now NA's are sorted to the bottom.
+
 ## [0.99.9] -- 2018-10-29
 
     - First release version
