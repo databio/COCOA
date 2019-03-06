@@ -41,7 +41,8 @@ using `lapply` to get the loading profiles of many region sets.}
 \value{
 A data.frame with the binned loading profile,
 one row per bin. columns: binID and one column for each PC
-in PCsToAnnotate.
+in PCsToAnnotate. The function will return NULL if there
+is no overlap between regionSet and signalCoord.
 }
 \description{
 This loading profile can show enrichment 
