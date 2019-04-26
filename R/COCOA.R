@@ -540,9 +540,9 @@ runCOCOA <- function(loadingMat,
 #' @export
 
 getLoadingProfile <- function(loadingMat, signalCoord, regionSet,
-                        PCsToAnnotate = c("PC1", "PC2"),
-                        binNum = 25,
-                        verbose=TRUE) {
+                    PCsToAnnotate = c("PC1", "PC2"), binNum = 25,
+                    verbose=TRUE, minOverlap = 0.75, 
+                    overlapMethod = c("single", "simple", "total")) {
     
     if (!(any(c(is(loadingMat, "matrix"), is(loadingMat, "data.frame"))))) {
         warning("loadingMat should be a matrix or data.frame.")
@@ -571,18 +571,26 @@ getLoadingProfile <- function(loadingMat, signalCoord, regionSet,
     
     GRDT <- grToDt(regionSet)
     
-    loadProf <- BSBinAggregate(BSDT = loadingDT,
-                               rangeDT = GRDT,
-                               binCount = binNum,
-                               minReads = 0,
-                               byRegionGroup = TRUE,
+    loadProf <- BSBinAggregate(BSDT = loadingDT, 
+                               rangeDT = GRDT, 
+                               binCount = binNum, 
+                               minReads = 0, 
+                               byRegionGroup = TRUE, 
                                splitFactor = NULL,
-                               PCsToAnnotate = PCsToAnnotate)
+                               PCsToAnnotate = PCsToAnnotate,
+                               minOverlap = minOverlap,
+                               overlapMethod = overlapMethod)
     
-    loadProf <- makeSymmetric(loadProf)
-    loadProf[, regionGroupID := seq_len(binNum)][]
-    setnames(loadProf, old = "regionGroupID", new="binID")
-    loadProf <- as.data.frame(loadProf)
+    # if loadProf is NULL, return NULL from function, otherwise make symmetrical
+    # it will be NULL when there was no overlap between data and any of the bins
+    if (!is.null(loadProf)) {
+        loadProf <- makeSymmetric(loadProf)
+        loadProf[, regionGroupID := seq_len(binNum)][]
+        setnames(loadProf, old = "regionGroupID", new="binID")
+        loadProf <- as.data.frame(loadProf)
+    } else {
+        warning("No overlap between regionSet and signalCoord")
+    }
     
     return(loadProf)
 }
@@ -631,10 +639,10 @@ makeSymmetric <- function(prof) {
 # set location by the minOverlap parameter. This method includes genomic
 # signals that when combined sufficiently cover a single region set location
 # by the minOverlap parameter.
-BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
+BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads. = 500,
                            byRegionGroup = TRUE,
                            splitFactor = NULL,
-                           PCsToAnnotate,
+                           PCsToAnnotate = PCsToAnnotate,
                            verbose = FALSE,
                            minOverlap = 0.75,
                            overlapMethod = overlapMethod) {
@@ -664,8 +672,8 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
                               regionsGRL=GRangesList(binnedGR),
                               jExpr=buildJ(PCsToAnnotate,
                                            rep("mean", length(PCsToAnnotate))),
-                                           byRegionGroup = byRegionGroup,
-                                           splitFactor = splitFactor,
+                              byRegionGroup = byRegionGroup,
+                              splitFactor = splitFactor,
                               minOverlap=minOverlap,
                               overlapMethod=overlapMethod)
     # # If we aren't aggregating by bin, then don't restrict to min reads!
