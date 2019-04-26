@@ -18,17 +18,27 @@ BSdtToGRanges <- function(dtList) {
     gList <- list();
     for (i in seq_along(dtList)) {
         # dt <- dtList[[i]];
-        setkey(dtList[[i]], chr, start)
-        # convert the data into granges object
-        gList[[i]] <- GRanges(seqnames = dtList[[i]]$chr, 
-                              ranges = IRanges(start = dtList[[i]]$start, 
-                                               end = dtList[[i]]$start), 
-                              strand = rep("*", nrow(dtList[[i]])))
-        
-        # I used to use end = start + 1, but this targets CG instead of just 
-        # a C, and it's causing edge-effects problems when I assign Cs to 
-        # tiled windows using (within). Aug 2014 I'm changing to start/end at 
-        # the same coordinate.
+        if ("end" %in% colnames(dtList[[i]])) {
+            #message("end is present")  # DEBUG
+            setkey(dtList[[i]], chr, start, end)
+            # convert the data into granges object
+            gList[[i]] <- GRanges(seqnames = dtList[[i]]$chr, 
+                                  ranges = IRanges(start = dtList[[i]]$start, 
+                                                   end = dtList[[i]]$end), 
+                                  strand = rep("*", nrow(dtList[[i]])))
+        } else {
+            setkey(dtList[[i]], chr, start)
+            # convert the data into granges object
+            gList[[i]] <- GRanges(seqnames = dtList[[i]]$chr, 
+                                  ranges = IRanges(start = dtList[[i]]$start, 
+                                                   end = dtList[[i]]$start), 
+                                  strand = rep("*", nrow(dtList[[i]])))
+            
+            # I used to use end = start + 1, but this targets CG instead of just 
+            # a C, and it's causing edge-effects problems when I assign Cs to 
+            # tiled windows using (within). Aug 2014 I'm changing to start/end at 
+            # the same coordinate.
+        }
     }
     return(gList);
 }
