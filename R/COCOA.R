@@ -201,9 +201,7 @@ aggregateLoadings <- function(loadingMat, signalCoord, regionSet,
                                   jExpr = aggrCommand,
                                   byRegionGroup = TRUE,
                                   splitFactor = NULL, returnOLInfo = TRUE)
-        if (verbose == TRUE) {
-                message(class(loadAgMain))
-            }
+
         # if no cytosines from loadings were included in regionSet, result is NA
         if (is.null(loadAgMain)) {
             results <- as.data.table(t(rep(NA, length(PCsToAnnotate))))
