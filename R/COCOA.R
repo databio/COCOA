@@ -201,7 +201,9 @@ aggregateLoadings <- function(loadingMat, signalCoord, regionSet,
                                   jExpr = aggrCommand,
                                   byRegionGroup = TRUE,
                                   splitFactor = NULL, returnOLInfo = TRUE)
-        results <- loadAgMain[, .SD, .SDcols = PCsToAnnotate]
+        if (verbose == TRUE) {
+                message(class(loadAgMain))
+            }
         # if no cytosines from loadings were included in regionSet, result is NA
         if (is.null(loadAgMain)) {
             results <- as.data.table(t(rep(NA, length(PCsToAnnotate))))
@@ -211,6 +213,7 @@ aggregateLoadings <- function(loadingMat, signalCoord, regionSet,
             results[, total_region_number := numOfRegions]
             results[, mean_region_size := round(mean(width(regionSet)), 1)]
         } else {
+            results <- loadAgMain[, .SD, .SDcols = PCsToAnnotate]
             results[, cytosine_coverage := loadAgMain[, .SD, .SDcols = "numCpGsOverlapping"]]
             results[, region_coverage := loadAgMain[, .SD, .SDcols = "numRegionsOverlapping"]]
             results[, total_region_number := numOfRegions]
