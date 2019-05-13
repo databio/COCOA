@@ -21,7 +21,9 @@ eg c("PC1", "PC2")}
 A data.frame with columns PCsToAnnotate. Each column has been 
 sorted by score for region sets for that PC (decreasing order).
 Original indices for region sets that were used to create rsScores
-are given.
+are given. Region sets with a score of NA are counted as having the 
+lowest scores and indices for these region sets will be at the bottom of the
+returned data.frame (na.last=TRUE in sorting)
 }
 \description{
 For each PC, get index of original region sets but ordered by rsScores

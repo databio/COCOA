@@ -525,7 +525,8 @@ runCOCOA <- function(loadingMat,
 #' using `lapply` to get the loading profiles of many region sets.
 #' @return A data.frame with the binned loading profile,
 #' one row per bin. columns: binID and one column for each PC
-#' in PCsToAnnotate. 
+#' in PCsToAnnotate. The function will return NULL if there
+#' is no overlap between regionSet and signalCoord.
 #' 
 #' @examples 
 #' data("brcaMCoord1")
@@ -571,7 +572,7 @@ getLoadingProfile <- function(loadingMat, signalCoord, regionSet,
     
     GRDT <- grToDt(regionSet)
     
-    loadProf <- BSBinAggregate(BSDT = loadingDT, 
+    loadProf <- BSBinAggregate(BSDT = loadingDT,
                                rangeDT = GRDT, 
                                binCount = binNum, 
                                minReads = 0, 
@@ -1179,7 +1180,9 @@ BSFilter <- function(BSDT, minReads = 10, excludeGR = NULL) {
 #' @return A data.frame with columns PCsToAnnotate. Each column has been 
 #' sorted by score for region sets for that PC (decreasing order).
 #' Original indices for region sets that were used to create rsScores
-#' are given. 
+#' are given. Region sets with a score of NA are counted as having the 
+#' lowest scores and indices for these region sets will be at the bottom of the
+#' returned data.frame (na.last=TRUE in sorting) 
 #' @examples data("rsScores")
 #' rsRankInd = rsRankingIndex(rsScores=rsScores, 
 #'                            PCsToAnnotate=c("PC1", "PC2"))
@@ -1214,7 +1217,7 @@ rsRankingIndex <- function(rsScores, PCsToAnnotate) {
     for (i in seq_along(PCsToAnnotate)) {
         
         # -1 for decreasing order of scores
-        setorderv(rsScores, cols = PCsToAnnotate[i], order=-1L)
+        setorderv(rsScores, cols = PCsToAnnotate[i], order=-1L, na.last=TRUE)
         
         rsEnSortedInd[, PCsToAnnotate[i] := rsScores[, rsIndex]]
     }

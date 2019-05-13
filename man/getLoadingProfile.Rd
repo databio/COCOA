@@ -5,7 +5,8 @@
 \title{Create a "meta-region" loading profile}
 \usage{
 getLoadingProfile(loadingMat, signalCoord, regionSet,
-  PCsToAnnotate = c("PC1", "PC2"), binNum = 25, verbose = TRUE)
+  PCsToAnnotate = c("PC1", "PC2"), binNum = 25, verbose = TRUE,
+  minOverlap = 0.75, overlapMethod = c("single", "simple", "total"))
 }
 \arguments{
 \item{loadingMat}{matrix of loadings (the coefficients of 
@@ -41,7 +42,8 @@ using `lapply` to get the loading profiles of many region sets.}
 \value{
 A data.frame with the binned loading profile,
 one row per bin. columns: binID and one column for each PC
-in PCsToAnnotate.
+in PCsToAnnotate. The function will return NULL if there
+is no overlap between regionSet and signalCoord.
 }
 \description{
 This loading profile can show enrichment 

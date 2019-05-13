@@ -6,7 +6,7 @@
 \usage{
 aggregateLoadings(loadingMat, signalCoord, regionSet,
   PCsToAnnotate = c("PC1", "PC2"), scoringMetric = "regionMean",
-  verbose = FALSE)
+  verbose = FALSE, minOverlap = 0.75, overlapMethod = "single")
 }
 \arguments{
 \item{loadingMat}{matrix of loadings (the coefficients of 
@@ -60,7 +60,7 @@ aggregateLoadings with 'apply' to do many region sets at a time.}
 a data.table with one row and the following 
 columns: one column for each item of PCsToAnnotate with names given
 by PCsToAnnotate. These columns have scores for the region set for each PC.
-Other columns: cytosine_coverage which
+Other columns: signal_coverage (formerly cytosine_coverage) which
 has number of cytosines that overlapped with regionSet (or in the general case, 
 coordinates from signalCoord that overlapped regionSet) 
 region_coverage which has number of regions from regionSet

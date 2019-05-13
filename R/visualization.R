@@ -269,7 +269,7 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
     
     for (i in seq_along(PCsToAnnotate)) {
         # first convert to rank
-        setorderv(rsScores, PCsToAnnotate[i], order = -1L) # descending order
+        setorderv(rsScores, PCsToAnnotate[i], order = -1L, na.last=TRUE) # descending order
         rsScores[, PCsToAnnotate[i] := seq_len(rsNum)]
         
         # center around zero
