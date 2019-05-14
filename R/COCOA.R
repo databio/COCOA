@@ -542,7 +542,7 @@ runCOCOA <- function(loadingMat,
 getLoadingProfile <- function(loadingMat, signalCoord, regionSet,
                     PCsToAnnotate = c("PC1", "PC2"), binNum = 25,
                     verbose=TRUE, minOverlap = 0.75, 
-                    overlapMethod = c("single", "simple", "total")) {
+                    overlapMethod = "single") {
     
     if (!(any(c(is(loadingMat, "matrix"), is(loadingMat, "data.frame"))))) {
         warning("loadingMat should be a matrix or data.frame.")
@@ -639,13 +639,13 @@ makeSymmetric <- function(prof) {
 # set location by the minOverlap parameter. This method includes genomic
 # signals that when combined sufficiently cover a single region set location
 # by the minOverlap parameter.
-BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads. = 500,
+BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
                            byRegionGroup = TRUE,
                            splitFactor = NULL,
-                           PCsToAnnotate = PCsToAnnotate,
+                           PCsToAnnotate,
                            verbose = FALSE,
                            minOverlap = 0.75,
-                           overlapMethod = overlapMethod) {
+                           overlapMethod) {
     if (!is(rangeDT, "data.table")) {
     stop("rangeDT must be a data.table")
 }
@@ -735,9 +735,9 @@ averageByRegion <- function(loadingMat,
                             signalCoord,
                             regionSet,
                             PCsToAnnotate = c("PC1", "PC2"),
-                            returnQuantile=FALSE,
+                            returnQuantile = FALSE,
                             minOverlap = 0.75,
-                            overlapMethod = overlapMethod) {
+                            overlapMethod) {
     
     
     
@@ -940,7 +940,7 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL,
                         keep.na=FALSE, returnSD=FALSE, 
                         returnOLInfo=FALSE, meanPerRegion=FALSE,
                         returnQuantile=FALSE, minOverlap=0.75,
-                        overlapMethod=c("single", "simple", "total")) {
+                        overlapMethod="single") {
 
     # Assert that regionsGRL is a GRL.
     # If regionsGRL is given as a GRanges, we convert to GRL
