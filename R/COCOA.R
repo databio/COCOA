@@ -1399,3 +1399,34 @@ rsWilcox <- function(dataDT,
                        mean_region_size)
     return(wRes)
 }
+
+# Create null distribution based on permutations
+
+createNullDist <- function(loadingMat, PCsToAnnotate, nPerm = 1000, sampleSize = 1000) {
+    
+    loadingMat = abs(loadingMat)
+    permScoreList = list()
+    for (i in 1:nPerm) {
+        permInd = sample(1:nrow(loadingDT), size=sampleSize, replace = FALSE)
+        # reformat into data.table with chromosome location and weight
+        permScoreList[[i]] = colMeans(loadingMat[permInd, PCsToAnnotate])
+        
+        # naming does not work if only using one PC so add this line for that case
+        # setnames(loadingDT, c("chr", "start", PCsToAnnotate)) 
+        
+    }
+    
+    permScoreMat = do.call(rbind, permScoreList)
+    return(permScoreMat)
+}
+
+multiNullDist <- function(loadingMat, PCsToAnnotate, nPerm = 1000, sampleSize = c(10, 100, 1000, 10000, 100000)) {
+    
+    # create distribution for each sample
+    nullDistList = lapply(X = sampleSize, FUN = function(x) createNullDist(loadingMat=loadingMat, 
+                                                            PCsToAnnotate=PCsToAnnotate, 
+                                                            nPerm=nPerm, 
+                                                            sampleSize = x))
+}
+
+
