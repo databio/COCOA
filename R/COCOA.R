@@ -1531,7 +1531,7 @@ createNullDist <- function(loadingMat, PCsToAnnotate, nPerm = 1000, sampleSize =
     loadingMat = abs(loadingMat)
     permScoreList = list()
     for (i in 1:nPerm) {
-        permInd = sample(1:nrow(loadingDT), size=sampleSize, replace = FALSE)
+        permInd = sample(1:nrow(loadingMat), size=sampleSize, replace = FALSE)
         # reformat into data.table with chromosome location and weight
         permScoreList[[i]] = colMeans(loadingMat[permInd, PCsToAnnotate])
         
@@ -1546,11 +1546,12 @@ createNullDist <- function(loadingMat, PCsToAnnotate, nPerm = 1000, sampleSize =
 
 multiNullDist <- function(loadingMat, PCsToAnnotate, nPerm = 1000, sampleSize = c(10, 100, 1000, 10000, 100000)) {
     
+    # MIRA:::setLapplyAlias(cores = 8)
     # create distribution for each sample
-    nullDistList = lapply(X = sampleSize, FUN = function(x) createNullDist(loadingMat=loadingMat, 
+    nullDistList = MIRA:::lapplyAlias(X = sampleSize, FUN = function(x) createNullDist(loadingMat=loadingMat, 
                                                             PCsToAnnotate=PCsToAnnotate, 
                                                             nPerm=nPerm, 
-                                                            sampleSize = x))
+                                                            sampleSize = x))#, mc.set.seed = FALSE)
 }
 
 
