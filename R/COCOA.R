@@ -371,9 +371,9 @@ aggregateLoadings <- function(loadingMat,
 #' @param verbose A "logical" object. Whether progress 
 #' of the function should be shown, one
 #' bar indicates the region set is completed.
-#' @param minOverlap The minimum percent overlap required between the 
-#' genomic signal/original data included in the PCA and the `GRList` region
-#' sets to be called a hit.
+#' @param minOverlap The minimum proportion overlap required between the 
+# genomic signal/original data included in the PCA and a given `GRList` region
+# to include that `GRList` region in scoring calculations.
 #' @param overlapMethod A character object with the overlap method.
 #' "single" is the default method and is appropriate to use when the start and
 #' end coordinates of the genomic signal/original data included in the PCA are
@@ -626,9 +626,9 @@ makeSymmetric <- function(prof) {
 # bar indicates the region set is completed.
 # useful when using BSBinAggregate with 'apply' to do many 
 # region sets at a time.
-# @param minOverlap The minimum percent overlap required between the 
-# genomic signal/original data included in the PCA and the `GRList` region
-# sets to be called a hit.
+# @param minOverlap The minimum proportion overlap required between the 
+# genomic signal/original data included in the PCA and a given `GRList` region
+# to include that `GRList` region in scoring calculations.
 # @param overlapMethod A character object with the overlap method.
 # "single" is the default method and is appropriate to use when the start and
 # end coordinates of the genomic signal/original data included in the PCA are
@@ -710,9 +710,9 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
 # @param returnQuantile "logical" object. If FALSE, return region averages. If TRUE,
 # for each region, return the quantile of that region's average value
 # based on the distribution of individual genomic signal/feature values
-# @param minOverlap The minimum percent overlap required between the 
-# genomic signal/original data included in the PCA and the `GRList` region
-# sets to be called a hit.
+# @param minOverlap The minimum proportion overlap required between the 
+# genomic signal/original data included in the PCA and a given `GRList` region
+# to include that `GRList` region in scoring calculations.
 # @param overlapMethod A character object with the overlap method.
 # "single" is the default method and is appropriate to use when the start and
 # end coordinates of the genomic signal/original data included in the PCA are
@@ -855,9 +855,9 @@ averageByRegion <- function(loadingMat,
 # @param returnQuantile Only used if meanPerRegion=TRUE, instead of mean
 # return the quantile/percentile of the mean of each region
 # in relation to the distribution of original values in BSDT
-# @param minOverlap The minimum percent overlap required between the 
-# genomic signal/original data included in the PCA and the `GRList` region
-# sets to be called a hit.
+# @param minOverlap The minimum proportion overlap required between the 
+# genomic signal/original data included in the PCA and a given `GRList` region
+# to include that `GRList` region in scoring calculations.
 # @param overlapMethod A character object with the overlap method.
 # "single" is the default method and is appropriate to use when the start and
 # end coordinates of the genomic signal/original data included in the PCA are
@@ -878,7 +878,7 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL,
                         jExpr=NULL, byRegionGroup=FALSE, 
                         keep.na=FALSE, returnSD=FALSE, 
                         returnOLInfo=FALSE, meanPerRegion=FALSE,
-                        returnQuantile=FALSE, minOverlap=0.75,
+                        returnQuantile=FALSE, minOverlap=0.5,
                         overlapMethod="single") {
 
     # Assert that regionsGRL is a GRL.
@@ -964,11 +964,12 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL,
     } else if (overlapMethod == "simple") {
         # If the query represents a region, use percent overlap to identify hits
         hits  <- findOverlaps(query = bsgr[[1]], subject = regionsGR)
-        # determine percent overlapping
+        # determine proportion overlapping 
+        # (proportion of regionsGR region that is covered)
         olap  <- pintersect(bsgr[[1]][queryHits(hits)],
                             regionsGR[subjectHits(hits)])
         polap <- width(olap) / width(regionsGR[subjectHits(hits)])
-        # keep only hits greater than some minimum overlap value (default=0.75)
+        # keep only hits greater than some minimum overlap value (default=0.5)
         hits  <- hits[polap > minOverlap]
         fo    <- hits
     } else if (overlapMethod == "total") {
@@ -979,8 +980,8 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL,
         polap <- width(olap) / width(regionsGR[subjectHits(hits)])
         hits  <- hits[polap > minOverlap]
 
-        # Identify multiple input regions that overlap a single region set 
-        # location by inverting the findOverlaps function
+        # Identify multiple input regions that overlap a single region set
+        # region by inverting the findOverlaps function
         hitsTotal          <- findOverlaps(regionsGR, bsgr[[1]])
         # Isolate those input regions that overlap the same region set
         # location
