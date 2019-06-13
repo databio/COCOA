@@ -666,6 +666,7 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
     binnedDT <- rangeDT[, MIRA::binRegion(start, end, 
                                           binCount, get(seqnamesColName))]
     # output is a list of GRanges objects, does not play well with vapply
+    # one GRanges object for each bin, containing a segment of each original rangeDT region 
     binnedGR <- sapply(split(binnedDT, binnedDT$binID), dtToGr)
     # message("Aggregating...")
     
