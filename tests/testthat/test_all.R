@@ -188,39 +188,13 @@ test_that("aggregateLoadings, scoring metrics, and runCOCOA", {
     
 })
 
-test_that("aggregateLoadings and scoring metrics", {
+test_that("ATAC-seq scoring methods", {
     
+    findOverlaps(regionSet1, COCOA:::dtToGr(rbind(dataDT, dataDT)))
+    findOverlaps(COCOA:::dtToGr(dataDT), regionSet1)
     
-    
-    # test wilcoxon rank sum scoring metric
-    rsWResults <- COCOA:::rsWilcox(dataDT = dataDTW, regionGR = regionSetW)
-    PC2W <- wilcox.test(x = c(-2, 0, 1), y=c(-1, 2:4))$p.value
-    PC3W <- wilcox.test(x = c(8, 6, 5), y=c(7, 4, 3, 10))$p.value
-    expect_equal(c(PC2W, PC3W, 3, 2, 2, mean(width(regionSetW))), 
-                 c(rsWResults$PC2, rsWResults$PC3, rsWResults$cytosine_coverage, 
-                   rsWResults$region_coverage, 
-                   rsWResults$total_region_number, 
-                   rsWResults$mean_region_size))
-    
-    # same test for Wilcoxon but with aggregateLoadings (absolute value
-    # of loadings will be taken), "greater" alternate hypothesis is used in
-    # aggregateLoadings
-    rsWResults <- COCOA:::aggregateLoadings(loadingMat = loadingMatW, 
-                                           signalCoord = coordinateDTW, 
-                                           regionSet = regionSetW, 
-                                           PCsToAnnotate = c("PC2", "PC3"), 
-                                           scoringMetric = "rankSum")    
-    PC2W <- wilcox.test(x = c(2, 0, 1), y=c(1, 2:4), alternative = "greater")$p.value
-    PC3W <- wilcox.test(x = c(8, 6, 5), y=c(7, 4, 3, 10), alternative = "greater")$p.value
-    expect_equal(c(PC2W, PC3W, 3, 2, 2, mean(width(regionSetW))), 
-                 c(rsWResults$PC2, rsWResults$PC3, rsWResults$cytosine_coverage, 
-                   rsWResults$region_coverage, 
-                   rsWResults$total_region_number, 
-                   rsWResults$mean_region_size))
+})
 
-    
-    
-    })
 
 test_that("averageByRegion", {
     loadingMatABR <- loadingMat
