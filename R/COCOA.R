@@ -198,16 +198,28 @@ aggregateLoadings <- function(loadingMat,
     
     # do the actual aggregation
     if (scoringMetric == "regionMean") {
-        # previously used BSAggregate from RGenomeUtils but now using local, 
-        # modified copy
-        loadAgMain <- BSAggregate(BSDT = loadingDT, 
-                                  regionsGRL = GRangesList(regionSet),
-                                  jExpr = aggrCommand,
-                                  byRegionGroup = TRUE,
-                                  splitFactor = NULL,
-                                  returnOLInfo = TRUE,
-                                  minOverlap = minOverlap,
-                                  overlapMethod=overlapMethod)
+        
+        # for ATAC-seq
+        if (overlapMethod == "regionWeightedMean") {
+            loadAgMain <- regionOLWeightedMean(signalDT = loadingDT, 
+                                 signalGR = COCOA:::dtToGr(coordinateDT),
+                                 regionSet = regionSet,
+                                 calcCols= PCsToAnnotate)
+            loadAgMain <- as.data.table(loadAgMain)
+            
+        } else {
+            # previously used BSAggregate from RGenomeUtils but now using local, 
+            # modified copy
+            loadAgMain <- BSAggregate(BSDT = loadingDT, 
+                                      regionsGRL = GRangesList(regionSet),
+                                      jExpr = aggrCommand,
+                                      byRegionGroup = TRUE,
+                                      splitFactor = NULL,
+                                      returnOLInfo = TRUE,
+                                      minOverlap = minOverlap,
+                                      overlapMethod=overlapMethod)
+        }
+                
 
         # if no cytosines from loadings were included in regionSet, result is NA
         if (is.null(loadAgMain)) {
@@ -1401,6 +1413,37 @@ rsWilcox <- function(dataDT,
                        mean_region_size)
     return(wRes)
 }
+
+# calcCols character object. Column names. A weighted sum will be done for each of these
+# columns (columns should be numeric)
+
+
+regionOLWeightedMean <- function(signalDT, signalGR, 
+                                 regionSet, calcCols) {
+    
+    
+    hits  <- findOverlaps(query = signalGR, subject = regionSet)
+    olap  <- pintersect(signalGR[queryHits(hits)],
+                        regionSet[subjectHits(hits)])
+    polap <- width(olap) / width(regionSet[subjectHits(hits)])
+    
+    # some rows may be duplicated if a signalDT region overlapped multiple
+    # regions from signalGR but that is ok
+    signalDT <- signalDT[queryHits(hits), ]
+    
+    # weight the signalDT values by the proportion overlap (weighted average)
+    weightedSum <- t(as.matrix(polap)) %*% as.matrix(signalDT[, calcCols, with=FALSE])
+    
+    # weighted average
+    denom <- sum(polap)
+    weightedAve <- weightedSum / denom
+    # names(weightedAve) <- colsOfInterest
+
+    return(as.data.frame(weightedAve))
+} 
+
+
+
 
 # Create null distribution based on permutations
 

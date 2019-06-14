@@ -24,6 +24,13 @@ dataDT <- data.table(coordinateDT, loadingMat)
 dataDT$PC1[3] <- 0
 dataDT$PC3[5] <- 2
 
+# fake region data (for testing ATAC-seq)
+regionCoordDT <- data.table(chr=c(rep("chr1",4), rep("chr2", 2)),
+                            start=c(300, 650, 3000, 10000, 5075, 6150),
+                            end=c(600, 1000, 4000, 11000, 5125, 6300))
+regionDataDT <- data.table(PC1=c(1:6), PC2=-1:4)
+
+
 # region sets that will be tested
 regionSet1 <- data.table(chr = c("chr1", "chr1", "chr1", "chr2", "chr2"), 
                        start = c(1, 500, 3100, 5100, 6000),
@@ -190,8 +197,17 @@ test_that("aggregateLoadings, scoring metrics, and runCOCOA", {
 
 test_that("ATAC-seq scoring methods", {
     
-    findOverlaps(regionSet1, COCOA:::dtToGr(rbind(dataDT, dataDT)))
-    findOverlaps(COCOA:::dtToGr(dataDT), regionSet1)
+    # test "regionOLWeightedMean"
+    weightedAve = regionOLWeightedMean(signalDT = regionDataDT, signalGR = COCOA:::dtToGr(regionCoordDT), 
+                         regionSet = regionSet1, calcCols = c("PC1", "PC2"))
+    # proportion overlap is first then PC
+    correctAve = data.frame(PC1=((101/400)*1+(101/201)*1+(51/201)*2+1*3+(26/51)*5+(151/451)*6) / 
+        ((101/400)+(101/201)+(51/201)+1+(26/51)+(151/451)),
+        PC2=((101/400)*-1+(101/201)*-1+(51/201)*0+1*1+(26/51)*3+(151/451)*4) / 
+            ((101/400)+(101/201)+(51/201)+1+(26/51)+(151/451)))
+    expect_equal(weightedAve, correctAve)
+    
+    
     
 })
 
