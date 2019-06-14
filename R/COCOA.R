@@ -206,6 +206,8 @@ aggregateLoadings <- function(loadingMat,
                                  regionSet = regionSet,
                                  calcCols= PCsToAnnotate)
             loadAgMain <- as.data.table(loadAgMain)
+            setnames(loadAgMain, c("signal_coverage", "regionSet_coverage"),
+                    c("numCpGsOverlapping", "numRegionsOverlapping"))
             
         } else {
             # previously used BSAggregate from RGenomeUtils but now using local, 
@@ -555,7 +557,7 @@ runCOCOA <- function(loadingMat,
 
 getLoadingProfile <- function(loadingMat, signalCoord, regionSet,
                     PCsToAnnotate = c("PC1", "PC2"), binNum = 25,
-                    verbose=TRUE, minOverlap = 0.75, 
+                    verbose=TRUE, minOverlap = 0.5, 
                     overlapMethod = "single") {
     
     if (!(any(c(is(loadingMat, "matrix"), is(loadingMat, "data.frame"))))) {
@@ -682,15 +684,38 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
     binnedGR <- sapply(split(binnedDT, binnedDT$binID), dtToGr)
     # message("Aggregating...")
     
+    if (overlapMethod == "regionWeightedMean") {
+        
+        binMeansList <- lapply(X = binnedGR, 
+                               FUN = function(x) regionOLWeightedMean(signalDT = BSDT, 
+                                                                      signalGR = dtToGr(BSDT[, .(chr, start, end)]), 
+                                                                      regionSet = x, 
+                                                                      calcCols = PCsToAnnotate))
+        binnedBSDT <- rbindlist(binMeansList)
+        regionGroupID = 1:length(binMeansList)
+        # any bins that had no overlap with data will be NULL
+        # if any bins had no data, return NULL
+        if (any(vapply(X = binMeansList, FUN = is.null, FUN.VALUE = TRUE))) {
+            return(NULL)
+        }
+         
+        # regionGroupID = regionGroupID[!vapply(X = binMeansList, FUN = is.null, FUN.VALUE = TRUE)]
+        binnedBSDT[, regionGroupID := regionGroupID]
+        
+    } else {
+        
+        # what is output if a region set has no overlap?
+        binnedBSDT <- BSAggregate(BSDT,
+                                  regionsGRL=GRangesList(binnedGR),
+                                  jExpr=buildJ(PCsToAnnotate,
+                                               rep("mean", length(PCsToAnnotate))),
+                                  byRegionGroup = byRegionGroup,
+                                  splitFactor = splitFactor,
+                                  minOverlap=minOverlap,
+                                  overlapMethod=overlapMethod)
+    }
     # RGenomeUtils::BSAggregate
-    binnedBSDT <- BSAggregate(BSDT,
-                              regionsGRL=GRangesList(binnedGR),
-                              jExpr=buildJ(PCsToAnnotate,
-                                           rep("mean", length(PCsToAnnotate))),
-                              byRegionGroup = byRegionGroup,
-                              splitFactor = splitFactor,
-                              minOverlap=minOverlap,
-                              overlapMethod=overlapMethod)
+
     # # If we aren't aggregating by bin, then don't restrict to min reads!
     # if (byRegionGroup) {
     #     binnedBSDT <- binnedBSDT[readCount > minReads,]
@@ -1414,9 +1439,19 @@ rsWilcox <- function(dataDT,
     return(wRes)
 }
 
-# calcCols character object. Column names. A weighted sum will be done for each of these
-# columns (columns should be numeric)
 
+# @param signalDT Data to be aggregated (e.g. raw data: ATAC-seq,
+# region based DNA methylation or loading values)
+# @param signalGR GRanges object with coordinates for signalDT
+# @param regionSet GRanges object. The region set to score.
+# @param calcCols character object. Column names. A weighted sum will be done for each of these
+# columns (columns should be numeric).
+# @value Returns data.frame with columns 'calcCols', signal_coverage col has
+# number of signalGR regions that overlapped with any regionSet regions, 
+# regionSet_coverage has the sum of all proportion overlaps of regions from 
+# signalGR with regionSet (regionSet region is denominator)
+# containing weighted mean for each col.
+# Returns NULL if there is no overlap between signalGR and regionSet
 
 regionOLWeightedMean <- function(signalDT, signalGR, 
                                  regionSet, calcCols) {
@@ -1441,10 +1476,14 @@ regionOLWeightedMean <- function(signalDT, signalGR,
     
     # weighted average
     denom <- sum(polap)
-    weightedAve <- weightedSum / denom
+    weightedAve <- as.data.frame(weightedSum / denom)
     # names(weightedAve) <- colsOfInterest
+    
+    # add columns for coverage info
+    weightedAve$signal_coverage = length(unique(queryHits(hits)))
+    weightedAve$regionSet_coverage = denom
 
-    return(as.data.frame(weightedAve))
+    return(weightedAve)
 } 
 
 
