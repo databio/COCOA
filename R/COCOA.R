@@ -1550,6 +1550,11 @@ regionOLWeightedMean <- function(signalDT, signalGR,
     
     
     hits  <- findOverlaps(query = signalGR, subject = regionSet)
+    # if no overlap, return NULL
+    if (length(hits) == 0) {
+        return(NULL)
+    }
+    
     olap  <- pintersect(signalGR[queryHits(hits)],
                         regionSet[subjectHits(hits)])
     polap <- width(olap) / width(regionSet[subjectHits(hits)])
