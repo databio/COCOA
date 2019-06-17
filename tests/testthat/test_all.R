@@ -209,6 +209,17 @@ test_that("ATAC-seq scoring methods", {
     
     
     
+    # test "weightedAveByRegion"
+    avePerRegion = weightedAveByRegion(signalDT= regionDataDT,
+                                    signalCoord=COCOA:::dtToGr(regionCoordDT),
+                                    regionSet=regionSet1,
+                                    calcCols = c("PC1", "PC2"))
+    correctAve = data.table(PC1 = c(1*1, (101/201*1 + 51/201*2)/ (101/201 + 51/201), 1*3, 1*5, 1*6), 
+                            PC2=c(1*-1, (101/201*-1 + 51/201*0)/ (101/201 + 51/201), 1*1, 1*3, 1*4))
+    expect_equal(avePerRegion$PC1, correctAve$PC1)
+    expect_equal(avePerRegion$PC2, correctAve$PC2)
+    
+    
 })
 
 
