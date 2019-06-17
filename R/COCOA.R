@@ -832,6 +832,55 @@ averageByRegion <- function(loadingMat,
     
 }
 
+# signalDT 
+# average by region for region-based data (eg ATAC-seq)
+# @return One value per region
+weightedAveByRegion <- function(signalDT,
+                                 signalCoord,
+                                 regionSet,
+                                 calcCols = c("PC1", "PC2"),
+                                 returnQuantile = FALSE) {
+
+    hits  <- findOverlaps(query = signalCoord, subject = regionSet)
+    # if no overlap, return NULL
+    if (length(hits) == 0) {
+        return(NULL)
+    }
+    
+    olap  <- pintersect(signalCoord[queryHits(hits)],
+                        regionSet[subjectHits(hits)])
+    polap <- width(olap) / width(regionSet[subjectHits(hits)])
+    
+    
+    # get total proportion overlap per region
+    # aggregate polap by region
+    pOlapDT <- data.table(signalDT[queryHits(hits), calcCols, with=FALSE], 
+                          rsRegionID = subjectHits(hits), 
+                          pOlap = polap)
+    pOlapByRegionDT <- pOlapDT[, .(regionPOlap = sum(pOlap)), by=rsRegionID]
+    
+    
+    # specify aggregation operation
+    # will be done separately for each PC specified
+    aggrCommand <- paste("list(", paste(paste0(calcCols, "=", "sum", "(", 
+                                calcCols, " * pOlap)"), collapse = ", "), ")")
+    weightedSumByRegionDT <- pOlapDT[, eval(parse(text=aggrCommand)), by=rsRegionID]
+    
+    
+    # divide by total proportion overlap to get mean value 
+    jCommand <- paste("list(", paste(paste0(calcCols, "=", calcCols, " / regionPOlap"), collapse = ", "), ")")
+    meanPerRegion <- cbind(pOlapByRegionDT, weightedSumByRegionDT)
+    meanPerRegion <- meanPerRegion[, eval(parse(text=jCommand))]
+    
+        
+    # meanPerRegion <-  pOlapDT[, .(regionMean = sum(score * (pOlap/sum(pOlap))), by=rsRegionID]
+    
+    return(meanPerRegion)
+    
+}
+
+
+
 
 # Get regions that are most associated with PCs of interest
 #
