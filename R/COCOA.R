@@ -149,7 +149,7 @@ aggregateLoadings <- function(loadingMat,
                               PCsToAnnotate = c("PC1", "PC2"),
                               scoringMetric = "regionMean",
                               verbose = FALSE,
-                              minOverlap = 0.75,
+                              minOverlap = 0.5,
                               overlapMethod = "single") {
     
 
@@ -201,7 +201,7 @@ aggregateLoadings <- function(loadingMat,
 
         
         # for ATAC-seq
-        if (overlapMethod == "regionWeightedMean") {
+        if (overlapMethod == "proportionWeightedMean") {
             loadAgMain <- regionOLWeightedMean(signalDT = loadingDT, 
                                  signalGR = COCOA:::dtToGr(coordinateDT),
                                  regionSet = regionSet,
@@ -434,7 +434,7 @@ runCOCOA <- function(loadingMat,
                      PCsToAnnotate = c("PC1", "PC2"),
                      scoringMetric = "regionMean",
                      verbose = TRUE,
-                     minOverlap = 0.75,
+                     minOverlap = 0.5,
                      overlapMethod="single") {
     
     if (!(any(c(is(loadingMat, "matrix"), is(loadingMat, "data.frame"))))) {
@@ -661,7 +661,7 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
                            splitFactor = NULL,
                            PCsToAnnotate,
                            verbose = FALSE,
-                           minOverlap = 0.75,
+                           minOverlap = 0.5,
                            overlapMethod) {
     if (!is(rangeDT, "data.table")) {
     stop("rangeDT must be a data.table")
@@ -685,7 +685,7 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
     binnedGR <- sapply(split(binnedDT, binnedDT$binID), dtToGr)
     # message("Aggregating...")
     
-    if (overlapMethod == "regionWeightedMean") {
+    if (overlapMethod == "proportionWeightedMean") {
         
         binMeansList <- lapply(X = binnedGR, 
                                FUN = function(x) regionOLWeightedMean(signalDT = BSDT, 
@@ -768,17 +768,17 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
 # values for each region. Has columns chr, start, end, and a column for each
 # PC in PCsToAnnotate. Regions are not in order along the rows of the data.table.
 #
-# @example averageByRegion(BSDT = BSDT, regionsGRL, 
+# @example averagePerRegion(BSDT = BSDT, regionsGRL, 
 #          jCommand = MIRA:::buildJ(cols = "methylProp", "mean")) 
 # Devel note: I could add a column for how many cytosines are in each region 
 
-averageByRegion <- function(loadingMat,
+averagePerRegion <- function(loadingMat,
                             signalCoord,
                             regionSet,
                             PCsToAnnotate = c("PC1", "PC2"),
                             returnQuantile = FALSE,
-                            minOverlap = 0.75,
-                            overlapMethod) {
+                            minOverlap = 0.5,
+                            absVal=TRUE) {
     
     
     
@@ -803,30 +803,66 @@ averageByRegion <- function(loadingMat,
         stop("regionSet should be a GRanges object. Check object class.")
     }
     
+    # determine whether coordinates are single base or a range
+    if (!("end" %in% colnames(coordinateDT))) {
+        dataCoordType <- "singleBase"
+    } else {
+        if (all(coordinateDT$start == coordinateDT$end)) {
+            dataCoordType <- "singleBase"
+        } else {
+            dataCoordType <- "region"
+        }
+    }
     
-    # reformating parameters and assigning new names
-    loadingDT <- as.data.table(abs(loadingMat))
-    # linking coordinates to loading values, has columns chr start, PCsToAnnotate
-    BSDT <- cbind(coordinateDT, loadingDT[, .SD, .SDcols = PCsToAnnotate])
-    jExpr <- buildJ(PCsToAnnotate, rep("mean", length(PCsToAnnotate)))
+    
+    # take absolute value or not
+    if (absVal) {
+        signalDT <- as.data.table(abs(loadingMat))
+    } else {
+        signalDT <- as.data.table(loadingMat)
+    }
     
    
-    avPerRegion <- BSAggregate(BSDT = BSDT,
-                               regionsGRL = regionSet,
-                               excludeGR = NULL,
-                               regionsGRL.length = NULL,
-                               splitFactor = NULL, 
-                               keepCols = NULL,
-                               sumCols = NULL,
-                               jExpr = jExpr,
-                               byRegionGroup = FALSE,
-                               keep.na = FALSE,
-                               returnSD = FALSE,
-                               returnOLInfo = FALSE,
-                               meanPerRegion = TRUE,
-                               returnQuantile = returnQuantile,
-                               minOverlap = minOverlap,
-                               overlapMethod = overlapMethod) 
+    
+    # use different function for single base data and for region data
+    
+    if (dataCoordType == "singleBase") {
+        
+        # linking coordinates to loading values, has columns chr start, PCsToAnnotate
+        BSDT <- cbind(coordinateDT, signalDT[, .SD, .SDcols = PCsToAnnotate])
+        jExpr <- buildJ(PCsToAnnotate, rep("mean", length(PCsToAnnotate)))
+        
+        avPerRegion <- BSAggregate(BSDT = BSDT,
+                                   regionsGRL = regionSet,
+                                   excludeGR = NULL,
+                                   regionsGRL.length = NULL,
+                                   splitFactor = NULL, 
+                                   keepCols = NULL,
+                                   sumCols = NULL,
+                                   jExpr = jExpr,
+                                   byRegionGroup = FALSE,
+                                   keep.na = FALSE,
+                                   returnSD = FALSE,
+                                   returnOLInfo = FALSE,
+                                   meanPerRegion = TRUE,
+                                   returnQuantile = returnQuantile,
+                                   minOverlap = minOverlap,
+                                   overlapMethod = "single") 
+        
+        
+    } else if (dataCoordType == "region") {
+        
+        avePerRegion <- weightedAvePerRegion(signalDT = signalDT,
+                             signalCoord=signalCoord,
+                             regionSet=regionSet,
+                             calcCols = PCsToAnnotate,
+                             returnQuantile = returnQuantile) 
+        
+    } else {
+        stop("dataCoordType not recognized.")
+    }
+   
+
     
     return(avPerRegion)
     
@@ -835,7 +871,7 @@ averageByRegion <- function(loadingMat,
 # signalDT 
 # average by region for region-based data (eg ATAC-seq)
 # @return One value per region
-weightedAveByRegion <- function(signalDT,
+weightedAvePerRegion <- function(signalDT,
                                  signalCoord,
                                  regionSet,
                                  calcCols = c("PC1", "PC2"),
@@ -872,11 +908,18 @@ weightedAveByRegion <- function(signalDT,
     meanPerRegion <- cbind(pOlapByRegionDT, weightedSumByRegionDT)
     meanPerRegion <- meanPerRegion[, eval(parse(text=jCommand))]
     
-        
+    if (returnQuantile) {
+        for (i in seq_along(calcCols)) {
+            # perhaps this could be more efficient with mapply
+            # ecdf example: ecdf(distributionData)(getPercentileOfThis)
+            meanPerRegion[, c(calcCols[i]) := ecdf(signalDT[[calcCols[i]]])(meanPerRegion[[calcCols[i]]])]
+            # I tried set() to improve performance but it took about the same time
+        }
+    }
+    
     # meanPerRegion <-  pOlapDT[, .(regionMean = sum(score * (pOlap/sum(pOlap))), by=rsRegionID]
     
     return(meanPerRegion)
-    
 }
 
 
