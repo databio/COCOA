@@ -223,38 +223,19 @@ test_that("ATAC-seq scoring methods", {
 })
 
 
-test_that("averageByRegion", {
+test_that("averagePerRegion", {
     loadingMatABR <- loadingMat
     loadingMatABR[1, "PC1"] <- 3
     loadingMatABR[32, "PC1"] <- 2
-    abr <- COCOA:::averageByRegion(loadingMat = loadingMatABR, signalCoord = COCOA:::dtToGr(coordinateDT), 
+    abr <- COCOA:::averagePerRegion(loadingMat = loadingMatABR, signalCoord = COCOA:::dtToGr(coordinateDT), 
                             regionSet = regionSet1, PCsToAnnotate = "PC1", 
                             returnQuantile = FALSE)
     expect_equal(abr$PC1, c(2, 1, 1, 1.5))
     
     # test quantile
-    abrq <- COCOA:::averageByRegion(loadingMat = loadingMatABR, signalCoord = COCOA:::dtToGr(coordinateDT), 
+    abrq <- COCOA:::averagePerRegion(loadingMat = loadingMatABR, signalCoord = COCOA:::dtToGr(coordinateDT), 
                                    regionSet = regionSet1, PCsToAnnotate = "PC1", 
                                    returnQuantile = TRUE)
-    # the mean values, abr$PC1, converted to quantiles
-    # converting properly to quantiles?
-    expect_equal(abrq$PC1, ecdf(loadingMatABR[, "PC1"])(abr$PC1))
-    
-})
-
-test_that("averageByRegion", {
-    loadingMatABR <- loadingMat
-    loadingMatABR[1, "PC1"] <- 3
-    loadingMatABR[32, "PC1"] <- 2
-    abr <- COCOA:::averageByRegion(loadingMat = loadingMatABR, signalCoord = COCOA:::dtToGr(coordinateDT), 
-                                   regionSet = regionSet1, PCsToAnnotate = "PC1", 
-                                   returnQuantile = FALSE)
-    expect_equal(abr$PC1, c(2, 1, 1, 1.5))
-    
-    # test quantile
-    abrq <- COCOA:::averageByRegion(loadingMat = loadingMatABR, signalCoord = COCOA:::dtToGr(coordinateDT), 
-                                    regionSet = regionSet1, PCsToAnnotate = "PC1", 
-                                    returnQuantile = TRUE)
     # the mean values, abr$PC1, converted to quantiles
     # converting properly to quantiles?
     expect_equal(abrq$PC1, ecdf(loadingMatABR[, "PC1"])(abr$PC1))
