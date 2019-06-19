@@ -61,9 +61,9 @@ NULL
 if (getRversion() >= "2.15.1") {
     utils::globalVariables(c(
         ".", "bin", "binID", "chr", "id", 
-        "coverage", "regionGroupID", "regionID", "theme", 
+        "coverage", "pOlap", "regionGroupID", "regionID", "theme", 
         "mean_region_size", "region_coverage", "rowIndex", "rsIndex",
-        "total_region_number", "signal_coverage", ".SD")) 
+        "rsRegionID", "total_region_number", "signal_coverage", ".SD")) 
 }
 
 #########################################################################
@@ -203,7 +203,7 @@ aggregateLoadings <- function(loadingMat,
         # for ATAC-seq
         if (overlapMethod == "proportionWeightedMean") {
             loadAgMain <- regionOLWeightedMean(signalDT = loadingDT, 
-                                 signalGR = COCOA:::dtToGr(coordinateDT),
+                                 signalGR = dtToGr(coordinateDT),
                                  regionSet = regionSet,
                                  calcCols= PCsToAnnotate)
             loadAgMain <- as.data.table(loadAgMain)
