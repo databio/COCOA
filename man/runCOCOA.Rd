@@ -5,7 +5,12 @@
 \title{Do COCOA with many region sets}
 \usage{
 runCOCOA(loadingMat, signalCoord, GRList, PCsToAnnotate = c("PC1",
+<<<<<<< e142089229adfc23c1f7702854a6da9a03f1f342
   "PC2"), scoringMetric = "regionMean", verbose = TRUE)
+=======
+  "PC2"), scoringMetric = "regionMean", verbose = TRUE,
+  minOverlap = 0.5, overlapMethod = "single")
+>>>>>>> Update docs
 }
 \arguments{
 \item{loadingMat}{matrix of loadings (the coefficients of 
@@ -55,6 +60,21 @@ the loadings not in the region set.}
 \item{verbose}{A "logical" object. Whether progress 
 of the function should be shown, one
 bar indicates the region set is completed.}
+
+\item{minOverlap}{The minimum proportion overlap required between the}
+
+\item{overlapMethod}{A character object with the overlap method.
+"single" is the default method and is appropriate to use when the start and
+end coordinates of the genomic signal/original data included in the PCA are
+the same.
+"simple" determines whether a single genomic signal included in the PCA that 
+spans more than a single position overlaps with a region set location by
+the minOverlap parameter.
+"total" determines whether a single, or multiple, genomic signal(s) included 
+in the PCA that span(s) more than a single position overlap(s) with a region 
+set location by the minOverlap parameter. This method includes genomic
+signals that when combined sufficiently cover a single region set location
+by the minOverlap parameter.}
 }
 \value{
 data.frame of results, one row for each region set. 

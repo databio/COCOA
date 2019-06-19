@@ -46,4 +46,4 @@ biocViews: PrincipalComponent, GenomicVariation, DNAMethylation, GeneRegulation,
            MethylSeq, Sequencing, Epigenetics, ImmunoOncology
 URL: http://code.databio.org/COCOA/
 BugReports: https://github.com/databio/COCOA
-RoxygenNote: 6.1.0
+RoxygenNote: 6.1.1
