@@ -6,7 +6,7 @@
 \usage{
 runCOCOA(loadingMat, signalCoord, GRList, PCsToAnnotate = c("PC1",
   "PC2"), scoringMetric = "regionMean", verbose = TRUE,
-  minOverlap = 0.75, overlapMethod = "single")
+  minOverlap = 0.5, overlapMethod = "single")
 }
 \arguments{
 \item{loadingMat}{matrix of loadings (the coefficients of 
@@ -57,9 +57,7 @@ the loadings not in the region set.}
 of the function should be shown, one
 bar indicates the region set is completed.}
 
-\item{minOverlap}{The minimum percent overlap required between the 
-genomic signal/original data included in the PCA and the `GRList` region
-sets to be called a hit.}
+\item{minOverlap}{The minimum proportion overlap required between the}
 
 \item{overlapMethod}{A character object with the overlap method.
 "single" is the default method and is appropriate to use when the start and

@@ -6,7 +6,7 @@
 \usage{
 getLoadingProfile(loadingMat, signalCoord, regionSet,
   PCsToAnnotate = c("PC1", "PC2"), binNum = 25, verbose = TRUE,
-  minOverlap = 0.75, overlapMethod = c("single", "simple", "total"))
+  minOverlap = 0.5, overlapMethod = "single")
 }
 \arguments{
 \item{loadingMat}{matrix of loadings (the coefficients of 
