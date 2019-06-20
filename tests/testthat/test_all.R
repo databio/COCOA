@@ -208,7 +208,17 @@ test_that("ATAC-seq scoring methods", {
         signal_coverage=5, regionSet_coverage=(101/400)+(101/201)+(51/201)+1+(26/51)+(151/451))
     expect_equal(weightedAve, correctAve)
     
-    
+    # test "regionOLMean"
+    signalAve <- regionOLMean(signalDT = regionDataDT,
+                              signalGR = COCOA:::dtToGr(regionCoordDT), 
+                              regionSet = regionSet1,
+                              calcCols = c("PC1", "PC2"))
+    # proportion overlap is first then PC
+    correctAve <- data.frame(PC1=(1+1+2+3+5+6)/6,
+                             PC2=(-1+-1+0+1+3+4)/6, 
+                             signal_coverage=5,
+                             regionSet_coverage=5)
+    expect_equal(signalAve, correctAve)
     
     # test "weightedAvePerRegion"
     avePerRegion <- weightedAvePerRegion(signalDT= regionDataDT,
@@ -216,10 +226,9 @@ test_that("ATAC-seq scoring methods", {
                                     regionSet=regionSet1,
                                     calcCols = c("PC1", "PC2"))
     correctAve <- data.table(PC1 = c(1*1, (101/201*1 + 51/201*2)/ (101/201 + 51/201), 1*3, 1*5, 1*6), 
-                            PC2=c(1*-1, (101/201*-1 + 51/201*0)/ (101/201 + 51/201), 1*1, 1*3, 1*4))
+                             PC2 = c(1*-1, (101/201*-1 + 51/201*0)/ (101/201 + 51/201), 1*1, 1*3, 1*4))
     expect_equal(avePerRegion$PC1, correctAve$PC1)
     expect_equal(avePerRegion$PC2, correctAve$PC2)
-    
     
 })
 
@@ -280,10 +289,7 @@ test_that("getLoadingProfile", {
                                                      PCsToAnnotate = "PC1", 
                                                      binNum = 5))  
     
-    expect_equal(binnedP, alterOut)
-    
-    
-    
+    expect_equal(binnedP, alterOut)    
     
 })
 
