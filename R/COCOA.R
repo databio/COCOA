@@ -61,9 +61,9 @@ NULL
 if (getRversion() >= "2.15.1") {
     utils::globalVariables(c(
         ".", "bin", "binID", "chr", "id", 
-        "coverage", "regionGroupID", "regionID", "theme", 
+        "coverage", "pOlap", "regionGroupID", "regionID", "theme", 
         "mean_region_size", "region_coverage", "rowIndex", "rsIndex",
-        "total_region_number", "cytosine_coverage", ".SD")) 
+        "rsRegionID", "total_region_number", "signal_coverage", ".SD")) 
 }
 
 #########################################################################
@@ -122,7 +122,7 @@ if (getRversion() >= "2.15.1") {
 #' @return a data.table with one row and the following 
 #' columns: one column for each item of PCsToAnnotate with names given
 #' by PCsToAnnotate. These columns have scores for the region set for each PC.
-#' Other columns: cytosine_coverage which
+#' Other columns: signal_coverage (formerly cytosine_coverage) which
 #' has number of cytosines that overlapped with regionSet (or in the general case, 
 #' coordinates from signalCoord that overlapped regionSet) 
 #' region_coverage which has number of regions from regionSet
@@ -143,11 +143,13 @@ if (getRversion() >= "2.15.1") {
 #'                                  scoringMetric="regionMean")
 #' @export
 
-aggregateLoadings <- function(loadingMat, signalCoord, regionSet, 
-                              PCsToAnnotate = c("PC1", "PC2"), 
-                              scoringMetric="regionMean",
-                              verbose=FALSE) {
-    
+aggregateLoadings <- function(loadingMat,
+                              signalCoord,
+                              regionSet,
+                              PCsToAnnotate = c("PC1", "PC2"),
+                              scoringMetric = "regionMean",
+                              verbose = FALSE,
+                              overlapMethod = "single") {
 
     if (is(signalCoord, "GRanges")) {
         coordinateDT <- grToDt(signalCoord)
@@ -170,11 +172,11 @@ aggregateLoadings <- function(loadingMat, signalCoord, regionSet,
     }
     
     numOfRegions <- length(regionSet)
-    totalCpGs <- nrow(loadingMat)
+    totalCpGs    <- nrow(loadingMat)
     
     # extreme positive or negative values both give important information
     loadingMat <- abs(loadingMat) # required for later code
-    loadingDT <- as.data.table(loadingMat)
+    loadingDT  <- as.data.table(loadingMat)
     
     # reformat into data.table with chromosome location and weight
     # also restricting to PCsToAnnotate so unnecessary computations 
@@ -194,25 +196,52 @@ aggregateLoadings <- function(loadingMat, signalCoord, regionSet,
     
     # do the actual aggregation
     if (scoringMetric == "regionMean") {
-        # previously used BSAggregate from RGenomeUtils but now using local, 
-        # modified copy
-        loadAgMain <- BSAggregate(BSDT = loadingDT, 
-                                  regionsGRL = GRangesList(regionSet),
-                                  jExpr = aggrCommand,
-                                  byRegionGroup = TRUE,
-                                  splitFactor = NULL, returnOLInfo = TRUE)
+        
+        # for ATAC-seq
+        if (overlapMethod == "proportionWeightedMean") {
+
+            loadAgMain <- regionOLWeightedMean(signalDT = loadingDT, 
+                                 signalGR = dtToGr(coordinateDT),
+                                 regionSet = regionSet,
+                                 calcCols= PCsToAnnotate)
+            loadAgMain <- as.data.table(loadAgMain)
+            setnames(loadAgMain, c("signal_coverage", "regionSet_coverage"),
+                    c("numCpGsOverlapping", "numRegionsOverlapping"))
+            
+        } else if (overlapMethod == "unweightedMean") {
+
+            loadAgMain <- regionOLMean(signalDT = loadingDT, 
+                                 signalGR = dtToGr(coordinateDT),
+                                 regionSet = regionSet,
+                                 calcCols= PCsToAnnotate)
+            loadAgMain <- as.data.table(loadAgMain)
+            setnames(loadAgMain, c("signal_coverage", "regionSet_coverage"),
+                    c("numCpGsOverlapping", "numRegionsOverlapping"))
+
+        } else {
+            # previously used BSAggregate from RGenomeUtils but now using local, 
+            # modified copy
+            loadAgMain <- BSAggregate(BSDT = loadingDT, 
+                                      regionsGRL = GRangesList(regionSet),
+                                      jExpr = aggrCommand,
+                                      byRegionGroup = TRUE,
+                                      splitFactor = NULL,
+                                      returnOLInfo = TRUE)
+        }
+                
+
 
         # if no cytosines from loadings were included in regionSet, result is NA
         if (is.null(loadAgMain)) {
             results <- as.data.table(t(rep(NA, length(PCsToAnnotate))))
             setnames(results, PCsToAnnotate)
-            results[, cytosine_coverage := 0]
+            results[, signal_coverage := 0]
             results[, region_coverage := 0]
             results[, total_region_number := numOfRegions]
             results[, mean_region_size := round(mean(width(regionSet)), 1)]
         } else {
             results <- loadAgMain[, .SD, .SDcols = PCsToAnnotate]
-            results[, cytosine_coverage := loadAgMain[, .SD, .SDcols = "numCpGsOverlapping"]]
+            results[, signal_coverage := loadAgMain[, .SD, .SDcols = "numCpGsOverlapping"]]
             results[, region_coverage := loadAgMain[, .SD, .SDcols = "numRegionsOverlapping"]]
             results[, total_region_number := numOfRegions]
             results[, mean_region_size := round(mean(width(regionSet)), 1)]
@@ -227,7 +256,7 @@ aggregateLoadings <- function(loadingMat, signalCoord, regionSet,
         if (is.null(loadMetrics)) {
             results <- as.data.table(t(rep(NA, length(PCsToAnnotate))))
             setnames(results, PCsToAnnotate)
-            results[, cytosine_coverage := 0]
+            results[, signal_coverage := 0]
             results[, region_coverage := 0]
             results[, total_region_number := numOfRegions]
             results[, mean_region_size := round(mean(width(regionSet)), 1)]
@@ -240,7 +269,7 @@ aggregateLoadings <- function(loadingMat, signalCoord, regionSet,
             # add information about degree of overlap
             results <- cbind(results, 
                              loadMetrics[1, .SD, 
-                                         .SDcols = c("cytosine_coverage", 
+                                         .SDcols = c("signal_coverage", 
                                                      "region_coverage", 
                                                      "total_region_number", 
                                                      "mean_region_size")]) 
@@ -260,7 +289,7 @@ aggregateLoadings <- function(loadingMat, signalCoord, regionSet,
         if (is.null(loadMetrics)) {
             results <- as.data.table(t(rep(NA, length(PCsToAnnotate))))
             setnames(results, PCsToAnnotate)
-            results[, cytosine_coverage := 0]
+            results[, signal_coverage := 0]
             results[, region_coverage := 0]
             results[, total_region_number := numOfRegions]
             results[, mean_region_size := round(mean(width(regionSet)), 1)]
@@ -272,13 +301,12 @@ aggregateLoadings <- function(loadingMat, signalCoord, regionSet,
             # mean difference
             # error if numCpGsOverlapping > (1/2) * totalCpGs
             meanDiff <- (loadMetrics$mean_OL - loadMetrics$mean_nonOL) / 
-                (sdPool * sqrt((1 / loadMetrics$cytosine_coverage) - (1 / (totalCpGs - loadMetrics$cytosine_coverage))))
+                (sdPool * sqrt((1 / loadMetrics$signal_coverage) - (1 / (totalCpGs - loadMetrics$signal_coverage))))
             results <- as.data.table(t(meanDiff))
             colnames(results) <- loadMetrics$testCol
             
             # add information about degree of overlap
-            results <- cbind(results, loadMetrics[1, .SD, .SDcols = c("cytosine_coverage", "region_coverage", 
-                                                      "total_region_number", "mean_region_size")]) 
+            results <- cbind(results, loadMetrics[1, .SD, .SDcols = c("signal_coverage", "region_coverage", "total_region_number", "mean_region_size")]) 
          }
         
         
@@ -290,7 +318,7 @@ aggregateLoadings <- function(loadingMat, signalCoord, regionSet,
         if (is.null(wRes)) {
             results <- as.data.table(t(rep(NA, length(PCsToAnnotate))))
             setnames(results, PCsToAnnotate)
-            results[, cytosine_coverage := 0]
+            results[, signal_coverage := 0]
             results[, region_coverage := 0]
             results[, total_region_number := numOfRegions]
             results[, mean_region_size := round(mean(width(regionSet)), 1)]
@@ -331,10 +359,9 @@ aggregateLoadings <- function(loadingMat, signalCoord, regionSet,
 #' for the genomic signal/original data (eg DNA methylation) 
 #' included in the PCA. Coordinates should be in the 
 #' same order as the original data and the loadings 
-#' (each item/row in signalCoord
-#' corresponds to a row in loadingMat). If a data.frame, 
-#' must have chr and start columns. If end is included, start 
-#' and end should be the same. Start coordinate will be used for calculations.
+#' (each item/row in signalCoord corresponds to a row in loadingMat).
+#' If a data.frame, must have chr and start columns.
+#' If end is not included, start coordinate will be used for calculations.
 #' @param GRList GRangesList object. Each list item is 
 #' a distinct region set to test (region set: regions that correspond to 
 #' the same biological annotation). The region set database.
@@ -365,12 +392,24 @@ aggregateLoadings <- function(loadingMat, signalCoord, regionSet,
 #' @param verbose A "logical" object. Whether progress 
 #' of the function should be shown, one
 #' bar indicates the region set is completed.
+#' @param overlapMethod A character object with the overlap method.
+#' "single" is the default method and is appropriate to use when the start and
+#' end coordinates of the genomic signal/original data included in the PCA are
+#' the same.
+#' "unweightedMean" determines whether single, or multiple, genomic signal(s) 
+#' that span(s) more than a single position overlap(s) with a region set 
+#' location. This method determines the unweighted mean signal of any genomic 
+#' signal that overlaps in any amount with a region set region.
+#' "proportionWeightedMean" determines whether single, or multiple, 
+#' genomic signal(s) that span(s) more than a single position overlap(s) with a 
+#' region set location. This method weights the signals by the proportion 
+#' overlap with the corresponding region set regions.
 #' @return data.frame of results, one row for each region set. 
 #' One column for each PC in PCsToAnnotate
 #' with score for that PC for a given region set (specific score depends
 #' on "scoringMetric" parameter). 
 #' Rows will be in the same order as region sets in GRList
-#' "cytosine_coverage" column has number of cytosines that 
+#' "signal_coverage" column has number of cytosines (or regions) that 
 #' overlapped with the given region set (or in the general case, 
 #' coordinates from signalCoord that overlapped regionSet).
 #' "region_coverage" column has number of regions 
@@ -392,10 +431,14 @@ aggregateLoadings <- function(loadingMat, signalCoord, regionSet,
 #' 
 #' @export
 
-runCOCOA <- function(loadingMat, signalCoord, GRList, 
-                  PCsToAnnotate = c("PC1", "PC2"), scoringMetric = "regionMean",
-                  verbose=TRUE) {
-    
+runCOCOA <- function(loadingMat,
+                     signalCoord,
+                     GRList,
+                     PCsToAnnotate = c("PC1", "PC2"),
+                     scoringMetric = "regionMean",
+                     verbose = TRUE,
+                     overlapMethod="single") {
+
     if (!(any(c(is(loadingMat, "matrix"), is(loadingMat, "data.frame"))))) {
         warning("loadingMat should be a matrix or data.frame.")
     }
@@ -418,24 +461,25 @@ runCOCOA <- function(loadingMat, signalCoord, GRList,
     if (!is(PCsToAnnotate, "character")) {
         stop("PCsToAnnotate should be a character object (eg 'PC1').")
     }
-    
-    
+
     # apply over the list of region sets
-    resultsList <- lapplyAlias(GRList, 
-                              function(x) aggregateLoadings(loadingMat=loadingMat, 
-                                                            signalCoord=coordinateDT, 
-                                                            regionSet=x, 
-                                                            PCsToAnnotate = PCsToAnnotate,
-                                                            scoringMetric = scoringMetric, 
-                                                            verbose=verbose))
+    resultsList <- lapplyAlias(GRList,
+                               function(x) aggregateLoadings(
+                                loadingMat = loadingMat,
+                                signalCoord = coordinateDT,
+                                regionSet = x,
+                                PCsToAnnotate = PCsToAnnotate,
+                                scoringMetric = scoringMetric,
+                                verbose = verbose,
+                                overlapMethod = overlapMethod))
     resultsDT <- do.call(rbind, resultsList) 
-    
+
     # # add names if they are present
     # if (!is.null(names(GRList))) {
     #     # resultsDT[, rsName := names(GRList)]
     #     row.names(resultsDT) <- names(GRList)
     # }
-    
+
     # rsName <- row.names(resultsDT)
     resultsDF <- as.data.frame(resultsDT) #, row.names = rsName)
 
@@ -514,7 +558,8 @@ runCOCOA <- function(loadingMat, signalCoord, GRList,
 
 getLoadingProfile <- function(loadingMat, signalCoord, regionSet,
                     PCsToAnnotate = c("PC1", "PC2"), binNum = 25,
-                    verbose=TRUE) {
+                    verbose=TRUE,  
+                    overlapMethod = "single") {
     
     if (!(any(c(is(loadingMat, "matrix"), is(loadingMat, "data.frame"))))) {
         warning("loadingMat should be a matrix or data.frame.")
@@ -543,13 +588,14 @@ getLoadingProfile <- function(loadingMat, signalCoord, regionSet,
     
     GRDT <- grToDt(regionSet)
     
-    loadProf <- BSBinAggregate(BSDT = loadingDT, 
-                                  rangeDT = GRDT, 
-                                  binCount = binNum, 
-                                  minReads = 0, 
-                                  byRegionGroup = TRUE, 
-                                  splitFactor = NULL,
-                                  PCsToAnnotate = PCsToAnnotate)
+    loadProf <- BSBinAggregate(BSDT = loadingDT,
+                               rangeDT = GRDT, 
+                               binCount = binNum, 
+                               minReads = 0, 
+                               byRegionGroup = TRUE, 
+                               splitFactor = NULL,
+                               PCsToAnnotate = PCsToAnnotate,
+                               overlapMethod = overlapMethod)
     
     # if loadProf is NULL, return NULL from function, otherwise make symmetrical
     # it will be NULL when there was no overlap between data and any of the bins
@@ -594,10 +640,24 @@ makeSymmetric <- function(prof) {
 # bar indicates the region set is completed.
 # useful when using BSBinAggregate with 'apply' to do many 
 # region sets at a time.
-BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500, 
-                          byRegionGroup = TRUE, 
-                          splitFactor = NULL,
-                          PCsToAnnotate, verbose=FALSE) {
+# @param overlapMethod A character object with the overlap method.
+# "single" is the default method and is appropriate to use when the start and
+# end coordinates of the genomic signal/original data included in the PCA are
+# the same.
+# "unweightedMean" determines whether single, or multiple, genomic signal(s) 
+# that span(s) more than a single position overlap(s) with a region set 
+# location. This method determines the unweighted mean signal of any genomic 
+# signal that overlaps in any amount with a region set region.
+# "proportionWeightedMean" determines whether single, or multiple, 
+# genomic signal(s) that span(s) more than a single position overlap(s) with a 
+# region set location. This method weights the signals by the proportion 
+# overlap with the corresponding region set regions.
+BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
+                           byRegionGroup = TRUE,
+                           splitFactor = NULL,
+                           PCsToAnnotate,
+                           verbose = FALSE,
+                           overlapMethod) {
     if (!is(rangeDT, "data.table")) {
     stop("rangeDT must be a data.table")
 }
@@ -616,16 +676,59 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
     binnedDT <- rangeDT[, MIRA::binRegion(start, end, 
                                           binCount, get(seqnamesColName))]
     # output is a list of GRanges objects, does not play well with vapply
+    # one GRanges object for each bin, containing a segment of each original rangeDT region 
     binnedGR <- sapply(split(binnedDT, binnedDT$binID), dtToGr)
     # message("Aggregating...")
     
+    if (overlapMethod == "proportionWeightedMean") {
+
+        binMeansList <- lapply(X = binnedGR, 
+                               FUN = function(x) regionOLWeightedMean(signalDT = BSDT, 
+                                                                      signalGR = dtToGr(BSDT[, .(chr, start, end)]), 
+                                                                      regionSet = x, 
+                                                                      calcCols = PCsToAnnotate))
+        binnedBSDT <- rbindlist(binMeansList)
+        regionGroupID = 1:length(binMeansList)
+        # any bins that had no overlap with data will be NULL
+        # if any bins had no data, return NULL
+        if (any(vapply(X = binMeansList, FUN = is.null, FUN.VALUE = TRUE))) {
+            return(NULL)
+        }
+         
+        # regionGroupID = regionGroupID[!vapply(X = binMeansList, FUN = is.null, FUN.VALUE = TRUE)]
+        binnedBSDT[, regionGroupID := regionGroupID]
+
+    } else if (overlapMethod == "unweightedMean") {
+
+        binMeansList <- lapply(X = binnedGR, 
+                               FUN = function(x) regionOLMean(signalDT = BSDT, 
+                                                              signalGR = dtToGr(BSDT[, .(chr, start, end)]), 
+                                                              regionSet = x, 
+                                                              calcCols = PCsToAnnotate))
+        binnedBSDT <- rbindlist(binMeansList)
+        regionGroupID = 1:length(binMeansList)
+        # any bins that had no overlap with data will be NULL
+        # if any bins had no data, return NULL
+        if (any(vapply(X = binMeansList, FUN = is.null, FUN.VALUE = TRUE))) {
+            return(NULL)
+        }
+         
+        # regionGroupID = regionGroupID[!vapply(X = binMeansList, FUN = is.null, FUN.VALUE = TRUE)]
+        binnedBSDT[, regionGroupID := regionGroupID]
+
+    } else {
+        
+        # what is output if a region set has no overlap?
+        binnedBSDT <- BSAggregate(BSDT,
+                                  regionsGRL=GRangesList(binnedGR),
+                                  jExpr=buildJ(PCsToAnnotate,
+                                               rep("mean", length(PCsToAnnotate))),
+                                  byRegionGroup = byRegionGroup,
+                                  splitFactor = splitFactor,
+                                  overlapMethod=overlapMethod)
+    }
     # RGenomeUtils::BSAggregate
-    binnedBSDT <- BSAggregate(BSDT, 
-                             regionsGRL=GRangesList(binnedGR), 
-                             jExpr=buildJ(PCsToAnnotate, 
-                                          rep("mean", length(PCsToAnnotate))), 
-                                          byRegionGroup=byRegionGroup, 
-                                          splitFactor = splitFactor)
+
     # # If we aren't aggregating by bin, then don't restrict to min reads!
     # if (byRegionGroup) {
     #     binnedBSDT <- binnedBSDT[readCount > minReads,]
@@ -662,21 +765,17 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
 # values for each region. Has columns chr, start, end, and a column for each
 # PC in PCsToAnnotate. Regions are not in order along the rows of the data.table.
 #
-# @examples data("brcaLoadings1")
-# data("brcaMCoord1")
-# data("esr1_chr1")
-# COCOA:::averageByRegion(loadingMat=brcaLoadings1,
-# signalCoord=brcaMCoord1, regionSet=esr1_chr1, returnQuantile = TRUE)[]
+# @example averagePerRegion(BSDT = BSDT, regionsGRL, 
+#          jCommand = MIRA:::buildJ(cols = "methylProp", "mean")) 
 # Devel note: I could add a column for how many cytosines are in each region 
 
-averageByRegion <- function(loadingMat, 
-                            signalCoord, 
-                            regionSet, 
-                            PCsToAnnotate = c("PC1", "PC2"), 
-                            returnQuantile=FALSE) {
-    
-    
-    
+averagePerRegion <- function(loadingMat,
+                             signalCoord,
+                             regionSet,
+                             PCsToAnnotate = c("PC1", "PC2"),
+                             returnQuantile = FALSE,
+                             absVal=TRUE) {
+
     if (is(signalCoord, "GRanges")) {
         coordinateDT <- grToDt(signalCoord)
     } else if (is(signalCoord, "data.frame")) {
@@ -684,39 +783,127 @@ averageByRegion <- function(loadingMat,
     } else {
         stop("signalCoord should be a data.frame or GRanges object.")
     }
-    
+
     # preferred as matrix, data.frame works
     if (!(is(loadingMat, "matrix") || is(loadingMat, "data.frame"))) {
         stop("loadingMat should be a matrix or data.frame. Check object class.")
     }
-    
+
     if (!is(PCsToAnnotate, "character")) {
         stop("PCsToAnnotate should be a character object (eg 'PC1').")
     }
-    
+
     if (!is(regionSet, "GRanges")) {
         stop("regionSet should be a GRanges object. Check object class.")
     }
-    
-    
-    # reformating parameters and assigning new names
-    loadingDT <- as.data.table(abs(loadingMat))
-    # linking coordinates to loading values, has columns chr start, PCsToAnnotate
-    BSDT <- cbind(coordinateDT, loadingDT[, .SD, .SDcols = PCsToAnnotate])
-    jExpr <- buildJ(PCsToAnnotate, rep("mean", length(PCsToAnnotate)))
-    
-   
-    avPerRegion <- BSAggregate(BSDT=BSDT, regionsGRL=regionSet, excludeGR=NULL, 
-                                           regionsGRL.length = NULL, splitFactor=NULL, 
-                                           keepCols=NULL, sumCols=NULL, 
-                                           jExpr=jExpr, byRegionGroup=FALSE, 
-                                           keep.na=FALSE, returnSD=FALSE, 
-                                           returnOLInfo=FALSE, 
-                                           meanPerRegion=TRUE, returnQuantile=returnQuantile) 
-    
+
+    # determine whether coordinates are single base or a range
+    if (!("end" %in% colnames(coordinateDT))) {
+        dataCoordType <- "singleBase"
+    } else {
+        if (all(coordinateDT$start == coordinateDT$end)) {
+            dataCoordType <- "singleBase"
+        } else {
+            dataCoordType <- "region"
+        }
+    }
+
+    # take absolute value or not
+    if (absVal) {
+        signalDT <- as.data.table(abs(loadingMat))
+    } else {
+        signalDT <- as.data.table(loadingMat)
+    }
+
+    # use different function for single base data and for region data
+    if (dataCoordType == "singleBase") {
+        # linking coordinates to loading values, has columns chr start, PCsToAnnotate
+        BSDT  <- cbind(coordinateDT, signalDT[, .SD, .SDcols = PCsToAnnotate])
+        jExpr <- buildJ(PCsToAnnotate, rep("mean", length(PCsToAnnotate)))
+
+        avPerRegion <- BSAggregate(BSDT = BSDT,
+                                   regionsGRL = regionSet,
+                                   excludeGR = NULL,
+                                   regionsGRL.length = NULL,
+                                   splitFactor = NULL, 
+                                   keepCols = NULL,
+                                   sumCols = NULL,
+                                   jExpr = jExpr,
+                                   byRegionGroup = FALSE,
+                                   keep.na = FALSE,
+                                   returnSD = FALSE,
+                                   returnOLInfo = FALSE,
+                                   meanPerRegion = TRUE,
+                                   returnQuantile = returnQuantile) 
+
+    } else if (dataCoordType == "region") {
+
+        avePerRegion <- weightedAvePerRegion(signalDT = signalDT,
+                             signalCoord=signalCoord,
+                             regionSet=regionSet,
+                             calcCols = PCsToAnnotate,
+                             returnQuantile = returnQuantile) 
+
+    } else {
+        stop("dataCoordType not recognized.")
+    }
+
     return(avPerRegion)
-    
+
 }
+
+# signalDT 
+# average by region for region-based data (eg ATAC-seq)
+# @return One value per region
+weightedAvePerRegion <- function(signalDT,
+                                 signalCoord,
+                                 regionSet,
+                                 calcCols = c("PC1", "PC2"),
+                                 returnQuantile = FALSE) {
+
+    hits  <- findOverlaps(query = signalCoord, subject = regionSet)
+    # if no overlap, return NULL
+    if (length(hits) == 0) {
+        return(NULL)
+    }
+
+    olap  <- pintersect(signalCoord[queryHits(hits)],
+                        regionSet[subjectHits(hits)])
+    polap <- width(olap) / width(regionSet[subjectHits(hits)])
+
+    # get total proportion overlap per region
+    # aggregate polap by region
+    pOlapDT <- data.table(signalDT[queryHits(hits), calcCols, with=FALSE],
+                          rsRegionID = subjectHits(hits),
+                          pOlap = polap)
+    pOlapByRegionDT <- pOlapDT[, .(regionPOlap = sum(pOlap)), by=rsRegionID]
+
+    # specify aggregation operation
+    # will be done separately for each PC specified
+    aggrCommand <- paste("list(", paste(paste0(calcCols, "=", "sum", "(",
+                                calcCols, " * pOlap)"), collapse = ", "), ")")
+    weightedSumByRegionDT <- pOlapDT[, eval(parse(text=aggrCommand)), by=rsRegionID]
+
+    # divide by total proportion overlap to get mean value 
+    jCommand <- paste("list(", paste(paste0(calcCols, "=", calcCols, " / regionPOlap"), collapse = ", "), ")")
+    meanPerRegion <- cbind(pOlapByRegionDT, weightedSumByRegionDT)
+    meanPerRegion <- meanPerRegion[, eval(parse(text=jCommand))]
+
+    if (returnQuantile) {
+        for (i in seq_along(calcCols)) {
+            # perhaps this could be more efficient with mapply
+            # ecdf example: ecdf(distributionData)(getPercentileOfThis)
+            meanPerRegion[, c(calcCols[i]) := ecdf(signalDT[[calcCols[i]]])(meanPerRegion[[calcCols[i]]])]
+            # I tried set() to improve performance but it took about the same time
+        }
+    }
+
+    # meanPerRegion <-  pOlapDT[, .(regionMean = sum(score * (pOlap/sum(pOlap))), by=rsRegionID]
+
+    return(meanPerRegion)
+}
+
+
 
 
 # Get regions that are most associated with PCs of interest
@@ -843,16 +1030,15 @@ getTopRegions <- function(loadingMat,
 # @param returnQuantile Only used if meanPerRegion=TRUE, instead of mean
 # return the quantile/percentile of the mean of each region
 # in relation to the distribution of original values in BSDT
-#
 # 
 BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL, 
                         regionsGRL.length = NULL, splitFactor=NULL, 
                         keepCols=NULL, sumCols=NULL, 
                         jExpr=NULL, byRegionGroup=FALSE, 
                         keep.na=FALSE, returnSD=FALSE, 
-                        returnOLInfo=FALSE, 
-                        meanPerRegion=FALSE, returnQuantile=FALSE) {
-    
+                        returnOLInfo=FALSE, meanPerRegion=FALSE,
+                        returnQuantile=FALSE) {
+
     # Assert that regionsGRL is a GRL.
     # If regionsGRL is given as a GRanges, we convert to GRL
     if(is(regionsGRL, "GRanges")) {
@@ -860,7 +1046,7 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL,
     } else if (!is(regionsGRL, "GRangesList")) {
         stop("regionsGRL is not a GRanges or GRangesList object")
     }
-    
+
     # will cause error if BSDT is only a data.frame
     if (is(BSDT, "data.frame") & !is(BSDT, "data.table")) {
         BSDT <- as.data.table(BSDT)
@@ -868,26 +1054,24 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL,
     if (!is(BSDT, "data.table"))  {
         stop("BSDT must be a data.table")
     }
-    
-    
-    
+
     if(! is.null(excludeGR)) {
         BSDT <- BSFilter(BSDT, minReads=0, excludeGR)
     }
-    
+
     if (returnQuantile) {
         # keep all data so quantiles can be calculated
         # later code will change BSDT
         origBSDT <- data.table::copy(BSDT)
     }
-    
+    # TODO: BSdtToGRanges needs to include end coordinate!!!
     bsgr <- BSdtToGRanges(list(BSDT))
-    
+
     additionalColNames <- setdiff(colnames(BSDT), 
                                   c("chr","start", "end",
                                     "hitCount","readCount", splitFactor))
-    
-    # specificy that "character" outcome is expected from mode by 
+
+    # specify that "character" outcome is expected from mode by 
     # supplying "a" as last vapply argument (any character object would work)
     colModes <- vapply(BSDT, mode, "a")
     if (is.null(sumCols)) {
@@ -896,14 +1080,13 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL,
         # Restrict to numeric columns.		
         sumCols <- intersect(sumCols, 
                              names(colModes[which(colModes == "numeric")]))
-        
     }
     # It's required to do a findoverlaps on each region individually,
     # Not on a GRL, because of the way overlaps with GRLs work. So,
     # we must convert the GRL to a GR, but we must keep track of which
     # regions came from which group.
     regionsGR <- unlist(regionsGRL)
-    
+
     if(is.null(regionsGRL.length)) {
         # if (length(regionsGRL) > 100) {
         #     message("BSAggregate: Calculating sizes. You can speed this up by supplying a regionsGRL.length vector...", appendLF=FALSE)
@@ -913,7 +1096,7 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL,
         regionsGRL.length <- vapply(regionsGRL, length, 1)
         # message("Done counting regionsGRL lengths.")
     }
-    
+
     # Build a table to keep track of which regions belong to which group
     # BIOC note: sapply returns a list where each item is of different length
     # therefore, I'm not using vapply
@@ -925,51 +1108,60 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL,
         withinGroupID= as.vector(unlist(sapply(regionsGRL.length, seq))),
         regionGroupID=rep(seq_along(regionsGRL), regionsGRL.length))
     setkey(region2group, regionID)
-    
-    
-    # message("Finding overlaps...")
-    fo <- findOverlaps(query = bsgr[[1]], subject = regionsGR)
-    
+
+    #TODO: if overlap method is single, but "end" is present, find center
+    # and set that to start!
+    if (all(start(bsgr[[1]]) != end(bsgr[[1]]))) {
+        stop("BSDT start and end coordinates are not the same. Choose a different overlapMethod.")
+    } else {
+        fo <- findOverlaps(query = bsgr[[1]], subject = regionsGR)
+    }
+
     ### use info from findOverlaps to see how many individual
-    # cytosines and how many regions overlap with each other
+    # cytosines (or input regions) and how many regions (in region sets) 
+    # overlap with one another
     if (returnOLInfo) {
-        numCpGsOverlapping <- length(unique(queryHits(fo)))
+        numCpGsOverlapping    <- length(unique(queryHits(fo)))
         numRegionsOverlapping <- length(unique(subjectHits(fo)))
     }
-    
-    
-    setkey(BSDT, chr, start)
+
+    if("end" %in% colnames(BSDT)){
+        setkey(BSDT, chr, start, end)
+    } else{
+        setkey(BSDT, chr, start) 
+    }
+
     # Gut check:
     # stopifnot(all(elementMetadata(bsgr[[1]])$readCount == BSDT$readCount))
-    
+
     # message("Setting regionIDs...")
-    BSDT <- BSDT[queryHits(fo),] #restrict the table to CpGs in any region.
-    
+    BSDT <- BSDT[queryHits(fo),] #restrict the table to CpGs (or input region) in any region set.
+
     if (NROW(BSDT) < 1) {
         warning("No BSDT sites in the given region list; please expand your regionsGRL")
         return(NULL)
     }
-    
+
     BSDT[,regionID:=subjectHits(fo)] #record which region they overlapped.
     #BSDT[queryHits(fo),regionID:=subjectHits(fo)]
     #if (!keep.na) {
     #    BSDT = BSDT[queryHits(fo),]
     #}
-    
+
     if (is.null(jExpr)) {
         cols=c(sumCols, keepCols)
         funcs <- c(rep("sum", length(sumCols)), rep("unique", length(keepCols)))
         jExpr <- buildJ(cols, funcs)
     }
     # message("jExpr: ", jExpr)
-    
+
     # Define aggregation column. aggregate by region or by region group?
     if (byRegionGroup) {
         agCol <- "regionGroupID"
     } else {
         agCol <- "regionID" # Default
     }
-    
+
     # Build the by string
     if (is.null(splitFactor)) {
         byString <- paste0("list(regionID)")
@@ -978,34 +1170,34 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL,
                                           paste0(splitFactor, ""), 
                                           collapse=", ", sep=", "), ")")
     }
-    
+
     # Now actually do the aggregate:
     # message("Combining...")
     bsCombined <- BSDT[,eval(parse(text=jExpr)), by=eval(parse(text=byString))]
     setkey(bsCombined, regionID)
-    
+
     if (meanPerRegion) {
         setkey(region2group, regionID)
-        
+
         avPerRegion <- merge(bsCombined, region2group)
         avPerRegion[, c("regionID", "withinGroupID", "regionGroupID") := NULL]
-        
+
         if (returnQuantile) {
-            
+
             for (i in seq_along(sumCols)) {
                 # perhaps this could be more efficient with mapply
                 # ecdf example: ecdf(distributionData)(getPercentileOfThis)
                 avPerRegion[, c(sumCols[i]) := ecdf(origBSDT[[sumCols[i]]])(avPerRegion[[sumCols[i]]])]
                 # I tried set() to improve performance but it took about the same time
             }
-            
+
         }
         return(avPerRegion)
     }
     # Now aggregate across groups.
     # I do this in 2 steps to avoid assigning regions to groups,
-    # which takes awhile. I think this preserve memory and is faster.
-    
+    # which takes awhile. I think this preserves memory and is faster.
+
     # Define aggregation column. aggregate by region or by region group?
     if (byRegionGroup) {
         # must set allow=TRUE here in case there are multiple IDs (splitCol)
@@ -1031,7 +1223,7 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL,
         return(e)
     }
     # WARNING: There are now 2^2 ways to aggregate, sum vs mean
-    # at each level: across regions, then across region sets. THis
+    # at each level: across regions, then across region sets. This
     # doesn't give you a choice at this point. 
 }
 
@@ -1142,7 +1334,7 @@ rsRankingIndex <- function(rsScores, PCsToAnnotate) {
 
 # Instead of averaging within regions first as BSAggregate does,
 # this function does a simple average and standard deviation
-#  for all CpGs that overlap
+# for all CpGs that overlap
 # with regions of a region set, also does average and 
 # standard deviation for non overlapping CpGs. Created to 
 # get metrics of loading values for each PC.
@@ -1164,17 +1356,15 @@ rsRankingIndex <- function(rsScores, PCsToAnnotate) {
 # input which should be the values of the cytosines.
 # @param alsoNonOLMet also include same metrics
 # for non overlapping CpGs (still also returns metrics for overlapping CpGs)
-
 # param columnMeans Not functional/is deprecated. The idea was to use
 # the mean of the column to speed up calculations (eg when calculating
 # mean of overlapping CpGs, use that info and column mean to get
 # mean for non overlapping CpGs without manually calculating it)
-
-
 # 
-signalOLMetrics <- function(dataDT, regionGR, 
-                            signalCols = colnames(dataDT)[!(colnames(dataDT) %in% c("chr", "start", "end"))], 
-                            metrics=c("mean", "sd"), 
+signalOLMetrics <- function(dataDT,
+                            regionGR,
+                            signalCols = colnames(dataDT)[!(colnames(dataDT) %in% c("chr", "start", "end"))],
+                            metrics=c("mean", "sd"),
                             alsoNonOLMet=TRUE) {
     
     # convert DT to GR for finding overlaps
@@ -1192,12 +1382,12 @@ signalOLMetrics <- function(dataDT, regionGR,
     
     # region set info
     total_region_number <- length(regionGR)
-    mean_region_size <- round(mean(width(regionGR)), 1)
+    mean_region_size    <- round(mean(width(regionGR)), 1)
     
     
     # get info on degree of overlap
     # number of CpGs that overlap
-    cytosine_coverage <- length(unique(olCpG))
+    signal_coverage <- length(unique(olCpG))
     # number of regions that overlap
     region_coverage <- length(unique(queryHits(OL)))
     
@@ -1207,10 +1397,10 @@ signalOLMetrics <- function(dataDT, regionGR,
     nonOLCpG <- (seq_len(nrow(dataDT)))[-olCpG]
     
     # gets metrics for all columns except chr, start, end
-    jExpr <- buildJ(cols=rep(signalCols, each=length(metrics)), 
+    jExpr <- buildJ(cols=rep(signalCols, each=length(metrics)),
                     funcs=rep(metrics, length(signalCols)),
-                    newColNames = paste0(rep(signalCols, 
-                                             each=length(metrics)), 
+                    newColNames = paste0(rep(signalCols,
+                                             each=length(metrics)),
                                          "_", metrics))
     
     # getting the metrics
@@ -1226,24 +1416,24 @@ signalOLMetrics <- function(dataDT, regionGR,
     # formatting so there is one row per PC/testCol
     # output is a matrix with ncol = length(metrics)
     # for vapply, FUN.VALUE should have length equal to a single output of FUN
-    olResults <- vapply(X = metrics, 
+    olResults <- vapply(X = metrics,
                         FUN = function(x) as.numeric(olMetrics[, grepl(pattern = x, colnames(olMetrics))]),
                         as.numeric(seq_along(signalCols)))
     olResults <- as.data.table(olResults)
     setnames(olResults, old = colnames(olResults), new = paste0(colnames(olResults), "_OL"))
     
-    nonOLResults <- vapply(X = metrics, 
+    nonOLResults <- vapply(X = metrics,
                            FUN = function(x) as.numeric(nonOLMetrics[, grepl(pattern = x, colnames(nonOLMetrics))]),
                            as.numeric(seq_along(signalCols)))
     nonOLResults <- as.data.table(nonOLResults)
     setnames(nonOLResults, old = colnames(nonOLResults), new = paste0(colnames(nonOLResults), "_nonOL"))
     
-    metricDT <- cbind(data.table(testCol=signalCols), 
-                      olResults, 
-                      nonOLResults, 
-                      data.table(cytosine_coverage, 
-                                 region_coverage, 
-                                 total_region_number, 
+    metricDT <- cbind(data.table(testCol=signalCols),
+                      olResults,
+                      nonOLResults,
+                      data.table(signal_coverage,
+                                 region_coverage,
+                                 total_region_number,
                                  mean_region_size))
     
     return(metricDT)
@@ -1265,13 +1455,14 @@ signalOLMetrics <- function(dataDT, regionGR,
 
 # could make this a generic function then apply it across PCs of interest
 
-rsWilcox <- function(dataDT, regionGR,
+rsWilcox <- function(dataDT,
+                     regionGR,
                      signalCols = colnames(dataDT)[!(colnames(dataDT) %in% c("chr", "start", "end"))], 
                      ...) {
     
     # region set info
     total_region_number <- length(regionGR)
-    mean_region_size <- round(mean(width(regionGR)), 1)
+    mean_region_size    <- round(mean(width(regionGR)), 1)
     
     
     # convert DT to GR for finding overlaps
@@ -1290,20 +1481,133 @@ rsWilcox <- function(dataDT, regionGR,
     
     # get info on degree of overlap
     # number of CpGs that overlap
-    cytosine_coverage <- length(unique(olCpG))
+    signal_coverage   <- length(unique(olCpG))
     # number of regions that overlap
-    region_coverage <- length(unique(queryHits(OL)))
+    region_coverage   <- length(unique(queryHits(OL)))
     
     # calculate Wilcoxon rank sum test for each column
     # additional parameters given with ...
-    pVals <- vapply(X = signalCols, FUN = function(x) wilcox.test(x = as.numeric(as.matrix(dataDT[olCpG, x, with=FALSE])), 
-                                               y = as.numeric(as.matrix(dataDT[nonOLCpG, x, with=FALSE])), ...)$p.value, 1)
+    pVals <- vapply(X = signalCols, FUN = function(x) wilcox.test(x = as.numeric(as.matrix(dataDT[olCpG, x, with=FALSE])),
+                                                                  y = as.numeric(as.matrix(dataDT[nonOLCpG, x, with=FALSE])), ...)$p.value, 1)
      
-    wRes <- data.frame(t(pVals), 
-                       cytosine_coverage, 
-                       region_coverage, 
-                       total_region_number, 
+    wRes <- data.frame(t(pVals),
+                       signal_coverage,
+                       region_coverage,
+                       total_region_number,
                        mean_region_size)
     return(wRes)
 }
+
+
+# @param signalDT Data to be aggregated (e.g. raw data: ATAC-seq,
+# region based DNA methylation or loading values)
+# @param signalGR GRanges object with coordinates for signalDT
+# @param regionSet GRanges object. The region set to score.
+# @param calcCols character object. Column names. A weighted sum will be done 
+# for each of these columns (columns should be numeric).
+# @value Returns data.frame with columns 'calcCols', signal_coverage col has
+# number of signalGR regions that overlapped with any regionSet regions, 
+# regionSet_coverage has the sum of all proportion overlaps of regions from 
+# signalGR with regionSet (regionSet region is denominator)
+# containing weighted mean for each col.
+# Returns NULL if there is no overlap between signalGR and regionSet
+
+regionOLWeightedMean <- function(signalDT, signalGR, 
+                                 regionSet, calcCols) {
+    
+    
+    hits  <- findOverlaps(query = signalGR, subject = regionSet)
+    # if no overlap, return NULL
+    if (length(hits) == 0) {
+        return(NULL)
+    }
+    
+    olap  <- pintersect(signalGR[queryHits(hits)],
+                        regionSet[subjectHits(hits)])
+    polap <- width(olap) / width(regionSet[subjectHits(hits)])
+    
+    # some rows may be duplicated if a signalDT region overlapped multiple
+    # regions from signalGR but that is ok
+    signalDT <- signalDT[queryHits(hits), ]
+    
+    # weight the signalDT values by the proportion overlap (weighted average)
+    weightedSum <- t(as.matrix(polap)) %*% as.matrix(signalDT[, calcCols, with=FALSE])
+    
+    # weighted average
+    denom <- sum(polap)
+    weightedAve <- as.data.frame(weightedSum / denom)
+    # names(weightedAve) <- colsOfInterest
+    
+    # add columns for coverage info
+    weightedAve$signal_coverage = length(unique(queryHits(hits)))
+    weightedAve$regionSet_coverage = denom
+
+    return(weightedAve)
+}
+
+
+# @param signalDT Data to be aggregated (e.g. raw data: ATAC-seq,
+# region based DNA methylation or loading values)
+# @param signalGR GRanges object with coordinates for signalDT
+# @param regionSet GRanges object. The region set to score.
+# @param calcCols character object. Column names. A mean will be calculated for 
+# each of these columns (columns should be numeric).
+# @value Returns data.frame with columns 'calcCols', signal_coverage col has
+# number of signalGR regions that overlapped with any regionSet regions, 
+# regionSet_coverage has the number of regions from 
+# signalGR that overlapped with regionSet
+# Returns NULL if there is no overlap between signalGR and regionSet
+
+regionOLMean <- function(signalDT, signalGR, regionSet, calcCols) {
+
+    hits  <- findOverlaps(query = signalGR, subject = regionSet)
+    # if no overlap, return NULL
+    if (length(hits) == 0) {
+        return(NULL)
+    }
+
+    # some rows may be duplicated if a signalDT region overlapped multiple
+    # regions from signalGR but that is ok
+    signalDT  <- signalDT[queryHits(hits), ]
+
+    # mean of the overlapping signalDT values
+    signalAve <- as.data.frame(t(colMeans(signalDT[,..calcCols])))
+
+    # add columns for coverage info
+    signalAve$signal_coverage    <- length(unique(queryHits(hits)))
+    signalAve$regionSet_coverage <- length(unique(subjectHits(hits)))
+
+    return(signalAve)
+}
+
+
+# Create null distribution based on permutations
+createNullDist <- function(loadingMat, PCsToAnnotate, nPerm = 1000, sampleSize = 1000) {
+    
+    loadingMat = abs(loadingMat)
+    permScoreList = list()
+    for (i in 1:nPerm) {
+        permInd = sample(1:nrow(loadingMat), size=sampleSize, replace = FALSE)
+        # reformat into data.table with chromosome location and weight
+        permScoreList[[i]] = colMeans(loadingMat[permInd, PCsToAnnotate])
+        
+        # naming does not work if only using one PC so add this line for that case
+        # setnames(loadingDT, c("chr", "start", PCsToAnnotate)) 
+        
+    }
+    
+    permScoreMat = do.call(rbind, permScoreList)
+    return(permScoreMat)
+}
+
+multiNullDist <- function(loadingMat, PCsToAnnotate, nPerm = 1000, sampleSize = c(10, 100, 1000, 10000, 100000)) {
+    
+    # MIRA:::setLapplyAlias(cores = 8)
+    # create distribution for each sample
+    nullDistList = MIRA:::lapplyAlias(X = sampleSize, FUN = function(x) createNullDist(loadingMat=loadingMat, 
+                                                            PCsToAnnotate=PCsToAnnotate, 
+                                                            nPerm=nPerm, 
+                                                            sampleSize = x))#, mc.set.seed = FALSE)
+}
+
 

@@ -24,6 +24,13 @@ dataDT <- data.table(coordinateDT, loadingMat)
 dataDT$PC1[3] <- 0
 dataDT$PC3[5] <- 2
 
+# fake region data (for testing ATAC-seq)
+regionCoordDT <- data.table(chr=c(rep("chr1",4), rep("chr2", 2)),
+                            start=c(300, 650, 3000, 10000, 5075, 6150),
+                            end=c(600, 1000, 4000, 11000, 5125, 6300))
+regionDataDT <- data.table(PC1=c(1:6), PC2=-1:4)
+
+
 # region sets that will be tested
 regionSet1 <- data.table(chr = c("chr1", "chr1", "chr1", "chr2", "chr2"), 
                        start = c(1, 500, 3100, 5100, 6000),
@@ -71,7 +78,7 @@ test_that("aggregateLoadings, scoring metrics, and runCOCOA", {
     PC2W <- wilcox.test(x = c(-2, 0, 1), y=c(-1, 2:4))$p.value
     PC3W <- wilcox.test(x = c(8, 6, 5), y=c(7, 4, 3, 10))$p.value
     expect_equal(c(PC2W, PC3W, 3, 2, 2, mean(width(regionSetW))), 
-                 c(rsWResults$PC2, rsWResults$PC3, rsWResults$cytosine_coverage, 
+                 c(rsWResults$PC2, rsWResults$PC3, rsWResults$signal_coverage, 
                    rsWResults$region_coverage, 
                    rsWResults$total_region_number, 
                    rsWResults$mean_region_size))
@@ -87,7 +94,7 @@ test_that("aggregateLoadings, scoring metrics, and runCOCOA", {
     PC2W <- wilcox.test(x = c(2, 0, 1), y=c(1, 2:4), alternative = "greater")$p.value
     PC3W <- wilcox.test(x = c(8, 6, 5), y=c(7, 4, 3, 10), alternative = "greater")$p.value
     expect_equal(c(PC2W, PC3W, 3, 2, 2, mean(width(regionSetW))), 
-                 c(rsWResults$PC2, rsWResults$PC3, rsWResults$cytosine_coverage, 
+                 c(rsWResults$PC2, rsWResults$PC3, rsWResults$signal_coverage, 
                    rsWResults$region_coverage, 
                    rsWResults$total_region_number, 
                    rsWResults$mean_region_size))
@@ -105,7 +112,7 @@ test_that("aggregateLoadings, scoring metrics, and runCOCOA", {
     PC2R <- mean(c(2, mean(c(0, 1))))
     PC3R <- mean(c(8, mean(c(6, 5))))
     expect_equal(c(PC2R, PC3R, 3, 2, 2, mean(width(regionSetW))), 
-                 c(regionMeanRes$PC2, regionMeanRes$PC3, regionMeanRes$cytosine_coverage, 
+                 c(regionMeanRes$PC2, regionMeanRes$PC3, regionMeanRes$signal_coverage, 
                    regionMeanRes$region_coverage, 
                    regionMeanRes$total_region_number, 
                    regionMeanRes$mean_region_size))
@@ -122,7 +129,7 @@ test_that("aggregateLoadings, scoring metrics, and runCOCOA", {
     PC2RC <- mean(c(2, 0, 1))
     PC3RC <- mean(c(8, 6, 5))
     expect_equal(c(PC2RC, PC3RC, 3, 2, 2, mean(width(regionSetW))), 
-                 c(simpleMeanRes$PC2, simpleMeanRes$PC3, simpleMeanRes$cytosine_coverage, 
+                 c(simpleMeanRes$PC2, simpleMeanRes$PC3, simpleMeanRes$signal_coverage, 
                    simpleMeanRes$region_coverage, 
                    simpleMeanRes$total_region_number, 
                    simpleMeanRes$mean_region_size))
@@ -144,7 +151,7 @@ test_that("aggregateLoadings, scoring metrics, and runCOCOA", {
                                        PCsToAnnotate = c("PC2", "PC3"), 
                                        scoringMetric = "meanDiff")
     expect_equal(c(PC2MD, PC3MD, 3, 2, 2, mean(width(regionSetW))), 
-                 c(mdRes$PC2, mdRes$PC3, mdRes$cytosine_coverage, 
+                 c(mdRes$PC2, mdRes$PC3, mdRes$signal_coverage, 
                    mdRes$region_coverage, 
                    mdRes$total_region_number, 
                    mdRes$mean_region_size))
@@ -163,7 +170,7 @@ test_that("aggregateLoadings, scoring metrics, and runCOCOA", {
                           PCsToAnnotate = c("PC2", "PC3"), 
                           scoringMetric = "meanDiff")
     expect_equal(rep(c(PC2MD, PC3MD, 3, 2, 2, mean(width(regionSetW))), each=2), 
-                 c(twoResults$PC2, twoResults$PC3, twoResults$cytosine_coverage, 
+                 c(twoResults$PC2, twoResults$PC3, twoResults$signal_coverage, 
                    twoResults$region_coverage, 
                    twoResults$total_region_number, 
                    twoResults$mean_region_size))
@@ -188,72 +195,57 @@ test_that("aggregateLoadings, scoring metrics, and runCOCOA", {
     
 })
 
-test_that("aggregateLoadings and scoring metrics", {
+test_that("ATAC-seq scoring methods", {
     
+    # test "regionOLWeightedMean"
+    weightedAve <- regionOLWeightedMean(signalDT = regionDataDT, signalGR = COCOA:::dtToGr(regionCoordDT), 
+                         regionSet = regionSet1, calcCols = c("PC1", "PC2"))
+    # proportion overlap is first then PC
+    correctAve <- data.frame(PC1=((101/400)*1+(101/201)*1+(51/201)*2+1*3+(26/51)*5+(151/451)*6) / 
+        ((101/400)+(101/201)+(51/201)+1+(26/51)+(151/451)),
+        PC2=((101/400)*-1+(101/201)*-1+(51/201)*0+1*1+(26/51)*3+(151/451)*4) / 
+            ((101/400)+(101/201)+(51/201)+1+(26/51)+(151/451)), 
+        signal_coverage=5, regionSet_coverage=(101/400)+(101/201)+(51/201)+1+(26/51)+(151/451))
+    expect_equal(weightedAve, correctAve)
     
+    # test "regionOLMean"
+    signalAve <- regionOLMean(signalDT = regionDataDT,
+                              signalGR = COCOA:::dtToGr(regionCoordDT), 
+                              regionSet = regionSet1,
+                              calcCols = c("PC1", "PC2"))
+    # proportion overlap is first then PC
+    correctAve <- data.frame(PC1=(1+1+2+3+5+6)/6,
+                             PC2=(-1+-1+0+1+3+4)/6, 
+                             signal_coverage=5,
+                             regionSet_coverage=5)
+    expect_equal(signalAve, correctAve)
     
-    # test wilcoxon rank sum scoring metric
-    rsWResults <- COCOA:::rsWilcox(dataDT = dataDTW, regionGR = regionSetW)
-    PC2W <- wilcox.test(x = c(-2, 0, 1), y=c(-1, 2:4))$p.value
-    PC3W <- wilcox.test(x = c(8, 6, 5), y=c(7, 4, 3, 10))$p.value
-    expect_equal(c(PC2W, PC3W, 3, 2, 2, mean(width(regionSetW))), 
-                 c(rsWResults$PC2, rsWResults$PC3, rsWResults$cytosine_coverage, 
-                   rsWResults$region_coverage, 
-                   rsWResults$total_region_number, 
-                   rsWResults$mean_region_size))
+    # test "weightedAvePerRegion"
+    avePerRegion <- weightedAvePerRegion(signalDT= regionDataDT,
+                                    signalCoord=COCOA:::dtToGr(regionCoordDT),
+                                    regionSet=regionSet1,
+                                    calcCols = c("PC1", "PC2"))
+    correctAve <- data.table(PC1 = c(1*1, (101/201*1 + 51/201*2)/ (101/201 + 51/201), 1*3, 1*5, 1*6), 
+                             PC2 = c(1*-1, (101/201*-1 + 51/201*0)/ (101/201 + 51/201), 1*1, 1*3, 1*4))
+    expect_equal(avePerRegion$PC1, correctAve$PC1)
+    expect_equal(avePerRegion$PC2, correctAve$PC2)
     
-    # same test for Wilcoxon but with aggregateLoadings (absolute value
-    # of loadings will be taken), "greater" alternate hypothesis is used in
-    # aggregateLoadings
-    rsWResults <- COCOA:::aggregateLoadings(loadingMat = loadingMatW, 
-                                           signalCoord = coordinateDTW, 
-                                           regionSet = regionSetW, 
-                                           PCsToAnnotate = c("PC2", "PC3"), 
-                                           scoringMetric = "rankSum")    
-    PC2W <- wilcox.test(x = c(2, 0, 1), y=c(1, 2:4), alternative = "greater")$p.value
-    PC3W <- wilcox.test(x = c(8, 6, 5), y=c(7, 4, 3, 10), alternative = "greater")$p.value
-    expect_equal(c(PC2W, PC3W, 3, 2, 2, mean(width(regionSetW))), 
-                 c(rsWResults$PC2, rsWResults$PC3, rsWResults$cytosine_coverage, 
-                   rsWResults$region_coverage, 
-                   rsWResults$total_region_number, 
-                   rsWResults$mean_region_size))
+})
 
-    
-    
-    })
 
-test_that("averageByRegion", {
+test_that("averagePerRegion", {
     loadingMatABR <- loadingMat
     loadingMatABR[1, "PC1"] <- 3
     loadingMatABR[32, "PC1"] <- 2
-    abr <- COCOA:::averageByRegion(loadingMat = loadingMatABR, signalCoord = COCOA:::dtToGr(coordinateDT), 
+    abr <- COCOA:::averagePerRegion(loadingMat = loadingMatABR, signalCoord = COCOA:::dtToGr(coordinateDT), 
                             regionSet = regionSet1, PCsToAnnotate = "PC1", 
                             returnQuantile = FALSE)
     expect_equal(abr$PC1, c(2, 1, 1, 1.5))
     
     # test quantile
-    abrq <- COCOA:::averageByRegion(loadingMat = loadingMatABR, signalCoord = COCOA:::dtToGr(coordinateDT), 
+    abrq <- COCOA:::averagePerRegion(loadingMat = loadingMatABR, signalCoord = COCOA:::dtToGr(coordinateDT), 
                                    regionSet = regionSet1, PCsToAnnotate = "PC1", 
                                    returnQuantile = TRUE)
-    # the mean values, abr$PC1, converted to quantiles
-    # converting properly to quantiles?
-    expect_equal(abrq$PC1, ecdf(loadingMatABR[, "PC1"])(abr$PC1))
-    
-})
-
-test_that("averageByRegion", {
-    loadingMatABR <- loadingMat
-    loadingMatABR[1, "PC1"] <- 3
-    loadingMatABR[32, "PC1"] <- 2
-    abr <- COCOA:::averageByRegion(loadingMat = loadingMatABR, signalCoord = COCOA:::dtToGr(coordinateDT), 
-                                   regionSet = regionSet1, PCsToAnnotate = "PC1", 
-                                   returnQuantile = FALSE)
-    expect_equal(abr$PC1, c(2, 1, 1, 1.5))
-    
-    # test quantile
-    abrq <- COCOA:::averageByRegion(loadingMat = loadingMatABR, signalCoord = COCOA:::dtToGr(coordinateDT), 
-                                    regionSet = regionSet1, PCsToAnnotate = "PC1", 
-                                    returnQuantile = TRUE)
     # the mean values, abr$PC1, converted to quantiles
     # converting properly to quantiles?
     expect_equal(abrq$PC1, ecdf(loadingMatABR[, "PC1"])(abr$PC1))
@@ -297,10 +289,7 @@ test_that("getLoadingProfile", {
                                                      PCsToAnnotate = "PC1", 
                                                      binNum = 5))  
     
-    expect_equal(binnedP, alterOut)
-    
-    
-    
+    expect_equal(binnedP, alterOut)    
     
 })
 

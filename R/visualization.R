@@ -418,7 +418,7 @@ regionQuantileByPC <- function(loadingMat, signalCoord, regionSet,
     
     
     
-    rsRegionAverage <- averageByRegion(loadingMat = loadingMat, 
+    rsRegionAverage <- averagePerRegion(loadingMat = loadingMat, 
                                        signalCoord =coordinateDT, 
                                        regionSet = regionSet, 
                                        PCsToAnnotate = PCsToAnnotate,
