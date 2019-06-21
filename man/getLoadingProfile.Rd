@@ -6,7 +6,7 @@
 \usage{
 getLoadingProfile(loadingMat, signalCoord, regionSet,
   PCsToAnnotate = c("PC1", "PC2"), binNum = 25, verbose = TRUE,
-  minOverlap = 0.5, overlapMethod = "single")
+  overlapMethod = "single")
 }
 \arguments{
 \item{loadingMat}{matrix of loadings (the coefficients of 
@@ -38,6 +38,11 @@ give a higher resolution but perhaps more noisy profile.}
 of the function should be shown, one
 bar indicates the region set is completed. Useful when
 using `lapply` to get the loading profiles of many region sets.}
+
+\item{overlapMethod}{A character object with the overlap method.
+"single" is the default method and is appropriate to use when the start and
+end coordinates of the genomic signal/original data included in the PCA are
+the same.}
 }
 \value{
 A data.frame with the binned loading profile,
