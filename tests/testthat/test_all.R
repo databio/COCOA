@@ -261,7 +261,7 @@ test_that("getLoadingProfile", {
               seq(from=4050, to=4950, by = 100))
     coordinateDTP <- data.frame(chr = rep("chr3", nrow(loadingMatP)), 
                                start = .start,
-                               end = .start + 1,
+                               end = .start,
                                extraCol = rep(1, length(.start)))
     regionSetP <- data.table(chr = rep("chr3", 3), 
                             start = c(1, 2001, 4001),

@@ -6,7 +6,7 @@
 \usage{
 aggregateLoadings(loadingMat, signalCoord, regionSet,
   PCsToAnnotate = c("PC1", "PC2"), scoringMetric = "regionMean",
-  verbose = FALSE, minOverlap = 0.5, overlapMethod = "single")
+  verbose = FALSE, overlapMethod = "single")
 }
 \arguments{
 \item{loadingMat}{matrix of loadings (the coefficients of 
@@ -55,6 +55,11 @@ the loadings not in the region set.}
 of the function should be shown, one
 bar indicates the region set is completed. Useful when using 
 aggregateLoadings with 'apply' to do many region sets at a time.}
+
+\item{overlapMethod}{A character object with the overlap method.
+"single" is the default method and is appropriate to use when the start and
+end coordinates of the genomic signal/original data included in the PCA are
+the same.}
 }
 \value{
 a data.table with one row and the following 

@@ -60,7 +60,7 @@ NULL
 # in order to pass some R CMD check NOTES.
 if (getRversion() >= "2.15.1") {
     utils::globalVariables(c(
-        ".", "bin", "binID", "chr", "id", 
+        ".", "..calcCols", "bin", "binID", "chr", "id", 
         "coverage", "pOlap", "regionGroupID", "regionID", "theme", 
         "mean_region_size", "region_coverage", "rowIndex", "rsIndex",
         "rsRegionID", "total_region_number", "signal_coverage", ".SD")) 
@@ -118,6 +118,11 @@ if (getRversion() >= "2.15.1") {
 #' of the function should be shown, one
 #' bar indicates the region set is completed. Useful when using 
 #' aggregateLoadings with 'apply' to do many region sets at a time.
+#' @param overlapMethod A character object with the overlap method.
+#' "single" is the default method and is appropriate to use when the start and
+#' end coordinates of the genomic signal/original data included in the PCA are
+#' the same.
+
 
 #' @return a data.table with one row and the following 
 #' columns: one column for each item of PCsToAnnotate with names given
@@ -539,6 +544,10 @@ runCOCOA <- function(loadingMat,
 #' of the function should be shown, one
 #' bar indicates the region set is completed. Useful when
 #' using `lapply` to get the loading profiles of many region sets.
+#' @param overlapMethod A character object with the overlap method.
+#' "single" is the default method and is appropriate to use when the start and
+#' end coordinates of the genomic signal/original data included in the PCA are
+#' the same.
 #' @return A data.frame with the binned loading profile,
 #' one row per bin. columns: binID and one column for each PC
 #' in PCsToAnnotate. The function will return NULL if there
@@ -724,8 +733,7 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
                                   jExpr=buildJ(PCsToAnnotate,
                                                rep("mean", length(PCsToAnnotate))),
                                   byRegionGroup = byRegionGroup,
-                                  splitFactor = splitFactor,
-                                  overlapMethod=overlapMethod)
+                                  splitFactor = splitFactor)
     }
     # RGenomeUtils::BSAggregate
 
@@ -950,7 +958,7 @@ getTopRegions <- function(loadingMat,
                           returnQuantile=TRUE) {
     
     
-    regionLoadDT = COCOA:::averageByRegion(loadingMat=loadingMat,
+    regionLoadDT = averagePerRegion(loadingMat=loadingMat,
                             signalCoord=signalCoord, regionSet=regionSet, 
                             PCsToAnnotate = PCsToAnnotate,
                             returnQuantile = returnQuantile)[]
@@ -960,7 +968,7 @@ getTopRegions <- function(loadingMat,
     # keep region if it is above cutoff in any of the PCs in PCsToAnnotate
     keepInd = apply(X = keepInd, MARGIN = 1, FUN = any)
     
-    highGR = COCOA:::dtToGr(regionLoadDT[keepInd, ])
+    highGR = dtToGr(regionLoadDT[keepInd, ])
     
     values(highGR) <- as.data.frame(regionLoadDT[keepInd, PCsToAnnotate, with=FALSE])
     

@@ -6,7 +6,7 @@
 \usage{
 runCOCOA(loadingMat, signalCoord, GRList, PCsToAnnotate = c("PC1",
   "PC2"), scoringMetric = "regionMean", verbose = TRUE,
-  minOverlap = 0.5, overlapMethod = "single")
+  overlapMethod = "single")
 }
 \arguments{
 \item{loadingMat}{matrix of loadings (the coefficients of 
@@ -19,8 +19,7 @@ for the genomic signal/original data (eg DNA methylation)
 included in the PCA. Coordinates should be in the 
 same order as the original data and the loadings 
 (each item/row in signalCoord corresponds to a row in loadingMat).
-If a data.frame, must have chr and start columns. If end is included,
-will use `minOverlap` to determine hits.
+If a data.frame, must have chr and start columns.
 If end is not included, start coordinate will be used for calculations.}
 
 \item{GRList}{GRangesList object. Each list item is 
@@ -57,20 +56,18 @@ the loadings not in the region set.}
 of the function should be shown, one
 bar indicates the region set is completed.}
 
-\item{minOverlap}{The minimum proportion overlap required between the}
-
 \item{overlapMethod}{A character object with the overlap method.
 "single" is the default method and is appropriate to use when the start and
 end coordinates of the genomic signal/original data included in the PCA are
 the same.
-"simple" determines whether a single genomic signal included in the PCA that 
-spans more than a single position overlaps with a region set location by
-the minOverlap parameter.
-"total" determines whether a single, or multiple, genomic signal(s) included 
-in the PCA that span(s) more than a single position overlap(s) with a region 
-set location by the minOverlap parameter. This method includes genomic
-signals that when combined sufficiently cover a single region set location
-by the minOverlap parameter.}
+"unweightedMean" determines whether single, or multiple, genomic signal(s) 
+that span(s) more than a single position overlap(s) with a region set 
+location. This method determines the unweighted mean signal of any genomic 
+signal that overlaps in any amount with a region set region.
+"proportionWeightedMean" determines whether single, or multiple, 
+genomic signal(s) that span(s) more than a single position overlap(s) with a 
+region set location. This method weights the signals by the proportion 
+overlap with the corresponding region set regions.}
 }
 \value{
 data.frame of results, one row for each region set. 
