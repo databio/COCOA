@@ -1461,11 +1461,16 @@ signalOLMetrics <- function(dataDT,
 # For instance specify alternative hypothesis: alternative = "greater".
 # @return A vector with a p value for each column other than chr, start or end. 
 
-# could make this a generic function then apply it across PCs of interest
+# @examples data("brcaLoadings1")
+# data("brcaMCoord1")
+# data("nrf1_chr1")
+# dataDT = as.data.table(cbind(brcaMCoord1, brcaLoadings1))
+# rsWilcox(dataDT = dataDT, regionGR = nrf1_chr1, conf.int=TRUE)
 
 rsWilcox <- function(dataDT,
                      regionGR,
                      signalCols = colnames(dataDT)[!(colnames(dataDT) %in% c("chr", "start", "end"))], 
+                     conf.int=FALSE,
                      ...) {
     
     # region set info
@@ -1484,7 +1489,7 @@ rsWilcox <- function(dataDT,
     }
     
     # get indices for overlapping and non overlapping CpGs
-    olCpG <- subjectHits(OL)
+    olCpG <- unique(subjectHits(OL))
     nonOLCpG <- (seq_len(nrow(dataDT)))[-olCpG]
     
     # get info on degree of overlap
@@ -1493,16 +1498,37 @@ rsWilcox <- function(dataDT,
     # number of regions that overlap
     region_coverage   <- length(unique(queryHits(OL)))
     
-    # calculate Wilcoxon rank sum test for each column
-    # additional parameters given with ...
-    pVals <- vapply(X = signalCols, FUN = function(x) wilcox.test(x = as.numeric(as.matrix(dataDT[olCpG, x, with=FALSE])),
-                                                                  y = as.numeric(as.matrix(dataDT[nonOLCpG, x, with=FALSE])), ...)$p.value, 1)
-     
-    wRes <- data.frame(t(pVals),
-                       signal_coverage,
-                       region_coverage,
-                       total_region_number,
-                       mean_region_size)
+
+    
+    # each confidence interval has length of 2: [low, high]
+    
+    if (conf.int) {
+        # calculate Wilcoxon rank sum test for each column
+        # additional parameters given with ...
+        # confIntervals will be [low1, high1, low2, high2, etc.]
+        confIntervals <- as.numeric(vapply(X = signalCols, FUN = function(x) wilcox.test(x = as.numeric(as.matrix(dataDT[olCpG, x, with=FALSE])),
+                                                                      y = as.numeric(as.matrix(dataDT[nonOLCpG, x, with=FALSE])), 
+                                                                      conf.int = conf.int, ...)$conf.int, c(1, 1)))
+        
+        names(confIntervals) <- paste0(rep(signalCols, each=2), c("_low", "_high"))
+        wRes <- data.frame(t(confIntervals),
+                           signal_coverage,
+                           region_coverage,
+                           total_region_number,
+                           mean_region_size)        
+            
+    } else {
+        # calculate Wilcoxon rank sum test for each column
+        # additional parameters given with ...
+        pVals <- vapply(X = signalCols, FUN = function(x) wilcox.test(x = as.numeric(as.matrix(dataDT[olCpG, x, with=FALSE])),
+                                                                      y = as.numeric(as.matrix(dataDT[nonOLCpG, x, with=FALSE])), ...)$p.value, 1)
+        wRes <- data.frame(t(pVals),
+                           signal_coverage,
+                           region_coverage,
+                           total_region_number,
+                           mean_region_size)
+    }
+    
     return(wRes)
 }
 
