@@ -6,7 +6,7 @@
 \usage{
 aggregateLoadings(loadingMat, signalCoord, regionSet,
   PCsToAnnotate = c("PC1", "PC2"), scoringMetric = "regionMean",
-  verbose = FALSE, overlapMethod = "single")
+  verbose = FALSE, overlapMethod = "single", wilcox.conf.int = FALSE)
 }
 \arguments{
 \item{loadingMat}{matrix of loadings (the coefficients of 
@@ -60,6 +60,10 @@ aggregateLoadings with 'apply' to do many region sets at a time.}
 "single" is the default method and is appropriate to use when the start and
 end coordinates of the genomic signal/original data included in the PCA are
 the same.}
+
+\item{wilcox.conf.int}{logical. Only applies when using "rankSum" scoring
+method. returns a 95% confidence interval from the Wilcoxon rank sum test
+instead of p value.}
 }
 \value{
 a data.table with one row and the following 

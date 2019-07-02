@@ -6,7 +6,7 @@
 \usage{
 runCOCOA(loadingMat, signalCoord, GRList, PCsToAnnotate = c("PC1",
   "PC2"), scoringMetric = "regionMean", verbose = TRUE,
-  overlapMethod = "single")
+  overlapMethod = "single", wilcox.conf.int = FALSE)
 }
 \arguments{
 \item{loadingMat}{matrix of loadings (the coefficients of 
@@ -68,6 +68,10 @@ signal that overlaps in any amount with a region set region.
 genomic signal(s) that span(s) more than a single position overlap(s) with a 
 region set location. This method weights the signals by the proportion 
 overlap with the corresponding region set regions.}
+
+\item{wilcox.conf.int}{logical. Only applies when using "rankSum" scoring
+method. returns a 95% confidence interval from the Wilcoxon rank sum test
+instead of p value.}
 }
 \value{
 data.frame of results, one row for each region set. 

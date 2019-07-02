@@ -122,7 +122,9 @@ if (getRversion() >= "2.15.1") {
 #' "single" is the default method and is appropriate to use when the start and
 #' end coordinates of the genomic signal/original data included in the PCA are
 #' the same.
-
+#' @param wilcox.conf.int logical. Only applies when using "rankSum" scoring
+#' method. returns a 95% confidence interval from the Wilcoxon rank sum test
+#' instead of p value.
 
 #' @return a data.table with one row and the following 
 #' columns: one column for each item of PCsToAnnotate with names given
@@ -154,7 +156,8 @@ aggregateLoadings <- function(loadingMat,
                               PCsToAnnotate = c("PC1", "PC2"),
                               scoringMetric = "regionMean",
                               verbose = FALSE,
-                              overlapMethod = "single") {
+                              overlapMethod = "single",
+                              wilcox.conf.int=FALSE) {
 
     if (is(signalCoord, "GRanges")) {
         coordinateDT <- grToDt(signalCoord)
@@ -316,19 +319,41 @@ aggregateLoadings <- function(loadingMat,
         
         
     } else if (scoringMetric == "rankSum"){
-        # one sided test since I took the absolute value of the loadings 
-        wRes <- rsWilcox(dataDT = loadingDT, regionGR=regionSet, 
-                         signalCols = PCsToAnnotate, alternative="greater")
         
-        if (is.null(wRes)) {
-            results <- as.data.table(t(rep(NA, length(PCsToAnnotate))))
-            setnames(results, PCsToAnnotate)
-            results[, signal_coverage := 0]
-            results[, region_coverage := 0]
-            results[, total_region_number := numOfRegions]
-            results[, mean_region_size := round(mean(width(regionSet)), 1)]
+        if (wilcox.conf.int) {
+            # returns confidence interval
+            wRes <- rsWilcox(dataDT = loadingDT, regionGR=regionSet, 
+                             signalCols = PCsToAnnotate, 
+                             conf.int = wilcox.conf.int)
+            
+            if (is.null(wRes)) {
+                results <- as.data.table(t(rep(NA, length(PCsToAnnotate) * 2)))
+                setnames(results, paste0(rep(PCsToAnnotate, each=2), 
+                                         c("_low", "_high")))
+                results[, signal_coverage := 0]
+                results[, region_coverage := 0]
+                results[, total_region_number := numOfRegions]
+                results[, mean_region_size := round(mean(width(regionSet)), 1)]
+            } else {
+                results <- as.data.table(wRes)
+            }    
+            
         } else {
-            results <- as.data.table(wRes)
+            # returns p value
+            # one sided test since I took the absolute value of the loadings 
+            wRes <- rsWilcox(dataDT = loadingDT, regionGR=regionSet, 
+                             signalCols = PCsToAnnotate, alternative="greater")
+            
+            if (is.null(wRes)) {
+                results <- as.data.table(t(rep(NA, length(PCsToAnnotate))))
+                setnames(results, PCsToAnnotate)
+                results[, signal_coverage := 0]
+                results[, region_coverage := 0]
+                results[, total_region_number := numOfRegions]
+                results[, mean_region_size := round(mean(width(regionSet)), 1)]
+            } else {
+                results <- as.data.table(wRes)
+            }    
         }
     } else {
         stop(cleanws("scoringMetric was not recognized. 
@@ -409,6 +434,9 @@ aggregateLoadings <- function(loadingMat,
 #' genomic signal(s) that span(s) more than a single position overlap(s) with a 
 #' region set location. This method weights the signals by the proportion 
 #' overlap with the corresponding region set regions.
+#' @param wilcox.conf.int logical. Only applies when using "rankSum" scoring
+#' method. returns a 95% confidence interval from the Wilcoxon rank sum test
+#' instead of p value.
 #' @return data.frame of results, one row for each region set. 
 #' One column for each PC in PCsToAnnotate
 #' with score for that PC for a given region set (specific score depends
@@ -442,7 +470,8 @@ runCOCOA <- function(loadingMat,
                      PCsToAnnotate = c("PC1", "PC2"),
                      scoringMetric = "regionMean",
                      verbose = TRUE,
-                     overlapMethod="single") {
+                     overlapMethod="single",
+                     wilcox.conf.int=FALSE) {
 
     if (!(any(c(is(loadingMat, "matrix"), is(loadingMat, "data.frame"))))) {
         warning("loadingMat should be a matrix or data.frame.")
@@ -476,7 +505,8 @@ runCOCOA <- function(loadingMat,
                                 PCsToAnnotate = PCsToAnnotate,
                                 scoringMetric = scoringMetric,
                                 verbose = verbose,
-                                overlapMethod = overlapMethod))
+                                overlapMethod = overlapMethod,
+                                wilcox.conf.int = wilcox.conf.int))
     resultsDT <- do.call(rbind, resultsList) 
 
     # # add names if they are present
