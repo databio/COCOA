@@ -172,7 +172,7 @@ aggregateLoadings <- function(loadingMat,
     
     ########## check that dimensions of inputs are consistent
     # length of signal coord = nrow of loadingMat
-    if (length(signalCoord) != nrow(loadingMat)) {
+    if (nrow(coordinateDT) != nrow(loadingMat)) {
         stop(cleanws("The number of coordinates in 
             signalCoord (length(signalCoord)) does not equal the number of 
                      rows in loadingMat"))
@@ -511,7 +511,7 @@ runCOCOA <- function(loadingMat,
     
     ########## check that dimensions of inputs are consistent
     # length of signal coord = nrow of loadingMat
-    if (length(signalCoord) != nrow(loadingMat)) {
+    if (nrow(coordinateDT) != nrow(loadingMat)) {
         stop(cleanws("The number of coordinates in 
             signalCoord (length(signalCoord)) does not equal the number of 
                      rows in loadingMat"))
@@ -656,7 +656,7 @@ getLoadingProfile <- function(loadingMat, signalCoord, regionSet,
     
     ########## check that dimensions of inputs are consistent
     # length of signal coord = nrow of loadingMat
-    if (length(signalCoord) != nrow(loadingMat)) {
+    if (nrow(coordinateDT) != nrow(loadingMat)) {
         stop(cleanws("The number of coordinates in 
             signalCoord (length(signalCoord)) does not equal the number of 
                      rows in loadingMat"))
@@ -892,7 +892,7 @@ averagePerRegion <- function(loadingMat,
     
     ########## check that dimensions of inputs are consistent
     # length of signal coord = nrow of loadingMat
-    if (length(signalCoord) != nrow(loadingMat)) {
+    if (nrow(coordinateDT) != nrow(loadingMat)) {
         stop(cleanws("The number of coordinates in 
             signalCoord (length(signalCoord)) does not equal the number of 
                      rows in loadingMat"))
