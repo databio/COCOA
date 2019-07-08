@@ -80,7 +80,7 @@ if (getRversion() >= "2.15.1") {
 #' One row for each original dimension/variable (should be same order 
 #' as original data/signalCoord). The x$rotation output of prcomp().
 #' @param signalCoord a GRanges object or data frame with coordinates 
-#' for the genomic signal/original data (eg DNA methylation) 
+#' for the genomic signal/original data (e.g. DNA methylation) 
 #' included in the PCA. Coordinates should be in the 
 #' same order as the original data and the loadings 
 #' (each item/row in signalCoord
@@ -125,6 +125,7 @@ if (getRversion() >= "2.15.1") {
 #' @param wilcox.conf.int logical. Only applies when using "rankSum" scoring
 #' method. returns a 95% confidence interval from the Wilcoxon rank sum test
 #' instead of p value.
+#' @param absVal
 
 #' @return a data.table with one row and the following 
 #' columns: one column for each item of PCsToAnnotate with names given
@@ -157,33 +158,56 @@ aggregateLoadings <- function(loadingMat,
                               scoringMetric = "regionMean",
                               verbose = FALSE,
                               overlapMethod = "single",
-                              wilcox.conf.int=FALSE) {
-
-    if (is(signalCoord, "GRanges")) {
-        coordinateDT <- grToDt(signalCoord)
-    } else if (is(signalCoord, "data.frame")) {
-        coordinateDT <- signalCoord
-    } else {
-        stop("signalCoord should be a data.frame or GRanges object.")
+                              wilcox.conf.int=FALSE, 
+                              absVal=TRUE) {
+    
+    ################### checking inputs  #################################
+    
+    ########## check that inputs are the correct class
+    # exports coordinateDT to this environment (converts signalCoord)
+    checkConvertInputClasses(loadingMat=loadingMat,
+                             signalCoord=signalCoord,
+                             regionSet=regionSet,
+                             PCsToAnnotate = PCsToAnnotate)
+    
+    ########## check that dimensions of inputs are consistent
+    # length of signal coord = nrow of loadingMat
+    if (length(signalCoord) != nrow(loadingMat)) {
+        stop(cleanws("The number of coordinates in 
+            signalCoord (length(signalCoord)) does not equal the number of 
+                     rows in loadingMat"))
+    } 
+    
+    ######### check that appropriate columns are present
+    # PCsToAnnotate are column names of loadingMat
+    if (!all(PCsToAnnotate %in% colnames(loadingMat))) {
+        missingCols = PCsToAnnotate[!(PCsToAnnotate %in% colnames(loadingMat))]
+        stop(cleanws(paste0("Some PCsToAnnotate are not 
+                            columns of loadingMat: ", missingCols)))
     }
     
-    # preferred as matrix, data.frame works
-    if (!(is(loadingMat, "matrix") || is(loadingMat, "data.frame"))) {
-        stop("loadingMat should be a matrix. Check object class.")
+    ######## check that scoringMetric is appropriate
+    
+    if (!(scoringMetric %in% c("regionMean", "simpleMean", 
+                               "meanDiff", "rankSum"))) {
+        stop(cleanws("scoringMetric was not recognized. 
+                      Check spelling and available options."))
     }
     
-    if (!is(regionSet, "GRanges")) {
-        stop("regionSet should be a GRanges object. Check object class.")
-    }
-    if (!is(PCsToAnnotate, "character")) {
-        stop("PCsToAnnotate should be a character object (eg 'PC1').")
-    }
+    #######
+    # what happens if there are NAs or Inf in loadingMat?
+    
+    #################################################################
     
     numOfRegions <- length(regionSet)
     totalCpGs    <- nrow(loadingMat)
     
     # extreme positive or negative values both give important information
-    loadingMat <- abs(loadingMat) # required for later code
+    # take absolute value or not
+    if (absVal) {
+        loadingMat <- abs(loadingMat) # required for later code
+    }
+    
     loadingDT  <- as.data.table(loadingMat)
     
     # reformat into data.table with chromosome location and weight
@@ -437,6 +461,7 @@ aggregateLoadings <- function(loadingMat,
 #' @param wilcox.conf.int logical. Only applies when using "rankSum" scoring
 #' method. returns a 95% confidence interval from the Wilcoxon rank sum test
 #' instead of p value.
+#' @param absVal
 #' @return data.frame of results, one row for each region set. 
 #' One column for each PC in PCsToAnnotate
 #' with score for that PC for a given region set (specific score depends
@@ -471,31 +496,49 @@ runCOCOA <- function(loadingMat,
                      scoringMetric = "regionMean",
                      verbose = TRUE,
                      overlapMethod="single",
-                     wilcox.conf.int=FALSE) {
+                     wilcox.conf.int=FALSE,
+                     absVal=TRUE) {
 
-    if (!(any(c(is(loadingMat, "matrix"), is(loadingMat, "data.frame"))))) {
-        warning("loadingMat should be a matrix or data.frame.")
-    }
- 
-    if (is(signalCoord, "GRanges")) {
-        coordinateDT <- grToDt(signalCoord)
-    } else if (is(signalCoord, "data.frame")) {
-        coordinateDT <- signalCoord
-    } else {
-        stop("signalCoord should be a data.frame or GRanges object.")
+    ################### checking inputs  #################################
+    
+    ########## check that inputs are the correct class
+    # exports coordinateDT to this environment (converts signalCoord)
+    checkConvertInputClasses(loadingMat=loadingMat,
+                             signalCoord=signalCoord,
+                             regionSet=NULL,
+                             PCsToAnnotate = PCsToAnnotate,
+                             GRList=GRList)
+    
+    ########## check that dimensions of inputs are consistent
+    # length of signal coord = nrow of loadingMat
+    if (length(signalCoord) != nrow(loadingMat)) {
+        stop(cleanws("The number of coordinates in 
+            signalCoord (length(signalCoord)) does not equal the number of 
+                     rows in loadingMat"))
+    } 
+    
+    ######### check that appropriate columns are present
+    # PCsToAnnotate are column names of loadingMat
+    if (!all(PCsToAnnotate %in% colnames(loadingMat))) {
+        missingCols = PCsToAnnotate[!(PCsToAnnotate %in% colnames(loadingMat))]
+        stop(cleanws(paste0("Some PCsToAnnotate are not 
+                            columns of loadingMat: ", missingCols)))
     }
     
-    # should be GRangesList
-    if (is(GRList, "GRanges")) {
-        GRList <- GRangesList(GRList)
-    } else if (!is(GRList, "GRangesList")) {
-        stop("GRList should be a GRangesList object.")
+    ######## check that scoringMetric is appropriate
+    
+    if (!(scoringMetric %in% c("regionMean", "simpleMean", 
+                               "meanDiff", "rankSum"))) {
+        stop(cleanws("scoringMetric was not recognized. 
+                      Check spelling and available options."))
     }
     
-    if (!is(PCsToAnnotate, "character")) {
-        stop("PCsToAnnotate should be a character object (eg 'PC1').")
-    }
-
+    #######
+    # what happens if there are NAs or Inf in loadingMat?
+    
+    #################################################################
+    
+    
     # apply over the list of region sets
     resultsList <- lapplyAlias(GRList,
                                function(x) aggregateLoadings(
@@ -506,7 +549,8 @@ runCOCOA <- function(loadingMat,
                                 scoringMetric = scoringMetric,
                                 verbose = verbose,
                                 overlapMethod = overlapMethod,
-                                wilcox.conf.int = wilcox.conf.int))
+                                wilcox.conf.int = wilcox.conf.int,
+                                absVal = absVal))
     resultsDT <- do.call(rbind, resultsList) 
 
     # # add names if they are present
@@ -578,6 +622,7 @@ runCOCOA <- function(loadingMat,
 #' "single" is the default method and is appropriate to use when the start and
 #' end coordinates of the genomic signal/original data included in the PCA are
 #' the same.
+#' @param absVal
 #' @return A data.frame with the binned loading profile,
 #' one row per bin. columns: binID and one column for each PC
 #' in PCsToAnnotate. The function will return NULL if there
@@ -598,31 +643,52 @@ runCOCOA <- function(loadingMat,
 getLoadingProfile <- function(loadingMat, signalCoord, regionSet,
                     PCsToAnnotate = c("PC1", "PC2"), binNum = 25,
                     verbose=TRUE,  
-                    overlapMethod = "single") {
+                    overlapMethod = "single", absVal=TRUE) {
     
-    if (!(any(c(is(loadingMat, "matrix"), is(loadingMat, "data.frame"))))) {
-        warning("loadingMat should be a matrix or data.frame.")
+    ################### checking inputs  #################################
+    
+    ########## check that inputs are the correct class
+    # exports coordinateDT to this environment (converts signalCoord)
+    checkConvertInputClasses(loadingMat=loadingMat,
+                             signalCoord=signalCoord,
+                             regionSet=regionSet,
+                             PCsToAnnotate = PCsToAnnotate)
+    
+    ########## check that dimensions of inputs are consistent
+    # length of signal coord = nrow of loadingMat
+    if (length(signalCoord) != nrow(loadingMat)) {
+        stop(cleanws("The number of coordinates in 
+            signalCoord (length(signalCoord)) does not equal the number of 
+                     rows in loadingMat"))
+    } 
+    
+    ######### check that appropriate columns are present
+    # PCsToAnnotate are column names of loadingMat
+    if (!all(PCsToAnnotate %in% colnames(loadingMat))) {
+        missingCols = PCsToAnnotate[!(PCsToAnnotate %in% colnames(loadingMat))]
+        stop(cleanws(paste0("Some PCsToAnnotate are not 
+                            columns of loadingMat: ", missingCols)))
     }
     
-    # checks for correct input
-    if (is(signalCoord, "GRanges")) {
-        coordinateDT <- grToDt(signalCoord)
-    } else if (is(signalCoord, "data.frame")) {
-        coordinateDT <- signalCoord
+    ######## check that scoringMetric is appropriate
+    
+    if (!(scoringMetric %in% c("regionMean", "simpleMean", 
+                               "meanDiff", "rankSum"))) {
+        stop(cleanws("scoringMetric was not recognized. 
+                      Check spelling and available options."))
+    }
+    
+    #######
+    # what happens if there are NAs or Inf in loadingMat?
+    
+    #################################################################
+
+    # take absolute value or not
+    if (absVal) {
+        loadingDT <- as.data.table(abs(loadingMat))
     } else {
-        stop("signalCoord should be a data.frame or GRanges object.")
+        loadingDT <- as.data.table(loadingMat)
     }
-    
-    if (!is(regionSet, "GRanges")) {
-        stop("regionSet should be a GRanges object. Check object class.")
-    }
-    
-    if (!is(PCsToAnnotate, "character")) {
-        stop("PCsToAnnotate should be a character object (eg 'PC1').")
-    }
-    
-    
-    loadingDT <- as.data.table(abs(loadingMat))
     loadingDT <- cbind(coordinateDT, loadingDT)
     
     GRDT <- grToDt(regionSet)
@@ -799,6 +865,7 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
 # @param returnQuantile "logical" object. If FALSE, return region averages. If TRUE,
 # for each region, return the quantile of that region's average value
 # based on the distribution of individual genomic signal/feature values
+# @param absVal
 # @return a data.table with region coordinates and average loading 
 # values for each region. Has columns chr, start, end, and a column for each
 # PC in PCsToAnnotate. Regions are not in order along the rows of the data.table.
@@ -814,26 +881,35 @@ averagePerRegion <- function(loadingMat,
                              returnQuantile = FALSE,
                              absVal=TRUE) {
 
-    if (is(signalCoord, "GRanges")) {
-        coordinateDT <- grToDt(signalCoord)
-    } else if (is(signalCoord, "data.frame")) {
-        coordinateDT <- signalCoord
-    } else {
-        stop("signalCoord should be a data.frame or GRanges object.")
+    ################### checking inputs  #################################
+    
+    ########## check that inputs are the correct class
+    # exports coordinateDT to this environment (converts signalCoord)
+    checkConvertInputClasses(loadingMat=loadingMat,
+                             signalCoord=signalCoord,
+                             regionSet=regionSet,
+                             PCsToAnnotate = PCsToAnnotate)
+    
+    ########## check that dimensions of inputs are consistent
+    # length of signal coord = nrow of loadingMat
+    if (length(signalCoord) != nrow(loadingMat)) {
+        stop(cleanws("The number of coordinates in 
+            signalCoord (length(signalCoord)) does not equal the number of 
+                     rows in loadingMat"))
+    } 
+    
+    ######### check that appropriate columns are present
+    # PCsToAnnotate are column names of loadingMat
+    if (!all(PCsToAnnotate %in% colnames(loadingMat))) {
+        missingCols = PCsToAnnotate[!(PCsToAnnotate %in% colnames(loadingMat))]
+        stop(cleanws(paste0("Some PCsToAnnotate are not 
+                            columns of loadingMat: ", missingCols)))
     }
-
-    # preferred as matrix, data.frame works
-    if (!(is(loadingMat, "matrix") || is(loadingMat, "data.frame"))) {
-        stop("loadingMat should be a matrix or data.frame. Check object class.")
-    }
-
-    if (!is(PCsToAnnotate, "character")) {
-        stop("PCsToAnnotate should be a character object (eg 'PC1').")
-    }
-
-    if (!is(regionSet, "GRanges")) {
-        stop("regionSet should be a GRanges object. Check object class.")
-    }
+    
+    #######
+    # what happens if there are NAs or Inf in loadingMat?
+    
+    #################################################################
 
     # determine whether coordinates are single base or a range
     if (!("end" %in% colnames(coordinateDT))) {
@@ -986,6 +1062,7 @@ getTopRegions <- function(loadingMat,
                           regionSet, 
                           PCsToAnnotate = c("PC1", "PC2"), cutoff = 0.8, 
                           returnQuantile=TRUE) {
+    
     
     
     regionLoadDT = averagePerRegion(loadingMat=loadingMat,

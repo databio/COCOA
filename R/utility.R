@@ -1,5 +1,66 @@
 # Utility functions such as format conversion
 
+# Check whether function inputs are the right class
+# if they are wrong class but close enough, convert them.
+# if they are wrong class but not convertible, give an error.
+# Having a function to do this means, I don't need to write the 
+# same code within each exported function and can change it in one place.
+# default NULL means do not check a given parameter
+
+checkConvertInputClasses <- function(loadingMat=NULL,
+                                     signalCoord=NULL,
+                                     regionSet=NULL,
+                                     PCsToAnnotate = NULL,
+                                     GRList = NULL,
+                                     .env=.enclosingEnv) {
+    
+    # default value for .env, I put this inside the function to clarify
+    # that parent.frame() is being called inside the function 
+    # (it is still called while inside the function when it is a 
+    # default parameter but not when it is explicitly assigned to .env
+    # in the function call)
+    # I can define .enclosingEnv inside the function because of the 
+    # lazy evaluation of .env
+    .enclosingEnv = parent.frame(n=1)
+    
+    if (!is.null(loadingMat)) {
+        # preferred as matrix, data.frame works
+        if (!(is(loadingMat, "matrix") || is(loadingMat, "data.frame"))) {
+            stop("loadingMat should be a matrix. Check object class.")
+        }
+    }
+    if (!is.null(signalCoord)) {
+        if (is(signalCoord, "GRanges")) {
+            coordinateDT <- grToDt(signalCoord)
+            assign("coordinateDT", coordinateDT, envir=.env)
+        } else if (is(signalCoord, "data.frame")) {
+            coordinateDT <- signalCoord
+            assign("coordinateDT", coordinateDT, envir=.env)
+        } else {
+            stop("signalCoord should be a data.frame or GRanges object.")
+        }
+    }
+    if (!is.null(regionSet)) {
+        if (!is(regionSet, "GRanges")) {
+            stop("regionSet should be a GRanges object. Check object class.")
+        }
+    }
+    if (!is.null(PCsToAnnotate)) {
+        if (!is(PCsToAnnotate, "character")) {
+            stop("PCsToAnnotate should be a character object (eg 'PC1').")
+        }
+    }
+    if (!is.null(GRList)) {
+        # should be GRangesList
+        if (is(GRList, "GRanges")) {
+            GRList <- GRangesList(GRList)
+            assign("GRList", GRList, envir=.env)
+        } else if (!is(GRList, "GRangesList")) {
+            stop("GRList should be a GRangesList object.")
+        }
+    }
+    
+}
 
 # Converts a list of data.tables into GRanges.
 # @param dtList A list of data.tables, 
