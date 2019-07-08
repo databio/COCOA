@@ -389,24 +389,36 @@ regionQuantileByPC <- function(loadingMat, signalCoord, regionSet,
                                name = "Percentile of Loading Scores in PC", 
                                col = c("skyblue", "yellow"), ...) {
     
-    if (is(loadingMat, "matrix")) {
-        loadingMat = as.data.frame(loadingMat)
-    } else if (!is(loadingMat, "data.frame")) {
-        stop("loadingMat should be a matrix or data.frame. Check object class.")
+    ################### checking inputs  #################################
+    
+    ########## check that inputs are the correct class
+    # exports coordinateDT to this environment (converts signalCoord)
+    checkConvertInputClasses(loadingMat=loadingMat,
+                             signalCoord=signalCoord,
+                             regionSet=regionSet,
+                             PCsToAnnotate = PCsToAnnotate)
+    
+    ########## check that dimensions of inputs are consistent
+    # length of signal coord = nrow of loadingMat
+    if (length(signalCoord) != nrow(loadingMat)) {
+        stop(cleanws("The number of coordinates in 
+            signalCoord (length(signalCoord)) does not equal the number of 
+                     rows in loadingMat"))
+    } 
+    
+    ######### check that appropriate columns are present
+    # PCsToAnnotate are column names of loadingMat
+    if (!all(PCsToAnnotate %in% colnames(loadingMat))) {
+        missingCols = PCsToAnnotate[!(PCsToAnnotate %in% colnames(loadingMat))]
+        stop(cleanws(paste0("Some PCsToAnnotate are not 
+                            columns of loadingMat: ", missingCols)))
     }
     
-    if (is(signalCoord, "GRanges")) {
-        coordinateDT <- grToDt(signalCoord)
-    } else if (is(signalCoord, "data.frame")) {
-        coordinateDT <- signalCoord
-    } else {
-        stop("signalCoord should be a data.frame or GRanges object.")
-    }
+    #######
+    # what happens if there are NAs or Inf in loadingMat?
     
-    if (!is(regionSet, "GRanges")) {
-        stop("regionSet should be a GRanges object. Check object class.")
-    }
-    
+    #################################################################
+
     
     # if too many regions to plot, randomly subsample regions
     if (length(regionSet) > maxRegionsToPlot) {
