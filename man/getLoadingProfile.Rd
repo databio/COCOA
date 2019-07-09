@@ -6,7 +6,7 @@
 \usage{
 getLoadingProfile(loadingMat, signalCoord, regionSet,
   PCsToAnnotate = c("PC1", "PC2"), binNum = 25, verbose = TRUE,
-  overlapMethod = "single")
+  overlapMethod = "single", absVal = TRUE)
 }
 \arguments{
 \item{loadingMat}{matrix of loadings (the coefficients of 
@@ -43,6 +43,14 @@ using `lapply` to get the loading profiles of many region sets.}
 "single" is the default method and is appropriate to use when the start and
 end coordinates of the genomic signal/original data included in the PCA are
 the same.}
+
+\item{absVal}{logical. If TRUE, take the absolute value of values in
+loadingMat. Choose TRUE if you think there may be some 
+genomic loci in a region set that will increase and others
+will decrease (if there may be anticorrelation between
+regions in a region set). Choose FALSE if you expect regions in a 
+given region set to all change in the same direction (all be positively
+correlated with each other).}
 }
 \value{
 A data.frame with the binned loading profile,

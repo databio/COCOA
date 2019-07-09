@@ -349,6 +349,13 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
 #' @param col a vector of colors or a color mapping function which
 #' will be passed to the ComplexHeatmap::Heatmap() function. See ?Heatmap
 #' (the "col" parameter) for more details.
+#' @param absVal logical. If TRUE, take the absolute value of values in
+#' loadingMat. Choose TRUE if you think there may be some 
+#' genomic loci in a region set that will increase and others
+#' will decrease (if there may be anticorrelation between
+#' regions in a region set). Choose FALSE if you expect regions in a 
+#' given region set to change in the same direction (to be positively
+#' correlated with each other).
 #' @param ... optional parameters for ComplexHeatmap::Heatmap()
 #' @return a heatmap. Columns are PCs, rows are regions. 
 #' This heatmap allows you to see if some regions are 
@@ -387,7 +394,8 @@ regionQuantileByPC <- function(loadingMat, signalCoord, regionSet,
                                column_title_side = "top",
                                cluster_columns = FALSE, 
                                name = "Percentile of Loading Scores in PC", 
-                               col = c("skyblue", "yellow"), ...) {
+                               col = c("skyblue", "yellow"),
+                               absVal=TRUE, ...) {
     
     ################### checking inputs  #################################
     
@@ -434,7 +442,8 @@ regionQuantileByPC <- function(loadingMat, signalCoord, regionSet,
                                        signalCoord =coordinateDT, 
                                        regionSet = regionSet, 
                                        PCsToAnnotate = PCsToAnnotate,
-                                       returnQuantile = TRUE)
+                                       returnQuantile = TRUE,
+                                       absVal=absVal)
     # ranking in terms of percentiles in case there were different 
     # distributions of loading scores for each PC
     

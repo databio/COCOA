@@ -6,7 +6,8 @@
 \usage{
 aggregateLoadings(loadingMat, signalCoord, regionSet,
   PCsToAnnotate = c("PC1", "PC2"), scoringMetric = "regionMean",
-  verbose = FALSE, overlapMethod = "single", wilcox.conf.int = FALSE)
+  verbose = FALSE, overlapMethod = "single", wilcox.conf.int = FALSE,
+  absVal = TRUE)
 }
 \arguments{
 \item{loadingMat}{matrix of loadings (the coefficients of 
@@ -15,7 +16,7 @@ One row for each original dimension/variable (should be same order
 as original data/signalCoord). The x$rotation output of prcomp().}
 
 \item{signalCoord}{a GRanges object or data frame with coordinates 
-for the genomic signal/original data (eg DNA methylation) 
+for the genomic signal/original data (e.g. DNA methylation) 
 included in the PCA. Coordinates should be in the 
 same order as the original data and the loadings 
 (each item/row in signalCoord
@@ -64,6 +65,14 @@ the same.}
 \item{wilcox.conf.int}{logical. Only applies when using "rankSum" scoring
 method. returns a 95% confidence interval from the Wilcoxon rank sum test
 instead of p value.}
+
+\item{absVal}{logical. If TRUE, take the absolute value of values in
+loadingMat. Choose TRUE if you think there may be some 
+genomic loci in a region set that will increase and others
+will decrease (if there may be anticorrelation between
+regions in a region set). Choose FALSE if you expect regions in a 
+given region set to all change in the same direction (all be positively
+correlated with each other).}
 }
 \value{
 a data.table with one row and the following 

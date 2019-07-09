@@ -6,7 +6,7 @@
 \usage{
 runCOCOA(loadingMat, signalCoord, GRList, PCsToAnnotate = c("PC1",
   "PC2"), scoringMetric = "regionMean", verbose = TRUE,
-  overlapMethod = "single", wilcox.conf.int = FALSE)
+  overlapMethod = "single", wilcox.conf.int = FALSE, absVal = TRUE)
 }
 \arguments{
 \item{loadingMat}{matrix of loadings (the coefficients of 
@@ -72,6 +72,14 @@ overlap with the corresponding region set regions.}
 \item{wilcox.conf.int}{logical. Only applies when using "rankSum" scoring
 method. returns a 95% confidence interval from the Wilcoxon rank sum test
 instead of p value.}
+
+\item{absVal}{logical. If TRUE, take the absolute value of values in
+loadingMat. Choose TRUE if you think there may be some 
+genomic loci in a region set that will increase and others
+will decrease (if there may be anticorrelation between
+regions in a region set). Choose FALSE if you expect regions in a 
+given region set to all change in the same direction (all be positively
+correlated with each other).}
 }
 \value{
 data.frame of results, one row for each region set. 
