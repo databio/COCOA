@@ -125,7 +125,13 @@ if (getRversion() >= "2.15.1") {
 #' @param wilcox.conf.int logical. Only applies when using "rankSum" scoring
 #' method. returns a 95% confidence interval from the Wilcoxon rank sum test
 #' instead of p value.
-#' @param absVal
+#' @param absVal logical. If TRUE, take the absolute value of values in
+#' loadingMat. Choose TRUE if you think there may be some 
+#' genomic loci in a region set that will increase and others
+#' will decrease (if there may be anticorrelation between
+#' regions in a region set). Choose FALSE if you expect regions in a 
+#' given region set to all change in the same direction (all be positively
+#' correlated with each other).
 
 #' @return a data.table with one row and the following 
 #' columns: one column for each item of PCsToAnnotate with names given
@@ -461,7 +467,13 @@ aggregateLoadings <- function(loadingMat,
 #' @param wilcox.conf.int logical. Only applies when using "rankSum" scoring
 #' method. returns a 95% confidence interval from the Wilcoxon rank sum test
 #' instead of p value.
-#' @param absVal
+#' @param absVal logical. If TRUE, take the absolute value of values in
+#' loadingMat. Choose TRUE if you think there may be some 
+#' genomic loci in a region set that will increase and others
+#' will decrease (if there may be anticorrelation between
+#' regions in a region set). Choose FALSE if you expect regions in a 
+#' given region set to all change in the same direction (all be positively
+#' correlated with each other).
 #' @return data.frame of results, one row for each region set. 
 #' One column for each PC in PCsToAnnotate
 #' with score for that PC for a given region set (specific score depends
@@ -622,7 +634,13 @@ runCOCOA <- function(loadingMat,
 #' "single" is the default method and is appropriate to use when the start and
 #' end coordinates of the genomic signal/original data included in the PCA are
 #' the same.
-#' @param absVal
+#' @param absVal logical. If TRUE, take the absolute value of values in
+#' loadingMat. Choose TRUE if you think there may be some 
+#' genomic loci in a region set that will increase and others
+#' will decrease (if there may be anticorrelation between
+#' regions in a region set). Choose FALSE if you expect regions in a 
+#' given region set to all change in the same direction (all be positively
+#' correlated with each other).
 #' @return A data.frame with the binned loading profile,
 #' one row per bin. columns: binID and one column for each PC
 #' in PCsToAnnotate. The function will return NULL if there
@@ -668,14 +686,6 @@ getLoadingProfile <- function(loadingMat, signalCoord, regionSet,
         missingCols = PCsToAnnotate[!(PCsToAnnotate %in% colnames(loadingMat))]
         stop(cleanws(paste0("Some PCsToAnnotate are not 
                             columns of loadingMat: ", missingCols)))
-    }
-    
-    ######## check that scoringMetric is appropriate
-    
-    if (!(scoringMetric %in% c("regionMean", "simpleMean", 
-                               "meanDiff", "rankSum"))) {
-        stop(cleanws("scoringMetric was not recognized. 
-                      Check spelling and available options."))
     }
     
     #######
@@ -865,7 +875,13 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
 # @param returnQuantile "logical" object. If FALSE, return region averages. If TRUE,
 # for each region, return the quantile of that region's average value
 # based on the distribution of individual genomic signal/feature values
-# @param absVal
+# @param absVal logical. If TRUE, take the absolute value of values in
+# loadingMat. Choose TRUE if you think there may be some 
+# genomic loci in a region set that will increase and others
+# will decrease (if there may be anticorrelation between
+# regions in a region set). Choose FALSE if you expect regions in a 
+# given region set to all change in the same direction (all be positively
+# correlated with each other).
 # @return a data.table with region coordinates and average loading 
 # values for each region. Has columns chr, start, end, and a column for each
 # PC in PCsToAnnotate. Regions are not in order along the rows of the data.table.

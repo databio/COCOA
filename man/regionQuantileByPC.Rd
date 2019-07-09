@@ -9,7 +9,7 @@ regionQuantileByPC(loadingMat, signalCoord, regionSet, rsName = "",
   cluster_rows = TRUE, row_title = "Region", column_title = rsName,
   column_title_side = "top", cluster_columns = FALSE,
   name = "Percentile of Loading Scores in PC", col = c("skyblue",
-  "yellow"), ...)
+  "yellow"), absVal = TRUE, ...)
 }
 \arguments{
 \item{loadingMat}{matrix of loadings (the coefficients of 
@@ -66,6 +66,14 @@ order in different heatmaps)}
 \item{col}{a vector of colors or a color mapping function which
 will be passed to the ComplexHeatmap::Heatmap() function. See ?Heatmap
 (the "col" parameter) for more details.}
+
+\item{absVal}{logical. If TRUE, take the absolute value of values in
+loadingMat. Choose TRUE if you think there may be some 
+genomic loci in a region set that will increase and others
+will decrease (if there may be anticorrelation between
+regions in a region set). Choose FALSE if you expect regions in a 
+given region set to change in the same direction (to be positively
+correlated with each other).}
 
 \item{...}{optional parameters for ComplexHeatmap::Heatmap()}
 }
