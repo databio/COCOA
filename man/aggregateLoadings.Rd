@@ -4,13 +4,12 @@
 \alias{aggregateLoadings}
 \title{Use PCA loadings to score a region set}
 \usage{
-aggregateLoadings(loadingMat, signalCoord, regionSet,
-  PCsToAnnotate = c("PC1", "PC2"), scoringMetric = "regionMean",
-  verbose = FALSE, overlapMethod = "single", wilcox.conf.int = FALSE,
-  absVal = TRUE)
+aggregateLoadings(signal, signalCoord, regionSet, signalCol = c("PC1",
+  "PC2"), scoringMetric = "regionMean", verbose = FALSE,
+  overlapMethod = "single", wilcox.conf.int = FALSE, absVal = TRUE)
 }
 \arguments{
-\item{loadingMat}{matrix of loadings (the coefficients of 
+\item{signal}{matrix of loadings (the coefficients of 
 the linear combination that defines each PC). One named column for each PC.
 One row for each original dimension/variable (should be same order 
 as original data/signalCoord). The x$rotation output of prcomp().}
@@ -20,7 +19,7 @@ for the genomic signal/original data (e.g. DNA methylation)
 included in the PCA. Coordinates should be in the 
 same order as the original data and the loadings 
 (each item/row in signalCoord
-corresponds to a row in loadingMat). If a data.frame, 
+corresponds to a row in `signal`). If a data.frame, 
 must have chr and start columns. If end is included, start 
 and end should be the same. Start coordinate will be used for calculations.}
 
@@ -28,8 +27,8 @@ and end should be the same. Start coordinate will be used for calculations.}
 to the same biological annotation. Must be from the same reference genome
 as the coordinates for the actual data/samples (signalCoord).}
 
-\item{PCsToAnnotate}{A character vector with principal components to 
-include. eg c("PC1", "PC2") These should be column names of loadingMat.}
+\item{signalCol}{A character vector with principal components to 
+include. eg c("PC1", "PC2") These should be column names of signal.}
 
 \item{scoringMetric}{A character object with the scoring metric. 
 "regionMean" is a weighted
@@ -67,7 +66,7 @@ method. returns a 95% confidence interval from the Wilcoxon rank sum test
 instead of p value.}
 
 \item{absVal}{logical. If TRUE, take the absolute value of values in
-loadingMat. Choose TRUE if you think there may be some 
+signal. Choose TRUE if you think there may be some 
 genomic loci in a region set that will increase and others
 will decrease (if there may be anticorrelation between
 regions in a region set). Choose FALSE if you expect regions in a 
@@ -76,8 +75,8 @@ correlated with each other).}
 }
 \value{
 a data.table with one row and the following 
-columns: one column for each item of PCsToAnnotate with names given
-by PCsToAnnotate. These columns have scores for the region set for each PC.
+columns: one column for each item of signalCol with names given
+by signalCol. These columns have scores for the region set for each PC.
 Other columns: signal_coverage (formerly cytosine_coverage) which
 has number of cytosines that overlapped with regionSet (or in the general case, 
 coordinates from signalCoord that overlapped regionSet) 
@@ -97,9 +96,9 @@ according to the `scoringMetric` parameter.
 data("brcaMCoord1")
 data("brcaLoadings1")
 data("esr1_chr1")
-rsScores <- aggregateLoadings(loadingMat=brcaLoadings1, 
+rsScores <- aggregateLoadings(signal=brcaLoadings1, 
                                  signalCoord=brcaMCoord1, 
                                  regionSet=esr1_chr1, 
-                                 PCsToAnnotate=c("PC1", "PC2"), 
+                                 signalCol=c("PC1", "PC2"), 
                                  scoringMetric="regionMean")
 }

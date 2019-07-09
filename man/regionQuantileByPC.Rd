@@ -4,15 +4,15 @@
 \alias{regionQuantileByPC}
 \title{Visualize how individual regions are associated with principal components}
 \usage{
-regionQuantileByPC(loadingMat, signalCoord, regionSet, rsName = "",
-  PCsToAnnotate = paste0("PC", 1:5), maxRegionsToPlot = 8000,
+regionQuantileByPC(signal, signalCoord, regionSet, rsName = "",
+  signalCol = paste0("PC", 1:5), maxRegionsToPlot = 8000,
   cluster_rows = TRUE, row_title = "Region", column_title = rsName,
   column_title_side = "top", cluster_columns = FALSE,
   name = "Percentile of Loading Scores in PC", col = c("skyblue",
   "yellow"), absVal = TRUE, ...)
 }
 \arguments{
-\item{loadingMat}{matrix of loadings (the coefficients of 
+\item{signal}{matrix of loadings (the coefficients of 
 the linear combination that defines each PC). One named column for each PC.
 One row for each original dimension/variable (should be same order 
 as original data/signalCoord). The x$rotation output of prcomp().}
@@ -22,7 +22,7 @@ for the genomic signal/original data (eg DNA methylation)
 included in the PCA. Coordinates should be in the 
 same order as the original data and the loadings 
 (each item/row in signalCoord
-corresponds to a row in loadingMat). If a data.frame, 
+corresponds to a row in `signal`). If a data.frame, 
 must have chr and start columns. If end is included, start 
 and end should be the same. Start coordinate will be used for calculations.}
 
@@ -34,8 +34,8 @@ as the coordinates for the actual data (signalCoord).}
 \item{rsName}{character vector. Names of the region sets in the same
 order as GRList. For use as a title for each heatmap.}
 
-\item{PCsToAnnotate}{A character vector with principal components to 
-include. eg c("PC1", "PC2") These should be column names of loadingMat.}
+\item{signalCol}{A character vector with principal components to 
+include. eg c("PC1", "PC2") These should be column names of `signal`.}
 
 \item{maxRegionsToPlot}{how many top regions from region set to include
 in heatmap. Including too many may slow down computation and increase memory
@@ -68,7 +68,7 @@ will be passed to the ComplexHeatmap::Heatmap() function. See ?Heatmap
 (the "col" parameter) for more details.}
 
 \item{absVal}{logical. If TRUE, take the absolute value of values in
-loadingMat. Choose TRUE if you think there may be some 
+`signal`. Choose TRUE if you think there may be some 
 genomic loci in a region set that will increase and others
 will decrease (if there may be anticorrelation between
 regions in a region set). Choose FALSE if you expect regions in a 
@@ -104,11 +104,11 @@ data("brcaLoadings1")
 data("brcaMCoord1")
 data("esr1_chr1")
 data("brcaPCScores")
-regionByPCHM <- regionQuantileByPC(loadingMat = brcaLoadings1, 
+regionByPCHM <- regionQuantileByPC(signal = brcaLoadings1, 
                                    signalCoord = brcaMCoord1, 
                                    regionSet = esr1_chr1, 
                                    rsName = "Estrogen Receptor Chr1", 
-                                   PCsToAnnotate=paste0("PC", 1:2),
+                                   signalCol=paste0("PC", 1:2),
                                    maxRegionsToPlot = 8000, 
                                    cluster_rows = TRUE, 
                                    cluster_columns = FALSE, 

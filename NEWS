@@ -1,6 +1,22 @@
 # Change log
 Notable changes to this project will be documented in this file.
 
+## [2.0.0] -- Unreleased
+
+    - Major changes to user interface: parameter/function/output column name changes
+        - loadingMat => signal
+        - PCsToAnnotate => signalCols?
+        - genomicSignal => 
+        - orderByPC => orderByCol
+        - regionGR => regionSet (some functions already had regionSet param)
+        - pcScores => sampleScores
+        - signalAlongPC => signalAlongVariable?
+        - cytosine_coverage (column name in output of runCOCOA()) => signalCoverage
+        - region_coverage (column name in ouput of runCOCOA())=> regionSetCoverage
+    - Addition of functionality for region-based data such as ATAC-seq
+    - Other changes
+        - absVal parameter added for several functions
+
 ## [1.0.2] -- 2019-03-06
 
     - Bug fix: getLoadingProfile() had error when no overlap between signalCoord and regionSet. Now returns NULL in that case.

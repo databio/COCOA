@@ -4,8 +4,8 @@
 \alias{rsScoreHeatmap}
 \title{Heatmap of region set scores}
 \usage{
-rsScoreHeatmap(rsScores, PCsToAnnotate = paste0("PC", 1:5),
-  orderByPC = "PC1", rsNameCol = "rsName", topX = 20,
+rsScoreHeatmap(rsScores, signalCol = paste0("PC", 1:5),
+  orderByCol = "PC1", rsNameCol = "rsName", topX = 20,
   col = c("red", "#EEEEEE", "blue"), row_title = "Region Set",
   column_title = "Principal Component", column_title_side = "bottom",
   cluster_rows = FALSE, cluster_columns = FALSE,
@@ -20,10 +20,10 @@ Also can have columns with info on region set overlap
 with the original data. Should be in the same order as GRList (the list of 
 region sets used to create it.)}
 
-\item{PCsToAnnotate}{A character vector with principal components to 
+\item{signalCol}{A character vector with principal components to 
 include. eg c("PC1", "PC2"). Must be column names of rsScores.}
 
-\item{orderByPC}{a character object. PC to order by in heatmap 
+\item{orderByCol}{a character object. PC to order by in heatmap 
 (arranged in decreasing order for scores so p values should 
 be -log transformed). Must be the name of a column in rsScores.}
 
@@ -72,7 +72,7 @@ Heatmap of the ranking of region set scores across PCs
 A visualization of the rank of region sets in each PC, allowing the
 user to see if a region set is ranked highly in all PCs or only a subset.
 Region sets will be ranked from highest scoring to lowest based on 
-their score for `orderByPC`.
+their score for `orderByCol`.
 The ComplexHeatmap package
 is used and additional parameters for the ComplexHeatmap::Heatmap function
 may be passed to this function to modify the heatmap.
@@ -80,5 +80,5 @@ may be passed to this function to modify the heatmap.
 \examples{
 data("rsScores")
 scoreHeatmap <- rsScoreHeatmap(rsScores, 
-          PCsToAnnotate=paste0("PC", 1:2), orderByPC = "PC2")
+          signalCol=paste0("PC", 1:2), orderByCol = "PC2")
 }

@@ -7,10 +7,10 @@
 # same code within each exported function and can change it in one place.
 # default NULL means do not check a given parameter
 
-checkConvertInputClasses <- function(loadingMat=NULL,
+checkConvertInputClasses <- function(signal=NULL,
                                      signalCoord=NULL,
                                      regionSet=NULL,
-                                     PCsToAnnotate = NULL,
+                                     signalCol = NULL,
                                      GRList = NULL,
                                      .env=.enclosingEnv) {
     
@@ -23,10 +23,10 @@ checkConvertInputClasses <- function(loadingMat=NULL,
     # lazy evaluation of .env
     .enclosingEnv = parent.frame(n=1)
     
-    if (!is.null(loadingMat)) {
+    if (!is.null(signal)) {
         # preferred as matrix, data.frame works
-        if (!(is(loadingMat, "matrix") || is(loadingMat, "data.frame"))) {
-            stop("loadingMat should be a matrix. Check object class.")
+        if (!(is(signal, "matrix") || is(signal, "data.frame"))) {
+            stop("`signal` should be a matrix. Check object class.")
         }
     }
     if (!is.null(signalCoord)) {
@@ -45,9 +45,9 @@ checkConvertInputClasses <- function(loadingMat=NULL,
             stop("regionSet should be a GRanges object. Check object class.")
         }
     }
-    if (!is.null(PCsToAnnotate)) {
-        if (!is(PCsToAnnotate, "character")) {
-            stop("PCsToAnnotate should be a character object (eg 'PC1').")
+    if (!is.null(signalCol)) {
+        if (!is(signalCol, "character")) {
+            stop("signalCol should be a character object (eg 'PC1').")
         }
     }
     if (!is.null(GRList)) {

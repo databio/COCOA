@@ -4,12 +4,12 @@
 \alias{getLoadingProfile}
 \title{Create a "meta-region" loading profile}
 \usage{
-getLoadingProfile(loadingMat, signalCoord, regionSet,
-  PCsToAnnotate = c("PC1", "PC2"), binNum = 25, verbose = TRUE,
-  overlapMethod = "single", absVal = TRUE)
+getLoadingProfile(signal, signalCoord, regionSet, signalCol = c("PC1",
+  "PC2"), binNum = 25, verbose = TRUE, overlapMethod = "single",
+  absVal = TRUE)
 }
 \arguments{
-\item{loadingMat}{matrix of loadings (the coefficients of 
+\item{signal}{matrix of loadings (the coefficients of 
 the linear combination that defines each PC). One named column for each PC.
 One row for each original dimension/variable (should be same order 
 as original data/signalCoord). Given by prcomp(x)$rotation.}
@@ -19,7 +19,7 @@ for the genomic signal/original data (eg DNA methylation)
 included in the PCA. Coordinates should be in the 
 same order as the original data and the loadings 
 (each item/row in signalCoord
-corresponds to a row in loadingMat). If a data.frame, 
+corresponds to a row in `signal`). If a data.frame, 
 must have chr and start columns. If end is included, start 
 and end should be the same. Start coordinate will be used for calculations.}
 
@@ -27,8 +27,8 @@ and end should be the same. Start coordinate will be used for calculations.}
 to the same biological annotation. Must be from the same reference genome
 as the coordinates for the actual data/samples (signalCoord).}
 
-\item{PCsToAnnotate}{A character vector with principal components to
-include. eg c("PC1", "PC2") These should be column names of loadingMat.}
+\item{signalCol}{A character vector with principal components to
+include. eg c("PC1", "PC2") These should be column names of signal.}
 
 \item{binNum}{Number of bins to split each region into when
 making the aggregate loading profile. More bins will
@@ -45,7 +45,7 @@ end coordinates of the genomic signal/original data included in the PCA are
 the same.}
 
 \item{absVal}{logical. If TRUE, take the absolute value of values in
-loadingMat. Choose TRUE if you think there may be some 
+signal. Choose TRUE if you think there may be some 
 genomic loci in a region set that will increase and others
 will decrease (if there may be anticorrelation between
 regions in a region set). Choose FALSE if you expect regions in a 
@@ -55,7 +55,7 @@ correlated with each other).}
 \value{
 A data.frame with the binned loading profile,
 one row per bin. columns: binID and one column for each PC
-in PCsToAnnotate. The function will return NULL if there
+in signalCol. The function will return NULL if there
 is no overlap between regionSet and signalCoord.
 }
 \description{
@@ -89,9 +89,9 @@ data("brcaMCoord1")
 data("brcaLoadings1")
 data("esr1_chr1")
 esr1_chr1_expanded <- resize(esr1_chr1, 14000, fix="center")
-getLoadingProfile(loadingMat=brcaLoadings1, 
+getLoadingProfile(signal=brcaLoadings1, 
                     signalCoord=brcaMCoord1, 
                     regionSet=esr1_chr1_expanded, 
-                    PCsToAnnotate=c("PC1", "PC2"), 
+                    signalCol=c("PC1", "PC2"), 
                     binNum=25)
 }

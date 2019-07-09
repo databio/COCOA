@@ -33,7 +33,7 @@
 #' included in the PCA. Coordinates should be in the 
 #' same order as the original data and the loadings 
 #' (each item/row in signalCoord
-#' corresponds to a row in loadingMat). If a data.frame, 
+#' corresponds to a row in signal). If a data.frame, 
 #' must have chr and start columns. If end is included, start 
 #' and end should be the same. Start coordinate will be used for calculations.
 #' @param regionSet A genomic ranges object with regions corresponding
@@ -43,7 +43,7 @@
 #' @param pcScores A matrix. The principal component scores for the samples 
 #' (ie transformed methylation data). Must have sample names/IDs as row names,
 #' These same sample names must be column names of genomicSignal
-#' @param orderByPC a character object. PC to order samples by 
+#' @param orderByCol a character object. PC to order samples by 
 #' (order rows of heatmap by PC score, from high to low score). 
 #' Must be the name of a column in pcScores.
 #' @param cluster_rows "logical" object, whether rows should be clustered. 
@@ -64,7 +64,7 @@
 #' @return A heatmap of genomic signal values (eg DNA methylation levels) 
 #' in regions of interest (regionSet), with rows ordered by PC score.
 #' Each row is a patient/sample and each column is an individual genomic signal value. 
-#' Rows are ordered by PC score for `orderByPC`, high scores at top and low at 
+#' Rows are ordered by PC score for `orderByCol`, high scores at top and low at 
 #' the bottom.
 #'
 #' @examples data("brcaMethylData1")
@@ -75,12 +75,12 @@
 #'                              signalCoord=brcaMCoord1,
 #'                              regionSet=esr1_chr1,
 #'                              pcScores=brcaPCScores,
-#'                              orderByPC="PC1", cluster_columns=TRUE)
+#'                              orderByCol="PC1", cluster_columns=TRUE)
 #' 
 #' @export
 # previously called rsMethylHeatmap
 signalAlongPC <- function(genomicSignal, signalCoord, regionSet, 
-                            pcScores, orderByPC="PC1", cluster_columns = FALSE, 
+                            pcScores, orderByCol="PC1", cluster_columns = FALSE, 
                             cluster_rows = FALSE, 
                             row_title = "Sample",
                             column_title = "Genomic Signal", 
@@ -135,7 +135,7 @@ signalAlongPC <- function(genomicSignal, signalCoord, regionSet,
     # reducedValsPCA <- centeredPCAMeth %*% pcaData$rotation
     # reducedValsPCA <- pcaData$x
     # pcaData must have subject_ID as row name
-    thisRSMData <- thisRSMData[names(sort(pcScores[, orderByPC], 
+    thisRSMData <- thisRSMData[names(sort(pcScores[, orderByCol], 
                                           decreasing = TRUE)), ]
     message(paste0("Number of cytosines: ", ncol(thisRSMData)))
     message(paste0("Number of regions: ", length(unique(queryHits(olList)))))
@@ -156,7 +156,7 @@ signalAlongPC <- function(genomicSignal, signalCoord, regionSet,
 #' A visualization of the rank of region sets in each PC, allowing the
 #' user to see if a region set is ranked highly in all PCs or only a subset.
 #' Region sets will be ranked from highest scoring to lowest based on 
-#' their score for `orderByPC`.
+#' their score for `orderByCol`.
 #' The ComplexHeatmap package
 #' is used and additional parameters for the ComplexHeatmap::Heatmap function
 #' may be passed to this function to modify the heatmap.  
@@ -167,9 +167,9 @@ signalAlongPC <- function(genomicSignal, signalCoord, regionSet,
 #' Also can have columns with info on region set overlap
 #' with the original data. Should be in the same order as GRList (the list of 
 #' region sets used to create it.)
-#' @param PCsToAnnotate A character vector with principal components to 
+#' @param signalCol A character vector with principal components to 
 #' include. eg c("PC1", "PC2"). Must be column names of rsScores.
-#' @param orderByPC a character object. PC to order by in heatmap 
+#' @param orderByCol a character object. PC to order by in heatmap 
 #' (arranged in decreasing order for scores so p values should 
 #' be -log transformed). Must be the name of a column in rsScores.
 #' @param rsNameCol character. Name of the column in rsScores that has the
@@ -201,11 +201,11 @@ signalAlongPC <- function(genomicSignal, signalCoord, regionSet,
 #'
 #' @examples data("rsScores")
 #' scoreHeatmap <- rsScoreHeatmap(rsScores, 
-#'           PCsToAnnotate=paste0("PC", 1:2), orderByPC = "PC2")
+#'           signalCol=paste0("PC", 1:2), orderByCol = "PC2")
 #' @export
 
-rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
-                            orderByPC="PC1", rsNameCol = "rsName", topX = 20, 
+rsScoreHeatmap <- function(rsScores, signalCol=paste0("PC", 1:5),
+                            orderByCol="PC1", rsNameCol = "rsName", topX = 20, 
                            col=c("red", "#EEEEEE", "blue"),
                            row_title = "Region Set", column_title = "Principal Component",
                            column_title_side = "bottom",
@@ -215,22 +215,22 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
                            name="Rank within PC", ...) {
     
     
-    if (!is(PCsToAnnotate, "character")) {
-        stop("PCsToAnnotate should be a character object (eg 'PC1').")
+    if (!is(signalCol, "character")) {
+        stop("signalCol should be a character object (eg 'PC1').")
     }
     
     # function is not meant for making a heatmap of a single PC but should work
     if (is(rsScores, "numeric")) {
         warning("rsScores should be a data.frame")
         rsScores <- data.frame(rsScores)
-        colnames(rsScores) <- orderByPC
+        colnames(rsScores) <- orderByCol
     }
     if (!is(rsScores, "data.frame")) {
         stop("rsScores should be a data.frame.")
     }
     
-    if (!(orderByPC %in% colnames(rsScores))) {
-        stop(cleanws(paste0("orderByPC parameter:", orderByPC, 
+    if (!(orderByCol %in% colnames(rsScores))) {
+        stop(cleanws(paste0("orderByCol parameter:", orderByCol, 
                             ", was not a column of rsScores")))
     }
     if (!(rsNameCol %in% colnames(rsScores))) {
@@ -250,13 +250,13 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
     
     
     # only ones you have data for
-    PCsToAnnotate <- PCsToAnnotate[PCsToAnnotate %in% colnames(rsScores)]
-    if (length(PCsToAnnotate) == 0) {
-        stop("Please check format of PC names in PCsToAnnotate.")
+    signalCol <- signalCol[signalCol %in% colnames(rsScores)]
+    if (length(signalCol) == 0) {
+        stop("Please check format of PC names in signalCol.")
     }
      
     # apparently erases row names
-    rsScores <- rsScores[, c(PCsToAnnotate, rsNameCol), with=FALSE] 
+    rsScores <- rsScores[, c(signalCol, rsNameCol), with=FALSE] 
 
     
     # how to deal with NA?
@@ -267,18 +267,18 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
     # convert to data.table to do some data.table operations
     rsScores = as.data.table(rsScores)
     
-    for (i in seq_along(PCsToAnnotate)) {
+    for (i in seq_along(signalCol)) {
         # first convert to rank
-        setorderv(rsScores, PCsToAnnotate[i], order = -1L, na.last=TRUE) # descending order
-        rsScores[, PCsToAnnotate[i] := seq_len(rsNum)]
+        setorderv(rsScores, signalCol[i], order = -1L, na.last=TRUE) # descending order
+        rsScores[, signalCol[i] := seq_len(rsNum)]
         
         # center around zero
-        # rsScores[, PCsToAnnotate[i] := ((rsNum + 1) / 2) - get(PCsToAnnotate[i])]
+        # rsScores[, signalCol[i] := ((rsNum + 1) / 2) - get(signalCol[i])]
     }
     
     # heatmap of the centered ranks
     # back to first order, -1L means decreasing order
-    setorderv(rsScores, orderByPC, order = 1L) 
+    setorderv(rsScores, orderByCol, order = 1L) 
     rowNames <-  rsScores[, get(rsNameCol)] # redefined/reordered later
     row.names(rsScores) <- rowNames
     rsScores[, c(rsNameCol) := NULL]
@@ -307,7 +307,7 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
 #' on the distribution of all loadings for that PC. These values are
 #' plotted in a heatmap.
 #' 
-#' @param loadingMat matrix of loadings (the coefficients of 
+#' @param signal matrix of loadings (the coefficients of 
 #' the linear combination that defines each PC). One named column for each PC.
 #' One row for each original dimension/variable (should be same order 
 #' as original data/signalCoord). The x$rotation output of prcomp().
@@ -316,7 +316,7 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
 #' included in the PCA. Coordinates should be in the 
 #' same order as the original data and the loadings 
 #' (each item/row in signalCoord
-#' corresponds to a row in loadingMat). If a data.frame, 
+#' corresponds to a row in `signal`). If a data.frame, 
 #' must have chr and start columns. If end is included, start 
 #' and end should be the same. Start coordinate will be used for calculations.
 #' @param regionSet A genomic ranges object with regions corresponding
@@ -325,8 +325,8 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
 #' as the coordinates for the actual data (signalCoord).
 #' @param rsName character vector. Names of the region sets in the same
 #' order as GRList. For use as a title for each heatmap.
-#' @param PCsToAnnotate A character vector with principal components to 
-#' include. eg c("PC1", "PC2") These should be column names of loadingMat.
+#' @param signalCol A character vector with principal components to 
+#' include. eg c("PC1", "PC2") These should be column names of `signal`.
 #' @param maxRegionsToPlot how many top regions from region set to include
 #' in heatmap. Including too many may slow down computation and increase memory
 #' use. If regionSet has more regions than maxRegionsToPlot, a number of regions 
@@ -350,7 +350,7 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
 #' will be passed to the ComplexHeatmap::Heatmap() function. See ?Heatmap
 #' (the "col" parameter) for more details.
 #' @param absVal logical. If TRUE, take the absolute value of values in
-#' loadingMat. Choose TRUE if you think there may be some 
+#' `signal`. Choose TRUE if you think there may be some 
 #' genomic loci in a region set that will increase and others
 #' will decrease (if there may be anticorrelation between
 #' regions in a region set). Choose FALSE if you expect regions in a 
@@ -374,11 +374,11 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
 #' data("brcaMCoord1")
 #' data("esr1_chr1")
 #' data("brcaPCScores")
-#' regionByPCHM <- regionQuantileByPC(loadingMat = brcaLoadings1, 
+#' regionByPCHM <- regionQuantileByPC(signal = brcaLoadings1, 
 #'                                    signalCoord = brcaMCoord1, 
 #'                                    regionSet = esr1_chr1, 
 #'                                    rsName = "Estrogen Receptor Chr1", 
-#'                                    PCsToAnnotate=paste0("PC", 1:2),
+#'                                    signalCol=paste0("PC", 1:2),
 #'                                    maxRegionsToPlot = 8000, 
 #'                                    cluster_rows = TRUE, 
 #'                                    cluster_columns = FALSE, 
@@ -387,8 +387,8 @@ rsScoreHeatmap <- function(rsScores, PCsToAnnotate=paste0("PC", 1:5),
 #'                                    
 #' 
 #' @export
-regionQuantileByPC <- function(loadingMat, signalCoord, regionSet, 
-                               rsName = "", PCsToAnnotate=paste0("PC", 1:5),
+regionQuantileByPC <- function(signal, signalCoord, regionSet, 
+                               rsName = "", signalCol=paste0("PC", 1:5),
                                maxRegionsToPlot = 8000, cluster_rows = TRUE, 
                                row_title = "Region", column_title = rsName,
                                column_title_side = "top",
@@ -401,29 +401,29 @@ regionQuantileByPC <- function(loadingMat, signalCoord, regionSet,
     
     ########## check that inputs are the correct class
     # exports coordinateDT to this environment (converts signalCoord)
-    checkConvertInputClasses(loadingMat=loadingMat,
+    checkConvertInputClasses(signal=signal,
                              signalCoord=signalCoord,
                              regionSet=regionSet,
-                             PCsToAnnotate = PCsToAnnotate)
+                             signalCol = signalCol)
     
     ########## check that dimensions of inputs are consistent
-    # length of signal coord = nrow of loadingMat
-    if (nrow(coordinateDT) != nrow(loadingMat)) {
+    # length of signal coord = nrow of `signal`
+    if (nrow(coordinateDT) != nrow(signal)) {
         stop(cleanws("The number of coordinates in 
             signalCoord (length(signalCoord)) does not equal the number of 
-                     rows in loadingMat"))
+                     rows in `signal`"))
     } 
     
     ######### check that appropriate columns are present
-    # PCsToAnnotate are column names of loadingMat
-    if (!all(PCsToAnnotate %in% colnames(loadingMat))) {
-        missingCols = PCsToAnnotate[!(PCsToAnnotate %in% colnames(loadingMat))]
-        stop(cleanws(paste0("Some PCsToAnnotate are not 
-                            columns of loadingMat: ", missingCols)))
+    # signalCol are column names of `signal`
+    if (!all(signalCol %in% colnames(signal))) {
+        missingCols = signalCol[!(signalCol %in% colnames(signal))]
+        stop(cleanws(paste0("Some signalCol are not 
+                            columns of `signal`: ", missingCols)))
     }
     
     #######
-    # what happens if there are NAs or Inf in loadingMat?
+    # what happens if there are NAs or Inf in `signal`?
     
     #################################################################
 
@@ -438,17 +438,17 @@ regionQuantileByPC <- function(loadingMat, signalCoord, regionSet,
     
     
     
-    rsRegionAverage <- averagePerRegion(loadingMat = loadingMat, 
+    rsRegionAverage <- averagePerRegion(signal = signal, 
                                        signalCoord =coordinateDT, 
                                        regionSet = regionSet, 
-                                       PCsToAnnotate = PCsToAnnotate,
+                                       signalCol = signalCol,
                                        returnQuantile = TRUE,
                                        absVal=absVal)
     # ranking in terms of percentiles in case there were different 
     # distributions of loading scores for each PC
     
     # the heatmap
-    Heatmap(matrix = as.matrix(rsRegionAverage[, PCsToAnnotate, with=FALSE]), 
+    Heatmap(matrix = as.matrix(rsRegionAverage[, signalCol, with=FALSE]), 
             row_title = row_title,
             column_title = rsName,
             column_title_side = column_title_side,
