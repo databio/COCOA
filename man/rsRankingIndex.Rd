@@ -4,7 +4,7 @@
 \alias{rsRankingIndex}
 \title{Get indices for top scored region sets}
 \usage{
-rsRankingIndex(rsScores, PCsToAnnotate)
+rsRankingIndex(rsScores, signalCol)
 }
 \arguments{
 \item{rsScores}{a data.frame with scores for each 
@@ -13,12 +13,12 @@ Each row is a region set. Columns are PCs and info on region set overlap
 with DNA methylation data. Should be in the same order as GRList (the list of 
 region sets used to create it.)}
 
-\item{PCsToAnnotate}{a character vector. PCs in rsScores for which you want
+\item{signalCol}{a character vector. PCs in rsScores for which you want
 the indices of the original region sets (must be column names of rsScores)
 eg c("PC1", "PC2")}
 }
 \value{
-A data.frame with columns PCsToAnnotate. Each column has been 
+A data.frame with columns signalCol. Each column has been 
 sorted by score for region sets for that PC (decreasing order).
 Original indices for region sets that were used to create rsScores
 are given. Region sets with a score of NA are counted as having the 
@@ -42,7 +42,7 @@ decreasing order so if you have p values they should be log transformed:
 \examples{
 data("rsScores")
 rsRankInd = rsRankingIndex(rsScores=rsScores, 
-                           PCsToAnnotate=c("PC1", "PC2"))
+                           signalCol=c("PC1", "PC2"))
 # region sets sorted by score for PC1
 rsScores[rsRankInd$PC1, ]
 # region sets sorted by score for PC2

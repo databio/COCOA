@@ -75,7 +75,7 @@ if (getRversion() >= "2.15.1") {
 #' Then the loadings are used to score the region set 
 #' according to the `scoringMetric` parameter.  
 #' 
-#' @param loadingMat matrix of loadings (the coefficients of 
+#' @param signal matrix of loadings (the coefficients of 
 #' the linear combination that defines each PC). One named column for each PC.
 #' One row for each original dimension/variable (should be same order 
 #' as original data/signalCoord). The x$rotation output of prcomp().
@@ -84,14 +84,14 @@ if (getRversion() >= "2.15.1") {
 #' included in the PCA. Coordinates should be in the 
 #' same order as the original data and the loadings 
 #' (each item/row in signalCoord
-#' corresponds to a row in loadingMat). If a data.frame, 
+#' corresponds to a row in `signal`). If a data.frame, 
 #' must have chr and start columns. If end is included, start 
 #' and end should be the same. Start coordinate will be used for calculations.
 #' @param regionSet A genomic ranges (GRanges) object with regions corresponding
 #' to the same biological annotation. Must be from the same reference genome
 #' as the coordinates for the actual data/samples (signalCoord).
-#' @param PCsToAnnotate A character vector with principal components to 
-#' include. eg c("PC1", "PC2") These should be column names of loadingMat.
+#' @param signalCol A character vector with principal components to 
+#' include. eg c("PC1", "PC2") These should be column names of signal.
 #' @param scoringMetric A character object with the scoring metric. 
 #' "regionMean" is a weighted
 #' average of the absolute value of the loadings
@@ -126,7 +126,7 @@ if (getRversion() >= "2.15.1") {
 #' method. returns a 95% confidence interval from the Wilcoxon rank sum test
 #' instead of p value.
 #' @param absVal logical. If TRUE, take the absolute value of values in
-#' loadingMat. Choose TRUE if you think there may be some 
+#' signal. Choose TRUE if you think there may be some 
 #' genomic loci in a region set that will increase and others
 #' will decrease (if there may be anticorrelation between
 #' regions in a region set). Choose FALSE if you expect regions in a 
@@ -134,8 +134,8 @@ if (getRversion() >= "2.15.1") {
 #' correlated with each other).
 
 #' @return a data.table with one row and the following 
-#' columns: one column for each item of PCsToAnnotate with names given
-#' by PCsToAnnotate. These columns have scores for the region set for each PC.
+#' columns: one column for each item of signalCol with names given
+#' by signalCol. These columns have scores for the region set for each PC.
 #' Other columns: signal_coverage (formerly cytosine_coverage) which
 #' has number of cytosines that overlapped with regionSet (or in the general case, 
 #' coordinates from signalCoord that overlapped regionSet) 
@@ -150,17 +150,17 @@ if (getRversion() >= "2.15.1") {
 #' data("brcaMCoord1")
 #' data("brcaLoadings1")
 #' data("esr1_chr1")
-#' rsScores <- aggregateLoadings(loadingMat=brcaLoadings1, 
+#' rsScores <- aggregateLoadings(signal=brcaLoadings1, 
 #'                                  signalCoord=brcaMCoord1, 
 #'                                  regionSet=esr1_chr1, 
-#'                                  PCsToAnnotate=c("PC1", "PC2"), 
+#'                                  signalCol=c("PC1", "PC2"), 
 #'                                  scoringMetric="regionMean")
 #' @export
 
-aggregateLoadings <- function(loadingMat,
+aggregateLoadings <- function(signal,
                               signalCoord,
                               regionSet,
-                              PCsToAnnotate = c("PC1", "PC2"),
+                              signalCol = c("PC1", "PC2"),
                               scoringMetric = "regionMean",
                               verbose = FALSE,
                               overlapMethod = "single",
@@ -171,25 +171,25 @@ aggregateLoadings <- function(loadingMat,
     
     ########## check that inputs are the correct class
     # exports coordinateDT to this environment (converts signalCoord)
-    checkConvertInputClasses(loadingMat=loadingMat,
+    checkConvertInputClasses(signal=signal,
                              signalCoord=signalCoord,
                              regionSet=regionSet,
-                             PCsToAnnotate = PCsToAnnotate)
+                             signalCol = signalCol)
     
     ########## check that dimensions of inputs are consistent
-    # length of signal coord = nrow of loadingMat
-    if (nrow(coordinateDT) != nrow(loadingMat)) {
+    # length of signal coord = nrow of signal
+    if (nrow(coordinateDT) != nrow(signal)) {
         stop(cleanws("The number of coordinates in 
             signalCoord (length(signalCoord)) does not equal the number of 
-                     rows in loadingMat"))
+                     rows in `signal`"))
     } 
     
     ######### check that appropriate columns are present
-    # PCsToAnnotate are column names of loadingMat
-    if (!all(PCsToAnnotate %in% colnames(loadingMat))) {
-        missingCols = PCsToAnnotate[!(PCsToAnnotate %in% colnames(loadingMat))]
-        stop(cleanws(paste0("Some PCsToAnnotate are not 
-                            columns of loadingMat: ", missingCols)))
+    # signalCol are column names of signal
+    if (!all(signalCol %in% colnames(signal))) {
+        missingCols = signalCol[!(signalCol %in% colnames(signal))]
+        stop(cleanws(paste0("Some signalCol are not 
+                            columns of signal: ", missingCols)))
     }
     
     ######## check that scoringMetric is appropriate
@@ -201,36 +201,36 @@ aggregateLoadings <- function(loadingMat,
     }
     
     #######
-    # what happens if there are NAs or Inf in loadingMat?
+    # what happens if there are NAs or Inf in `signal`?
     
     #################################################################
     
     numOfRegions <- length(regionSet)
-    totalCpGs    <- nrow(loadingMat)
+    totalCpGs    <- nrow(signal)
     
     # extreme positive or negative values both give important information
     # take absolute value or not
     if (absVal) {
-        loadingMat <- abs(loadingMat) # required for later code
+        signal <- abs(signal) # required for later code
     }
     
-    loadingDT  <- as.data.table(loadingMat)
+    loadingDT  <- as.data.table(signal)
     
     # reformat into data.table with chromosome location and weight
-    # also restricting to PCsToAnnotate so unnecessary computations 
+    # also restricting to signalCol so unnecessary computations 
     # are not done
     loadingDT <- data.table(coordinateDT, 
-                            loadingDT[, PCsToAnnotate, with=FALSE])
+                            loadingDT[, signalCol, with=FALSE])
     # naming does not work if only using one PC so add this line for that case
-    setnames(loadingDT, c(colnames(coordinateDT), PCsToAnnotate))
+    setnames(loadingDT, c(colnames(coordinateDT), signalCol))
     
     # would rounding speed up aggregation?, potentially make a sparse matrix
     # if a lot of entries became 0
     
     # specify aggregation operation
     # will be done separately for each PC specified
-    aggrCommand <- buildJ(PCsToAnnotate, 
-                                rep("mean", length(PCsToAnnotate)))
+    aggrCommand <- buildJ(signalCol, 
+                                rep("mean", length(signalCol)))
     
     # do the actual aggregation
     if (scoringMetric == "regionMean") {
@@ -242,7 +242,7 @@ aggregateLoadings <- function(loadingMat,
             loadAgMain <- regionOLWeightedMean(signalDT = loadingDT, 
                                  signalGR = dtToGr(coordinateDT),
                                  regionSet = regionSet,
-                                 calcCols= PCsToAnnotate)
+                                 calcCols= signalCol)
             loadAgMain <- as.data.table(loadAgMain)
             setnames(loadAgMain, c("signal_coverage", "regionSet_coverage"),
                     c("numCpGsOverlapping", "numRegionsOverlapping"))
@@ -252,7 +252,7 @@ aggregateLoadings <- function(loadingMat,
             loadAgMain <- regionOLMean(signalDT = loadingDT, 
                                  signalGR = dtToGr(coordinateDT),
                                  regionSet = regionSet,
-                                 calcCols= PCsToAnnotate)
+                                 calcCols= signalCol)
             loadAgMain <- as.data.table(loadAgMain)
             setnames(loadAgMain, c("signal_coverage", "regionSet_coverage"),
                     c("numCpGsOverlapping", "numRegionsOverlapping"))
@@ -271,15 +271,15 @@ aggregateLoadings <- function(loadingMat,
 
         # if no cytosines from loadings were included in regionSet, result is NA
         if (is.null(loadAgMain)) {
-            results <- as.data.table(t(rep(NA, length(PCsToAnnotate))))
-            setnames(results, PCsToAnnotate)
+            results <- as.data.table(t(rep(NA, length(signalCol))))
+            setnames(results, signalCol)
             results[, signal_coverage := 0]
             results[, region_coverage := 0]
             results[, total_region_number := numOfRegions]
             results[, mean_region_size := round(mean(width(regionSet)), 1)]
         } else {
-            results <- loadAgMain[, .SD, .SDcols = PCsToAnnotate]
-            results[, cytosine_coverage := loadAgMain[, .SD, .SDcols = "numCpGsOverlapping"]]
+            results <- loadAgMain[, .SD, .SDcols = signalCol]
+            results[, signal_coverage := loadAgMain[, .SD, .SDcols = "numCpGsOverlapping"]]
             results[, region_coverage := loadAgMain[, .SD, .SDcols = "numRegionsOverlapping"]]
             results[, total_region_number := numOfRegions]
             results[, mean_region_size := round(mean(width(regionSet)), 1)]
@@ -287,13 +287,13 @@ aggregateLoadings <- function(loadingMat,
     } else if (scoringMetric == "simpleMean") {
         
         # average of loadings for all CpGs within region set
-        loadMetrics <- signalOLMetrics(dataDT=loadingDT, regionGR=regionSet, 
-                                       signalCols = PCsToAnnotate,
+        loadMetrics <- signalOLMetrics(dataDT=loadingDT, regionSet=regionSet, 
+                                       signalCol = signalCol,
                                        metrics="mean", 
                                        alsoNonOLMet=FALSE)
         if (is.null(loadMetrics)) {
-            results <- as.data.table(t(rep(NA, length(PCsToAnnotate))))
-            setnames(results, PCsToAnnotate)
+            results <- as.data.table(t(rep(NA, length(signalCol))))
+            setnames(results, signalCol)
             results[, signal_coverage := 0]
             results[, region_coverage := 0]
             results[, total_region_number := numOfRegions]
@@ -317,16 +317,16 @@ aggregateLoadings <- function(loadingMat,
     } else if (scoringMetric == "meanDiff") {
         # if (is.null(pcLoadAv)) {
         #     # calculate (should already be absolute)
-        #     pcLoadAv <- apply(X = loadingDT[, PCsToAnnotate, with=FALSE], 
+        #     pcLoadAv <- apply(X = loadingDT[, signalCol, with=FALSE], 
         #                       MARGIN = 2, FUN = mean)
         # }
-        loadMetrics <- signalOLMetrics(dataDT=loadingDT, regionGR=regionSet,
-                                       signalCols = PCsToAnnotate,
+        loadMetrics <- signalOLMetrics(dataDT=loadingDT, regionSet=regionSet,
+                                       signalCol = signalCol,
                                        metrics=c("mean", "sd"), 
                                        alsoNonOLMet=TRUE)
         if (is.null(loadMetrics)) {
-            results <- as.data.table(t(rep(NA, length(PCsToAnnotate))))
-            setnames(results, PCsToAnnotate)
+            results <- as.data.table(t(rep(NA, length(signalCol))))
+            setnames(results, signalCol)
             results[, signal_coverage := 0]
             results[, region_coverage := 0]
             results[, total_region_number := numOfRegions]
@@ -352,13 +352,13 @@ aggregateLoadings <- function(loadingMat,
         
         if (wilcox.conf.int) {
             # returns confidence interval
-            wRes <- rsWilcox(dataDT = loadingDT, regionGR=regionSet, 
-                             signalCols = PCsToAnnotate, 
+            wRes <- rsWilcox(dataDT = loadingDT, regionSet=regionSet, 
+                             signalCol = signalCol, 
                              conf.int = wilcox.conf.int)
             
             if (is.null(wRes)) {
-                results <- as.data.table(t(rep(NA, length(PCsToAnnotate) * 2)))
-                setnames(results, paste0(rep(PCsToAnnotate, each=2), 
+                results <- as.data.table(t(rep(NA, length(signalCol) * 2)))
+                setnames(results, paste0(rep(signalCol, each=2), 
                                          c("_low", "_high")))
                 results[, signal_coverage := 0]
                 results[, region_coverage := 0]
@@ -371,12 +371,12 @@ aggregateLoadings <- function(loadingMat,
         } else {
             # returns p value
             # one sided test since I took the absolute value of the loadings 
-            wRes <- rsWilcox(dataDT = loadingDT, regionGR=regionSet, 
-                             signalCols = PCsToAnnotate, alternative="greater")
+            wRes <- rsWilcox(dataDT = loadingDT, regionSet=regionSet, 
+                             signalCol = signalCol, alternative="greater")
             
             if (is.null(wRes)) {
-                results <- as.data.table(t(rep(NA, length(PCsToAnnotate))))
-                setnames(results, PCsToAnnotate)
+                results <- as.data.table(t(rep(NA, length(signalCol))))
+                setnames(results, signalCol)
                 results[, signal_coverage := 0]
                 results[, region_coverage := 0]
                 results[, total_region_number := numOfRegions]
@@ -404,14 +404,14 @@ aggregateLoadings <- function(loadingMat,
 #' Do COCOA with many region sets
 #' 
 #' This function will give each region set a score for each PC
-#' in `PCsToAnnotate` based on
+#' in `signalCol` based on
 #' the `scoringMetric` parameter. Based on these scores, you can determine
 #' which region sets out of a region set database (given by GRList) 
 #' are most associated with the top PCs. See the vignette "Introduction
 #' to Coordinate Covariation Analysis" for help interpreting your 
 #' results. 
 #'
-#' @param loadingMat matrix of loadings (the coefficients of 
+#' @param signal matrix of loadings (the coefficients of 
 #' the linear combination that defines each PC). One named column for each PC.
 #' One row for each original dimension/variable (should be same order 
 #' as original data/signalCoord). The x$rotation output of prcomp().
@@ -419,7 +419,7 @@ aggregateLoadings <- function(loadingMat,
 #' for the genomic signal/original data (eg DNA methylation) 
 #' included in the PCA. Coordinates should be in the 
 #' same order as the original data and the loadings 
-#' (each item/row in signalCoord corresponds to a row in loadingMat).
+#' (each item/row in signalCoord corresponds to a row in `signal`).
 #' If a data.frame, must have chr and start columns.
 #' If end is not included, start coordinate will be used for calculations.
 #' @param GRList GRangesList object. Each list item is 
@@ -427,8 +427,8 @@ aggregateLoadings <- function(loadingMat,
 #' the same biological annotation). The region set database.
 #' Must be from the same reference genome
 #' as the coordinates for the actual data/samples (signalCoord).
-#' @param PCsToAnnotate A character vector with principal components to  
-#' include. eg c("PC1", "PC2") These should be column names of loadingMat.
+#' @param signalCol A character vector with principal components to  
+#' include. eg c("PC1", "PC2") These should be column names of signal.
 #' @param scoringMetric A character object with the scoring metric. 
 #' "regionMean" is a weighted
 #' average of the absolute value of the loadings
@@ -468,14 +468,14 @@ aggregateLoadings <- function(loadingMat,
 #' method. returns a 95% confidence interval from the Wilcoxon rank sum test
 #' instead of p value.
 #' @param absVal logical. If TRUE, take the absolute value of values in
-#' loadingMat. Choose TRUE if you think there may be some 
+#' signal. Choose TRUE if you think there may be some 
 #' genomic loci in a region set that will increase and others
 #' will decrease (if there may be anticorrelation between
 #' regions in a region set). Choose FALSE if you expect regions in a 
 #' given region set to all change in the same direction (all be positively
 #' correlated with each other).
 #' @return data.frame of results, one row for each region set. 
-#' One column for each PC in PCsToAnnotate
+#' One column for each PC in signalCol
 #' with score for that PC for a given region set (specific score depends
 #' on "scoringMetric" parameter). 
 #' Rows will be in the same order as region sets in GRList
@@ -493,18 +493,18 @@ aggregateLoadings <- function(loadingMat,
 #' data("brcaMCoord1")
 #' data("brcaLoadings1")
 #' data("esr1_chr1")
-#' rsScores <- runCOCOA(loadingMat=brcaLoadings1, 
+#' rsScores <- runCOCOA(signal=brcaLoadings1, 
 #'                                  signalCoord=brcaMCoord1, 
 #'                                  GRList=GRangesList(esr1_chr1), 
-#'                                  PCsToAnnotate=c("PC1", "PC2"), 
+#'                                  signalCol=c("PC1", "PC2"), 
 #'                                  scoringMetric="regionMean")
 #' 
 #' @export
 
-runCOCOA <- function(loadingMat,
+runCOCOA <- function(signal,
                      signalCoord,
                      GRList,
-                     PCsToAnnotate = c("PC1", "PC2"),
+                     signalCol = c("PC1", "PC2"),
                      scoringMetric = "regionMean",
                      verbose = TRUE,
                      overlapMethod="single",
@@ -515,26 +515,26 @@ runCOCOA <- function(loadingMat,
     
     ########## check that inputs are the correct class
     # exports coordinateDT to this environment (converts signalCoord)
-    checkConvertInputClasses(loadingMat=loadingMat,
+    checkConvertInputClasses(signal=signal,
                              signalCoord=signalCoord,
                              regionSet=NULL,
-                             PCsToAnnotate = PCsToAnnotate,
+                             signalCol = signalCol,
                              GRList=GRList)
     
     ########## check that dimensions of inputs are consistent
-    # length of signal coord = nrow of loadingMat
-    if (nrow(coordinateDT) != nrow(loadingMat)) {
+    # length of signal coord = nrow of signal
+    if (nrow(coordinateDT) != nrow(signal)) {
         stop(cleanws("The number of coordinates in 
             signalCoord (length(signalCoord)) does not equal the number of 
-                     rows in loadingMat"))
+                     rows in `signal`"))
     } 
     
     ######### check that appropriate columns are present
-    # PCsToAnnotate are column names of loadingMat
-    if (!all(PCsToAnnotate %in% colnames(loadingMat))) {
-        missingCols = PCsToAnnotate[!(PCsToAnnotate %in% colnames(loadingMat))]
-        stop(cleanws(paste0("Some PCsToAnnotate are not 
-                            columns of loadingMat: ", missingCols)))
+    # signalCol are column names of signal
+    if (!all(signalCol %in% colnames(signal))) {
+        missingCols = signalCol[!(signalCol %in% colnames(signal))]
+        stop(cleanws(paste0("Some signalCol are not 
+                            columns of signal: ", missingCols)))
     }
     
     ######## check that scoringMetric is appropriate
@@ -546,7 +546,7 @@ runCOCOA <- function(loadingMat,
     }
     
     #######
-    # what happens if there are NAs or Inf in loadingMat?
+    # what happens if there are NAs or Inf in `signal`?
     
     #################################################################
     
@@ -554,10 +554,10 @@ runCOCOA <- function(loadingMat,
     # apply over the list of region sets
     resultsList <- lapplyAlias(GRList,
                                function(x) aggregateLoadings(
-                                loadingMat = loadingMat,
+                                signal = signal,
                                 signalCoord = coordinateDT,
                                 regionSet = x,
-                                PCsToAnnotate = PCsToAnnotate,
+                                signalCol = signalCol,
                                 scoringMetric = scoringMetric,
                                 verbose = verbose,
                                 overlapMethod = overlapMethod,
@@ -606,7 +606,7 @@ runCOCOA <- function(loadingMat,
 #' and not show a peak, despite having variation across samples.
 #'
 #'
-#' @param loadingMat matrix of loadings (the coefficients of 
+#' @param signal matrix of loadings (the coefficients of 
 #' the linear combination that defines each PC). One named column for each PC.
 #' One row for each original dimension/variable (should be same order 
 #' as original data/signalCoord). Given by prcomp(x)$rotation.
@@ -615,14 +615,14 @@ runCOCOA <- function(loadingMat,
 #' included in the PCA. Coordinates should be in the 
 #' same order as the original data and the loadings 
 #' (each item/row in signalCoord
-#' corresponds to a row in loadingMat). If a data.frame, 
+#' corresponds to a row in `signal`). If a data.frame, 
 #' must have chr and start columns. If end is included, start 
 #' and end should be the same. Start coordinate will be used for calculations.
 #' @param regionSet A genomic ranges (GRanges) object with regions corresponding
 #' to the same biological annotation. Must be from the same reference genome
 #' as the coordinates for the actual data/samples (signalCoord).
-#' @param PCsToAnnotate A character vector with principal components to  
-#' include. eg c("PC1", "PC2") These should be column names of loadingMat.
+#' @param signalCol A character vector with principal components to  
+#' include. eg c("PC1", "PC2") These should be column names of signal.
 #' @param binNum Number of bins to split each region into when
 #' making the aggregate loading profile. More bins will
 #' give a higher resolution but perhaps more noisy profile.
@@ -635,7 +635,7 @@ runCOCOA <- function(loadingMat,
 #' end coordinates of the genomic signal/original data included in the PCA are
 #' the same.
 #' @param absVal logical. If TRUE, take the absolute value of values in
-#' loadingMat. Choose TRUE if you think there may be some 
+#' signal. Choose TRUE if you think there may be some 
 #' genomic loci in a region set that will increase and others
 #' will decrease (if there may be anticorrelation between
 #' regions in a region set). Choose FALSE if you expect regions in a 
@@ -643,7 +643,7 @@ runCOCOA <- function(loadingMat,
 #' correlated with each other).
 #' @return A data.frame with the binned loading profile,
 #' one row per bin. columns: binID and one column for each PC
-#' in PCsToAnnotate. The function will return NULL if there
+#' in signalCol. The function will return NULL if there
 #' is no overlap between regionSet and signalCoord.
 #' 
 #' @examples 
@@ -651,15 +651,15 @@ runCOCOA <- function(loadingMat,
 #' data("brcaLoadings1")
 #' data("esr1_chr1")
 #' esr1_chr1_expanded <- resize(esr1_chr1, 14000, fix="center")
-#' getLoadingProfile(loadingMat=brcaLoadings1, 
+#' getLoadingProfile(signal=brcaLoadings1, 
 #'                     signalCoord=brcaMCoord1, 
 #'                     regionSet=esr1_chr1_expanded, 
-#'                     PCsToAnnotate=c("PC1", "PC2"), 
+#'                     signalCol=c("PC1", "PC2"), 
 #'                     binNum=25)
 #' @export
 
-getLoadingProfile <- function(loadingMat, signalCoord, regionSet,
-                    PCsToAnnotate = c("PC1", "PC2"), binNum = 25,
+getLoadingProfile <- function(signal, signalCoord, regionSet,
+                    signalCol = c("PC1", "PC2"), binNum = 25,
                     verbose=TRUE,  
                     overlapMethod = "single", absVal=TRUE) {
     
@@ -667,37 +667,37 @@ getLoadingProfile <- function(loadingMat, signalCoord, regionSet,
     
     ########## check that inputs are the correct class
     # exports coordinateDT to this environment (converts signalCoord)
-    checkConvertInputClasses(loadingMat=loadingMat,
+    checkConvertInputClasses(signal=signal,
                              signalCoord=signalCoord,
                              regionSet=regionSet,
-                             PCsToAnnotate = PCsToAnnotate)
+                             signalCol = signalCol)
     
     ########## check that dimensions of inputs are consistent
-    # length of signal coord = nrow of loadingMat
-    if (nrow(coordinateDT) != nrow(loadingMat)) {
+    # length of signal coord = nrow of signal
+    if (nrow(coordinateDT) != nrow(signal)) {
         stop(cleanws("The number of coordinates in 
             signalCoord (length(signalCoord)) does not equal the number of 
-                     rows in loadingMat"))
+                     rows in `signal`"))
     } 
     
     ######### check that appropriate columns are present
-    # PCsToAnnotate are column names of loadingMat
-    if (!all(PCsToAnnotate %in% colnames(loadingMat))) {
-        missingCols = PCsToAnnotate[!(PCsToAnnotate %in% colnames(loadingMat))]
-        stop(cleanws(paste0("Some PCsToAnnotate are not 
-                            columns of loadingMat: ", missingCols)))
+    # signalCol are column names of `signal`
+    if (!all(signalCol %in% colnames(signal))) {
+        missingCols = signalCol[!(signalCol %in% colnames(signal))]
+        stop(cleanws(paste0("Some signalCol are not 
+                            columns of signal: ", missingCols)))
     }
     
     #######
-    # what happens if there are NAs or Inf in loadingMat?
+    # what happens if there are NAs or Inf in `signal`?
     
     #################################################################
 
     # take absolute value or not
     if (absVal) {
-        loadingDT <- as.data.table(abs(loadingMat))
+        loadingDT <- as.data.table(abs(signal))
     } else {
-        loadingDT <- as.data.table(loadingMat)
+        loadingDT <- as.data.table(signal)
     }
     loadingDT <- cbind(coordinateDT, loadingDT)
     
@@ -709,7 +709,7 @@ getLoadingProfile <- function(loadingMat, signalCoord, regionSet,
                                minReads = 0, 
                                byRegionGroup = TRUE, 
                                splitFactor = NULL,
-                               PCsToAnnotate = PCsToAnnotate,
+                               signalCol = signalCol,
                                overlapMethod = overlapMethod)
 
     # if loadProf is NULL, return NULL from function, otherwise make symmetrical
@@ -748,7 +748,7 @@ makeSymmetric <- function(prof) {
 # @param binCount Number of bins across the region
 # @param byRegionGroup Pass along to binCount (see ?binCount)
 # @param minReads Filter out bins with fewer than X reads before returning.
-# @param PCsToAnnotate A character vector with principal components to 
+# @param signalCol A character vector with principal components to 
 # analyze. eg c("PC1", "PC2")
 # @param verbose A "logical" object. Whether progress 
 # of the function should be shown, one
@@ -770,7 +770,7 @@ makeSymmetric <- function(prof) {
 BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
                            byRegionGroup = TRUE,
                            splitFactor = NULL,
-                           PCsToAnnotate,
+                           signalCol,
                            verbose = FALSE,
                            overlapMethod) {
     if (!is(rangeDT, "data.table")) {
@@ -801,7 +801,7 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
                                FUN = function(x) regionOLWeightedMean(signalDT = BSDT, 
                                                                       signalGR = dtToGr(BSDT[, .(chr, start, end)]), 
                                                                       regionSet = x, 
-                                                                      calcCols = PCsToAnnotate))
+                                                                      calcCols = signalCol))
         binnedBSDT <- rbindlist(binMeansList)
         regionGroupID = 1:length(binMeansList)
         # any bins that had no overlap with data will be NULL
@@ -819,7 +819,7 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
                                FUN = function(x) regionOLMean(signalDT = BSDT, 
                                                               signalGR = dtToGr(BSDT[, .(chr, start, end)]), 
                                                               regionSet = x, 
-                                                              calcCols = PCsToAnnotate))
+                                                              calcCols = signalCol))
         binnedBSDT <- rbindlist(binMeansList)
         regionGroupID = 1:length(binMeansList)
         # any bins that had no overlap with data will be NULL
@@ -836,8 +836,8 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
         # what is output if a region set has no overlap?
         binnedBSDT <- BSAggregate(BSDT,
                                   regionsGRL=GRangesList(binnedGR),
-                                  jExpr=buildJ(PCsToAnnotate,
-                                               rep("mean", length(PCsToAnnotate))),
+                                  jExpr=buildJ(signalCol,
+                                               rep("mean", length(signalCol))),
                                   byRegionGroup = byRegionGroup,
                                   splitFactor = splitFactor)
     }
@@ -856,7 +856,7 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
 
 # modification of BSAggregate to just return mean per region
 # 
-# @param loadingMat matrix of loadings (the coefficients of 
+# @param signal matrix of loadings (the coefficients of 
 # the linear combination that defines each PC). One named column for each PC.
 # One row for each original dimension/variable (should be same order 
 # as original data/signalCoord). The x$rotation output of prcomp().
@@ -865,18 +865,18 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
 # included in the PCA. Coordinates should be in the 
 # same order as the original data and the loadings 
 # (each item/row in signalCoord
-# corresponds to a row in loadingMat). If a data.frame, 
+# corresponds to a row in `signal`). If a data.frame, 
 # must have chr and start columns. If end is included, start 
 # and end should be the same. Start coordinate will be used for calculations.
 # @param regionSet A GRanges object with regions corresponding
 # to the same biological annotation.
-# @param PCsToAnnotate A character vector with principal components to  
-# include. eg c("PC1", "PC2") These should be column names of loadingMat.
+# @param signalCol A character vector with principal components to  
+# include. eg c("PC1", "PC2") These should be column names of signal.
 # @param returnQuantile "logical" object. If FALSE, return region averages. If TRUE,
 # for each region, return the quantile of that region's average value
 # based on the distribution of individual genomic signal/feature values
 # @param absVal logical. If TRUE, take the absolute value of values in
-# loadingMat. Choose TRUE if you think there may be some 
+# signal. Choose TRUE if you think there may be some 
 # genomic loci in a region set that will increase and others
 # will decrease (if there may be anticorrelation between
 # regions in a region set). Choose FALSE if you expect regions in a 
@@ -884,16 +884,16 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
 # correlated with each other).
 # @return a data.table with region coordinates and average loading 
 # values for each region. Has columns chr, start, end, and a column for each
-# PC in PCsToAnnotate. Regions are not in order along the rows of the data.table.
+# PC in signalCol. Regions are not in order along the rows of the data.table.
 #
 # @example averagePerRegion(BSDT = BSDT, regionsGRL, 
 #          jCommand = MIRA:::buildJ(cols = "methylProp", "mean")) 
 # Devel note: I could add a column for how many cytosines are in each region 
 
-averagePerRegion <- function(loadingMat,
+averagePerRegion <- function(signal,
                              signalCoord,
                              regionSet,
-                             PCsToAnnotate = c("PC1", "PC2"),
+                             signalCol = c("PC1", "PC2"),
                              returnQuantile = FALSE,
                              absVal=TRUE) {
 
@@ -901,29 +901,29 @@ averagePerRegion <- function(loadingMat,
     
     ########## check that inputs are the correct class
     # exports coordinateDT to this environment (converts signalCoord)
-    checkConvertInputClasses(loadingMat=loadingMat,
+    checkConvertInputClasses(signal=signal,
                              signalCoord=signalCoord,
                              regionSet=regionSet,
-                             PCsToAnnotate = PCsToAnnotate)
+                             signalCol = signalCol)
     
     ########## check that dimensions of inputs are consistent
-    # length of signal coord = nrow of loadingMat
-    if (nrow(coordinateDT) != nrow(loadingMat)) {
+    # length of signal coord = nrow of signal
+    if (nrow(coordinateDT) != nrow(signal)) {
         stop(cleanws("The number of coordinates in 
             signalCoord (length(signalCoord)) does not equal the number of 
-                     rows in loadingMat"))
+                     rows in `signal`"))
     } 
     
     ######### check that appropriate columns are present
-    # PCsToAnnotate are column names of loadingMat
-    if (!all(PCsToAnnotate %in% colnames(loadingMat))) {
-        missingCols = PCsToAnnotate[!(PCsToAnnotate %in% colnames(loadingMat))]
-        stop(cleanws(paste0("Some PCsToAnnotate are not 
-                            columns of loadingMat: ", missingCols)))
+    # signalCol are column names of signal
+    if (!all(signalCol %in% colnames(signal))) {
+        missingCols = signalCol[!(signalCol %in% colnames(signal))]
+        stop(cleanws(paste0("Some signalCol are not 
+                            columns of signal: ", missingCols)))
     }
     
     #######
-    # what happens if there are NAs or Inf in loadingMat?
+    # what happens if there are NAs or Inf in `signal`?
     
     #################################################################
 
@@ -940,16 +940,16 @@ averagePerRegion <- function(loadingMat,
 
     # take absolute value or not
     if (absVal) {
-        signalDT <- as.data.table(abs(loadingMat))
+        signalDT <- as.data.table(abs(signal))
     } else {
-        signalDT <- as.data.table(loadingMat)
+        signalDT <- as.data.table(signal)
     }
 
     # use different function for single base data and for region data
     if (dataCoordType == "singleBase") {
-        # linking coordinates to loading values, has columns chr start, PCsToAnnotate
-        BSDT  <- cbind(coordinateDT, signalDT[, .SD, .SDcols = PCsToAnnotate])
-        jExpr <- buildJ(PCsToAnnotate, rep("mean", length(PCsToAnnotate)))
+        # linking coordinates to loading values, has columns chr start, signalCol
+        BSDT  <- cbind(coordinateDT, signalDT[, .SD, .SDcols = signalCol])
+        jExpr <- buildJ(signalCol, rep("mean", length(signalCol)))
 
         avPerRegion <- BSAggregate(BSDT = BSDT,
                                    regionsGRL = regionSet,
@@ -971,7 +971,7 @@ averagePerRegion <- function(loadingMat,
         avePerRegion <- weightedAvePerRegion(signalDT = signalDT,
                              signalCoord=signalCoord,
                              regionSet=regionSet,
-                             calcCols = PCsToAnnotate,
+                             calcCols = signalCol,
                              returnQuantile = returnQuantile) 
 
     } else {
@@ -1042,7 +1042,7 @@ weightedAvePerRegion <- function(signalDT,
 # loadings for the regions or the quantile of the region's loading.
 # Returns average loading or quantile as GRanges metadata.
 # 
-# @param loadingMat matrix of loadings (the coefficients of 
+# @param signal matrix of loadings (the coefficients of 
 # the linear combination that defines each PC). One named column for each PC.
 # One row for each original dimension/variable (should be same order 
 # as original data/signalCoord). The x$rotation output of prcomp().
@@ -1051,49 +1051,49 @@ weightedAvePerRegion <- function(signalDT,
 # included in the PCA. Coordinates should be in the 
 # same order as the original data and the loadings 
 # (each item/row in signalCoord
-# corresponds to a row in loadingMat). If a data.frame, 
+# corresponds to a row in `signal`). If a data.frame, 
 # must have chr and start columns. If end is included, start 
 # and end should be the same. Start coordinate will be used for calculations.
 # @param regionSet A GRanges object with regions corresponding
 # to the same biological annotation.
-# @param PCsToAnnotate A character vector with principal components to  
-# include. eg c("PC1", "PC2") These should be column names of loadingMat.
+# @param signalCol A character vector with principal components to  
+# include. eg c("PC1", "PC2") These should be column names of signal.
 # @param returnQuantile "logical" object. If FALSE, return region averages. If TRUE,
 # for each region, return the quantile of that region's average value
 # based on the distribution of individual genomic signal/feature values
 # @return a GRanges object with region coordinates for regions with
-# scores/quantiles above "cutoff" for any PC in PCsToAnnotate. The scores/quantiles
-# for PCsToAnnotate are given as metadata in the GRanges.
+# scores/quantiles above "cutoff" for any PC in signalCol. The scores/quantiles
+# for signalCol are given as metadata in the GRanges.
 
 # Are regions in order along the rows of the data.table?
 #
 # @examples data("brcaLoadings1")
 # data("brcaMCoord1")
 # data("esr1_chr1")
-# COCOA:::getTopRegions(loadingMat=brcaLoadings1,
+# COCOA:::getTopRegions(signal=brcaLoadings1,
 # signalCoord=brcaMCoord1, regionSet=esr1_chr1, returnQuantile = TRUE)
 
-getTopRegions <- function(loadingMat, 
+getTopRegions <- function(signal, 
                           signalCoord, 
                           regionSet, 
-                          PCsToAnnotate = c("PC1", "PC2"), cutoff = 0.8, 
+                          signalCol = c("PC1", "PC2"), cutoff = 0.8, 
                           returnQuantile=TRUE) {
     
     
     
-    regionLoadDT = averagePerRegion(loadingMat=loadingMat,
+    regionLoadDT = averagePerRegion(signal=signal,
                             signalCoord=signalCoord, regionSet=regionSet, 
-                            PCsToAnnotate = PCsToAnnotate,
+                            signalCol = signalCol,
                             returnQuantile = returnQuantile)[]
     
-    keepInd = regionLoadDT[, PCsToAnnotate, with=FALSE] >= cutoff
+    keepInd = regionLoadDT[, signalCol, with=FALSE] >= cutoff
     
-    # keep region if it is above cutoff in any of the PCs in PCsToAnnotate
+    # keep region if it is above cutoff in any of the PCs in signalCol
     keepInd = apply(X = keepInd, MARGIN = 1, FUN = any)
     
     highGR = dtToGr(regionLoadDT[keepInd, ])
     
-    values(highGR) <- as.data.frame(regionLoadDT[keepInd, PCsToAnnotate, with=FALSE])
+    values(highGR) <- as.data.frame(regionLoadDT[keepInd, signalCol, with=FALSE])
     
     return(highGR)
 
@@ -1470,10 +1470,10 @@ BSFilter <- function(BSDT, minReads = 10, excludeGR = NULL) {
 #' Each row is a region set. Columns are PCs and info on region set overlap
 #' with DNA methylation data. Should be in the same order as GRList (the list of 
 #' region sets used to create it.)
-#' @param PCsToAnnotate a character vector. PCs in rsScores for which you want
+#' @param signalCol a character vector. PCs in rsScores for which you want
 #' the indices of the original region sets (must be column names of rsScores)
 #' eg c("PC1", "PC2")
-#' @return A data.frame with columns PCsToAnnotate. Each column has been 
+#' @return A data.frame with columns signalCol. Each column has been 
 #' sorted by score for region sets for that PC (decreasing order).
 #' Original indices for region sets that were used to create rsScores
 #' are given. Region sets with a score of NA are counted as having the 
@@ -1481,7 +1481,7 @@ BSFilter <- function(BSDT, minReads = 10, excludeGR = NULL) {
 #' returned data.frame (na.last=TRUE in sorting) 
 #' @examples data("rsScores")
 #' rsRankInd = rsRankingIndex(rsScores=rsScores, 
-#'                            PCsToAnnotate=c("PC1", "PC2"))
+#'                            signalCol=c("PC1", "PC2"))
 #' # region sets sorted by score for PC1
 #' rsScores[rsRankInd$PC1, ]
 #' # region sets sorted by score for PC2
@@ -1489,33 +1489,33 @@ BSFilter <- function(BSDT, minReads = 10, excludeGR = NULL) {
 #' 
 #' @export
 #' 
-rsRankingIndex <- function(rsScores, PCsToAnnotate) {
+rsRankingIndex <- function(rsScores, signalCol) {
     
     if (!(is(rsScores, "data.frame") || is(rsScores, "matrix"))) {
         stop("rsScores should be a data.frame. Check object class.")
     }
     rsScores <- as.data.table(rsScores)
     
-    if (!is(PCsToAnnotate, "character")) {
-        stop("PCsToAnnotate should be a character object (eg 'PC1').")
+    if (!is(signalCol, "character")) {
+        stop("signalCol should be a character object (eg 'PC1').")
     }
     
     # so by references changes will not be a problem
     rsScores <- copy(rsScores)
     rsScores[, rsIndex := seq_len(nrow(rsScores))]
     
-    PCsToAnnotate <- PCsToAnnotate[PCsToAnnotate %in% colnames(rsScores)]
+    signalCol <- signalCol[signalCol %in% colnames(rsScores)]
     
-    rsEnSortedInd <- subset(rsScores, select= PCsToAnnotate)
+    rsEnSortedInd <- subset(rsScores, select= signalCol)
     
     # then scores by each PC and make a column with the original index for sorted region sets
     # this object will be used to pull out region sets that were top hits for each PC
-    for (i in seq_along(PCsToAnnotate)) {
+    for (i in seq_along(signalCol)) {
         
         # -1 for decreasing order of scores
-        setorderv(rsScores, cols = PCsToAnnotate[i], order=-1L, na.last=TRUE)
+        setorderv(rsScores, cols = signalCol[i], order=-1L, na.last=TRUE)
         
-        rsEnSortedInd[, PCsToAnnotate[i] := rsScores[, rsIndex]]
+        rsEnSortedInd[, signalCol[i] := rsScores[, rsIndex]]
     }
     
     # reset order
@@ -1540,10 +1540,10 @@ rsRankingIndex <- function(rsScores, PCsToAnnotate) {
 # except chr, start, and end will be considered 
 # columns to get the metrics from so no unnecessary columns should be
 # included.
-# @param regionGR GRanges object. Metrics will be calculated on
+# @param regionSet GRanges object. Metrics will be calculated on
 # only coordinates within this region set (and optionally separately
 # on those outside this region set with alsoNonOLMet parameter)
-# @param signalCols the columns to calculate the metrics on. The
+# @param signalCol the columns to calculate the metrics on. The
 # metrics will be calculated on each one of these columns separately.
 # @param metrics character vector with the name of a function or functions
 # to calculate on selected cytosines. Function should only require one
@@ -1556,15 +1556,15 @@ rsRankingIndex <- function(rsScores, PCsToAnnotate) {
 # mean for non overlapping CpGs without manually calculating it)
 # 
 signalOLMetrics <- function(dataDT,
-                            regionGR,
-                            signalCols = colnames(dataDT)[!(colnames(dataDT) %in% c("chr", "start", "end"))],
+                            regionSet,
+                            signalCol = colnames(dataDT)[!(colnames(dataDT) %in% c("chr", "start", "end"))],
                             metrics=c("mean", "sd"),
                             alsoNonOLMet=TRUE) {
     
     # convert DT to GR for finding overlaps
     dataGR <- BSdtToGRanges(list(dataDT))[[1]]
     
-    OL <- findOverlaps(query = regionGR, subject = dataGR)
+    OL <- findOverlaps(query = regionSet, subject = dataGR)
     
     # if no overlap, exit
     if (length(OL) == 0) {
@@ -1575,8 +1575,8 @@ signalOLMetrics <- function(dataDT,
     olCpG <- subjectHits(OL)
     
     # region set info
-    total_region_number <- length(regionGR)
-    mean_region_size    <- round(mean(width(regionGR)), 1)
+    total_region_number <- length(regionSet)
+    mean_region_size    <- round(mean(width(regionSet)), 1)
     
     
     # get info on degree of overlap
@@ -1591,9 +1591,9 @@ signalOLMetrics <- function(dataDT,
     nonOLCpG <- (seq_len(nrow(dataDT)))[-olCpG]
     
     # gets metrics for all columns except chr, start, end
-    jExpr <- buildJ(cols=rep(signalCols, each=length(metrics)),
-                    funcs=rep(metrics, length(signalCols)),
-                    newColNames = paste0(rep(signalCols,
+    jExpr <- buildJ(cols=rep(signalCol, each=length(metrics)),
+                    funcs=rep(metrics, length(signalCol)),
+                    newColNames = paste0(rep(signalCol,
                                              each=length(metrics)),
                                          "_", metrics))
     
@@ -1612,17 +1612,17 @@ signalOLMetrics <- function(dataDT,
     # for vapply, FUN.VALUE should have length equal to a single output of FUN
     olResults <- vapply(X = metrics,
                         FUN = function(x) as.numeric(olMetrics[, grepl(pattern = x, colnames(olMetrics))]),
-                        as.numeric(seq_along(signalCols)))
+                        as.numeric(seq_along(signalCol)))
     olResults <- as.data.table(olResults)
     setnames(olResults, old = colnames(olResults), new = paste0(colnames(olResults), "_OL"))
     
     nonOLResults <- vapply(X = metrics,
                            FUN = function(x) as.numeric(nonOLMetrics[, grepl(pattern = x, colnames(nonOLMetrics))]),
-                           as.numeric(seq_along(signalCols)))
+                           as.numeric(seq_along(signalCol)))
     nonOLResults <- as.data.table(nonOLResults)
     setnames(nonOLResults, old = colnames(nonOLResults), new = paste0(colnames(nonOLResults), "_nonOL"))
     
-    metricDT <- cbind(data.table(testCol=signalCols),
+    metricDT <- cbind(data.table(testCol=signalCol),
                       olResults,
                       nonOLResults,
                       data.table(signal_coverage,
@@ -1640,8 +1640,8 @@ signalOLMetrics <- function(dataDT,
 # except chr, start, and end will be considered 
 # columns to get the metrics from so no unnecessary columns should be
 # included.
-# @param regionGR Region set, GRanges object
-# @param signalCols the columns of interest. You will do ranksum test separately 
+# @param regionSet Region set, GRanges object
+# @param signalCol the columns of interest. You will do ranksum test separately 
 # on each of these columns (given test only uses info in one column)
 # @param ... Additional parameters of wilcox.test function. See ?wilcox.test.
 # For instance specify alternative hypothesis: alternative = "greater".
@@ -1651,23 +1651,23 @@ signalOLMetrics <- function(dataDT,
 # data("brcaMCoord1")
 # data("nrf1_chr1")
 # dataDT = as.data.table(cbind(brcaMCoord1, brcaLoadings1))
-# rsWilcox(dataDT = dataDT, regionGR = nrf1_chr1, conf.int=TRUE)
+# rsWilcox(dataDT = dataDT, regionSet = nrf1_chr1, conf.int=TRUE)
 
 rsWilcox <- function(dataDT,
-                     regionGR,
-                     signalCols = colnames(dataDT)[!(colnames(dataDT) %in% c("chr", "start", "end"))], 
+                     regionSet,
+                     signalCol = colnames(dataDT)[!(colnames(dataDT) %in% c("chr", "start", "end"))], 
                      conf.int=FALSE,
                      ...) {
     
     # region set info
-    total_region_number <- length(regionGR)
-    mean_region_size    <- round(mean(width(regionGR)), 1)
+    total_region_number <- length(regionSet)
+    mean_region_size    <- round(mean(width(regionSet)), 1)
     
     
     # convert DT to GR for finding overlaps
     dataGR <- BSdtToGRanges(list(dataDT))[[1]]
     
-    OL <- findOverlaps(query = regionGR, subject = dataGR)
+    OL <- findOverlaps(query = regionSet, subject = dataGR)
     
     # if no overlap, exit
     if (length(OL) == 0) {
@@ -1692,11 +1692,11 @@ rsWilcox <- function(dataDT,
         # calculate Wilcoxon rank sum test for each column
         # additional parameters given with ...
         # confIntervals will be [low1, high1, low2, high2, etc.]
-        confIntervals <- as.numeric(vapply(X = signalCols, FUN = function(x) wilcox.test(x = as.numeric(as.matrix(dataDT[olCpG, x, with=FALSE])),
+        confIntervals <- as.numeric(vapply(X = signalCol, FUN = function(x) wilcox.test(x = as.numeric(as.matrix(dataDT[olCpG, x, with=FALSE])),
                                                                       y = as.numeric(as.matrix(dataDT[nonOLCpG, x, with=FALSE])), 
                                                                       conf.int = conf.int, ...)$conf.int, c(1, 1)))
         
-        names(confIntervals) <- paste0(rep(signalCols, each=2), c("_low", "_high"))
+        names(confIntervals) <- paste0(rep(signalCol, each=2), c("_low", "_high"))
         wRes <- data.frame(t(confIntervals),
                            signal_coverage,
                            region_coverage,
@@ -1706,7 +1706,7 @@ rsWilcox <- function(dataDT,
     } else {
         # calculate Wilcoxon rank sum test for each column
         # additional parameters given with ...
-        pVals <- vapply(X = signalCols, FUN = function(x) wilcox.test(x = as.numeric(as.matrix(dataDT[olCpG, x, with=FALSE])),
+        pVals <- vapply(X = signalCol, FUN = function(x) wilcox.test(x = as.numeric(as.matrix(dataDT[olCpG, x, with=FALSE])),
                                                                       y = as.numeric(as.matrix(dataDT[nonOLCpG, x, with=FALSE])), ...)$p.value, 1)
         wRes <- data.frame(t(pVals),
                            signal_coverage,
@@ -1802,17 +1802,17 @@ regionOLMean <- function(signalDT, signalGR, regionSet, calcCols) {
 
 
 # Create null distribution based on permutations
-createNullDist <- function(loadingMat, PCsToAnnotate, nPerm = 1000, sampleSize = 1000) {
+createNullDist <- function(signal, signalCol, nPerm = 1000, sampleSize = 1000) {
     
-    loadingMat = abs(loadingMat)
+    signal = abs(signal)
     permScoreList = list()
     for (i in 1:nPerm) {
-        permInd = sample(1:nrow(loadingMat), size=sampleSize, replace = FALSE)
+        permInd = sample(1:nrow(signal), size=sampleSize, replace = FALSE)
         # reformat into data.table with chromosome location and weight
-        permScoreList[[i]] = colMeans(loadingMat[permInd, PCsToAnnotate])
+        permScoreList[[i]] = colMeans(signal[permInd, signalCol])
         
         # naming does not work if only using one PC so add this line for that case
-        # setnames(loadingDT, c("chr", "start", PCsToAnnotate)) 
+        # setnames(loadingDT, c("chr", "start", signalCol)) 
         
     }
     
@@ -1820,12 +1820,12 @@ createNullDist <- function(loadingMat, PCsToAnnotate, nPerm = 1000, sampleSize =
     return(permScoreMat)
 }
 
-multiNullDist <- function(loadingMat, PCsToAnnotate, nPerm = 1000, sampleSize = c(10, 100, 1000, 10000, 100000)) {
+multiNullDist <- function(signal, signalCol, nPerm = 1000, sampleSize = c(10, 100, 1000, 10000, 100000)) {
     
     # MIRA:::setLapplyAlias(cores = 8)
     # create distribution for each sample
-    nullDistList = MIRA:::lapplyAlias(X = sampleSize, FUN = function(x) createNullDist(loadingMat=loadingMat, 
-                                                            PCsToAnnotate=PCsToAnnotate, 
+    nullDistList = MIRA:::lapplyAlias(X = sampleSize, FUN = function(x) createNullDist(signal=signal, 
+                                                            signalCol=signalCol, 
                                                             nPerm=nPerm, 
                                                             sampleSize = x))#, mc.set.seed = FALSE)
 }

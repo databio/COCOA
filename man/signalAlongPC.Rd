@@ -6,7 +6,7 @@
 along principal component axis}
 \usage{
 signalAlongPC(genomicSignal, signalCoord, regionSet, pcScores,
-  orderByPC = "PC1", cluster_columns = FALSE, cluster_rows = FALSE,
+  orderByCol = "PC1", cluster_columns = FALSE, cluster_rows = FALSE,
   row_title = "Sample", column_title = "Genomic Signal",
   column_title_side = "bottom", name = "Genomic Signal Value",
   col = c("blue", "#EEEEEE", "red"), ...)
@@ -23,7 +23,7 @@ for the genomic signal/original data (eg DNA methylation)
 included in the PCA. Coordinates should be in the 
 same order as the original data and the loadings 
 (each item/row in signalCoord
-corresponds to a row in loadingMat). If a data.frame, 
+corresponds to a row in signal). If a data.frame, 
 must have chr and start columns. If end is included, start 
 and end should be the same. Start coordinate will be used for calculations.}
 
@@ -36,7 +36,7 @@ as the coordinates for the actual data (signalCoord).}
 (ie transformed methylation data). Must have sample names/IDs as row names,
 These same sample names must be column names of genomicSignal}
 
-\item{orderByPC}{a character object. PC to order samples by 
+\item{orderByCol}{a character object. PC to order samples by 
 (order rows of heatmap by PC score, from high to low score). 
 Must be the name of a column in pcScores.}
 
@@ -67,7 +67,7 @@ color similar to white.}
 A heatmap of genomic signal values (eg DNA methylation levels) 
 in regions of interest (regionSet), with rows ordered by PC score.
 Each row is a patient/sample and each column is an individual genomic signal value. 
-Rows are ordered by PC score for `orderByPC`, high scores at top and low at 
+Rows are ordered by PC score for `orderByCol`, high scores at top and low at 
 the bottom.
 }
 \description{
@@ -87,6 +87,6 @@ signalHM <- signalAlongPC(genomicSignal=brcaMethylData1,
                              signalCoord=brcaMCoord1,
                              regionSet=esr1_chr1,
                              pcScores=brcaPCScores,
-                             orderByPC="PC1", cluster_columns=TRUE)
+                             orderByCol="PC1", cluster_columns=TRUE)
 
 }

@@ -67,10 +67,10 @@ Now let's give each region set a score with `runCOCOA()` to quantify how much it
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 PCsToAnnotate <- paste0("PC", 1:4)
-regionSetScores <- runCOCOA(loadingMat=brcaLoadings1, 
+regionSetScores <- runCOCOA(signal=brcaLoadings1, 
                             signalCoord=brcaMCoord1, 
                             GRList=GRList, 
-                            PCsToAnnotate=PCsToAnnotate, 
+                            signalCol=PCsToAnnotate, 
                             scoringMetric="regionMean")
 regionSetScores$regionSetName <- regionSetName
 ```
@@ -79,19 +79,19 @@ As an easy way to visualize the results, we can see how the region sets are rank
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 rsScoreHeatmap(regionSetScores, 
-               PCsToAnnotate=paste0("PC", 1:4), 
+               signalCol=paste0("PC", 1:4), 
                rsNameCol = "regionSetName",
-               orderByPC = "PC1", 
+               orderByCol = "PC1", 
                column_title = "Region sets ordered by score for PC1")
 ```
 
-We can see that Gata3 had the highest score for PCs 1, 3, and 4 but that Esr1 had a higher score for PC2. While you might expect that Esr1 would be ranked first for all PCs, Gata3 is known to be associated with breast cancer and Esr1 activity so these results still make sense. As mentioned before, this vignette is showing two of the top scoring and bottom scoring region sets from a previous COCOA analysis with over 2200 region sets. So despite Esr1 being ranked second out of four for some PCs in this vignette which may not seem very impressive, it had one of the best scores in the previous larger analysis. On a practical note, if you want to arrange the heatmap by region set scores for another PC, just change the orderByPC parameter like so:
+We can see that Gata3 had the highest score for PCs 1, 3, and 4 but that Esr1 had a higher score for PC2. While you might expect that Esr1 would be ranked first for all PCs, Gata3 is known to be associated with breast cancer and Esr1 activity so these results still make sense. As mentioned before, this vignette is showing two of the top scoring and bottom scoring region sets from a previous COCOA analysis with over 2200 region sets. So despite Esr1 being ranked second out of four for some PCs in this vignette which may not seem very impressive, it had one of the best scores in the previous larger analysis. On a practical note, if you want to arrange the heatmap by region set scores for another PC, just change the orderByCol parameter like so:
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 rsScoreHeatmap(regionSetScores, 
-               PCsToAnnotate=paste0("PC", 1:4),
+               signalCol=paste0("PC", 1:4),
                rsNameCol = "regionSetName",
-               orderByPC = "PC2", 
+               orderByCol = "PC2", 
                column_title = "Region sets ordered by score for PC2")
 ```
 
@@ -109,10 +109,10 @@ We can see whether variability along the PC is specific to the region of interes
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 wideGRList <- lapply(GRList, resize, width=14000, fix="center")
-loadProfile <- lapply(wideGRList, function(x) getLoadingProfile(loadingMat=brcaLoadings1,
+loadProfile <- lapply(wideGRList, function(x) getLoadingProfile(signal=brcaLoadings1,
                                                                 signalCoord=brcaMCoord1,
                                                                 regionSet=x, 
-                                                                PCsToAnnotate=PCsToAnnotate,
+                                                                signalCol=PCsToAnnotate,
                                                                 binNum=21))
 ```
 
@@ -182,7 +182,7 @@ signalAlongPC(genomicSignal=brcaMethylData1,
                 signalCoord=brcaMCoord1,
                 regionSet=esr1_chr1,
                 pcScores=brcaPCScores,
-                orderByPC="PC1", cluster_columns=TRUE,
+                orderByCol="PC1", cluster_columns=TRUE,
                 column_title = "Individual cytosine/CpG",
                 name = "DNA methylation level")
 ```
@@ -196,7 +196,7 @@ signalAlongPC(genomicSignal=brcaMethylData1,
               signalCoord=brcaMCoord1,
               regionSet=nrf1_chr1,
               pcScores=brcaPCScores,
-              orderByPC="PC1", 
+              orderByCol="PC1", 
               cluster_columns=TRUE, 
               column_title = "Individual cytosine/CpG",
               name = "DNA methylation level")
@@ -211,11 +211,11 @@ Since COCOA ranks region sets based on their relative scores in comparison to ot
 This plot can help you learn more about the contribution of individual regions to the region set score for each PC. For example, if the estrogen receptor region set was associated with PCs 1, 3, and 4, we might wonder whether the same regions are causing the association with these PCs or whether different regions are associated with each PC. To do this, we will first calculate the average absolute loading value for each region in a region set (obtained by averaging a given PC's loadings for CpGs within that region). Then we can use the distribution of loadings for each PC to convert each region's loading to a percentile to see how extreme/high that region is for each PC. Let's look at the plot for estrogen receptor: 
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
-regionQuantileByPC(loadingMat = brcaLoadings1,
+regionQuantileByPC(signal = brcaLoadings1,
                                 signalCoord = brcaMCoord1,
                                 regionSet = esr1_chr1,
                                 rsName = "Estrogen receptor (chr1)",
-                                PCsToAnnotate=paste0("PC", 1:4),
+                                signalCol=paste0("PC", 1:4),
                                 maxRegionsToPlot = 8000,
                                 cluster_rows = TRUE,
                                 cluster_columns = FALSE,
@@ -228,11 +228,11 @@ We can see that some of the same regions have high loadings for multiple PCs (i.
 For contrast, we can look at the regions of Nrf1:
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
-regionQuantileByPC(loadingMat = brcaLoadings1,
+regionQuantileByPC(signal = brcaLoadings1,
                                 signalCoord = brcaMCoord1,
                                 regionSet = nrf1_chr1,
                                 rsName = "Nrf1 (chr1)",
-                                PCsToAnnotate=paste0("PC", 1:4),
+                                signalCol=paste0("PC", 1:4),
                                 maxRegionsToPlot = 8000,
                                 cluster_rows = TRUE,
                                 cluster_columns = FALSE,

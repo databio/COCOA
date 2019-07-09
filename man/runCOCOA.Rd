@@ -4,12 +4,12 @@
 \alias{runCOCOA}
 \title{Do COCOA with many region sets}
 \usage{
-runCOCOA(loadingMat, signalCoord, GRList, PCsToAnnotate = c("PC1",
-  "PC2"), scoringMetric = "regionMean", verbose = TRUE,
+runCOCOA(signal, signalCoord, GRList, signalCol = c("PC1", "PC2"),
+  scoringMetric = "regionMean", verbose = TRUE,
   overlapMethod = "single", wilcox.conf.int = FALSE, absVal = TRUE)
 }
 \arguments{
-\item{loadingMat}{matrix of loadings (the coefficients of 
+\item{signal}{matrix of loadings (the coefficients of 
 the linear combination that defines each PC). One named column for each PC.
 One row for each original dimension/variable (should be same order 
 as original data/signalCoord). The x$rotation output of prcomp().}
@@ -18,7 +18,7 @@ as original data/signalCoord). The x$rotation output of prcomp().}
 for the genomic signal/original data (eg DNA methylation) 
 included in the PCA. Coordinates should be in the 
 same order as the original data and the loadings 
-(each item/row in signalCoord corresponds to a row in loadingMat).
+(each item/row in signalCoord corresponds to a row in `signal`).
 If a data.frame, must have chr and start columns.
 If end is not included, start coordinate will be used for calculations.}
 
@@ -28,8 +28,8 @@ the same biological annotation). The region set database.
 Must be from the same reference genome
 as the coordinates for the actual data/samples (signalCoord).}
 
-\item{PCsToAnnotate}{A character vector with principal components to
-include. eg c("PC1", "PC2") These should be column names of loadingMat.}
+\item{signalCol}{A character vector with principal components to
+include. eg c("PC1", "PC2") These should be column names of signal.}
 
 \item{scoringMetric}{A character object with the scoring metric. 
 "regionMean" is a weighted
@@ -74,7 +74,7 @@ method. returns a 95% confidence interval from the Wilcoxon rank sum test
 instead of p value.}
 
 \item{absVal}{logical. If TRUE, take the absolute value of values in
-loadingMat. Choose TRUE if you think there may be some 
+signal. Choose TRUE if you think there may be some 
 genomic loci in a region set that will increase and others
 will decrease (if there may be anticorrelation between
 regions in a region set). Choose FALSE if you expect regions in a 
@@ -83,7 +83,7 @@ correlated with each other).}
 }
 \value{
 data.frame of results, one row for each region set. 
-One column for each PC in PCsToAnnotate
+One column for each PC in signalCol
 with score for that PC for a given region set (specific score depends
 on "scoringMetric" parameter). 
 Rows will be in the same order as region sets in GRList
@@ -98,7 +98,7 @@ not just those that overlap a cytosine).
 }
 \description{
 This function will give each region set a score for each PC
-in `PCsToAnnotate` based on
+in `signalCol` based on
 the `scoringMetric` parameter. Based on these scores, you can determine
 which region sets out of a region set database (given by GRList) 
 are most associated with the top PCs. See the vignette "Introduction
@@ -109,10 +109,10 @@ results.
 data("brcaMCoord1")
 data("brcaLoadings1")
 data("esr1_chr1")
-rsScores <- runCOCOA(loadingMat=brcaLoadings1, 
+rsScores <- runCOCOA(signal=brcaLoadings1, 
                                  signalCoord=brcaMCoord1, 
                                  GRList=GRangesList(esr1_chr1), 
-                                 PCsToAnnotate=c("PC1", "PC2"), 
+                                 signalCol=c("PC1", "PC2"), 
                                  scoringMetric="regionMean")
 
 }
