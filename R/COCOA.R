@@ -60,7 +60,7 @@ NULL
 # in order to pass some R CMD check NOTES.
 if (getRversion() >= "2.15.1") {
     utils::globalVariables(c(
-        ".", "..calcCols", "bin", "binID", "chr", "id", 
+        ".", "..calcCols", "bin", "binID", "chr", "id", "coordinateDT",
         "coverage", "pOlap", "regionGroupID", "regionID", "theme", 
         "mean_region_size", "region_coverage", "rowIndex", "rsIndex",
         "rsRegionID", "total_region_number", "signal_coverage", ".SD")) 

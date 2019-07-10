@@ -74,7 +74,7 @@ test_that("aggregateLoadings, scoring metrics, and runCOCOA", {
     
 
     # test wilcoxon rank sum scoring metric
-    rsWResults <- COCOA:::rsWilcox(dataDT = dataDTW, regionGR = regionSetW)
+    rsWResults <- COCOA:::rsWilcox(dataDT = dataDTW, regionSet = regionSetW)
     PC2W <- wilcox.test(x = c(-2, 0, 1), y=c(-1, 2:4))$p.value
     PC3W <- wilcox.test(x = c(8, 6, 5), y=c(7, 4, 3, 10))$p.value
     expect_equal(c(PC2W, PC3W, 3, 2, 2, mean(width(regionSetW))), 
@@ -177,7 +177,7 @@ test_that("aggregateLoadings, scoring metrics, and runCOCOA", {
     
     ########## testing signalOLMetrics, used for meanDiff scoring method #######
     olMetrics <- COCOA:::signalOLMetrics(dataDT=dataDTW, 
-                 regionGR = regionSetW, 
+                 regionSet = regionSetW, 
                  metrics = c("mean", "sd"), 
                  alsoNonOLMet = TRUE)
     
@@ -315,3 +315,4 @@ test_that("Input formats", {
     expect_equal(normalOut, alterOut)
 
 })
+
