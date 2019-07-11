@@ -212,6 +212,30 @@ aggregateSignal <- function(signal,
     
     #################################################################
     
+    # detect signalCoordType
+    if (signalCoordType == "default") {
+        if (is(signalCoord, "data.frame")) {
+            if ("end" %in% colnames(signalCoord)) {
+                if (all(signalCoord$start == signalCoord$end)) {
+                    signalCoordType <- "singleBase"
+                } else {
+                    signalCoordType <- "multiBase"
+                }
+            } else {
+                signalCoordType <- "singleBase"
+            }
+        } else {
+            # when signalCoord is a GRanges object
+            if (all(start(signalCoord) == end(signalCoord))) {
+                signalCoordType <- "singleBase" 
+            } else {
+                signalCoordType <- "multiBase"
+            }
+        }
+        
+    }
+    
+    
     numOfRegions <- length(regionSet)
     totalCpGs    <- nrow(signal)
     
@@ -564,14 +588,6 @@ runCOCOA <- function(signal,
     
     #################################################################
     
-    # detect signalCoordType
-    if (signalCoordType == "default") {
-        if (all(start(signalCoord) == end(signalCoord))) {
-            signalCoordType <- "singleBase" 
-        } else {
-            signalCoordType <- "multiBase"
-        }
-    }
     
     # apply over the list of region sets
     resultsList <- lapplyAlias(GRList,
