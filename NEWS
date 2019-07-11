@@ -5,17 +5,20 @@ Notable changes to this project will be documented in this file.
 
     - Major changes to user interface: parameter/function/output column name changes
         - loadingMat => signal
-        - PCsToAnnotate => signalCols?
-        - genomicSignal => 
+        - PCsToAnnotate => signalCol
         - orderByPC => orderByCol
         - regionGR => regionSet (some functions already had regionSet param)
         - pcScores => sampleScores
         - signalAlongPC => signalAlongVariable?
         - cytosine_coverage (column name in output of runCOCOA()) => signalCoverage
-        - region_coverage (column name in ouput of runCOCOA())=> regionSetCoverage
+        - region_coverage (column name in output of runCOCOA())=> regionSetCoverage
+        - aggregateLoadings => aggregateSignal
+        - getLoadingProfile = > getMetaRegionProfile
     - Addition of functionality for region-based data such as ATAC-seq
+        - default setting automatically detects whether data is single base(e.g. DNA methylation or multiple bases like ATAC-seq.
+        - different scoring method for single base vs multiple base data
     - Other changes
-        - absVal parameter added for several functions
+        - absVal parameter added for several functions (aggregateLoadings, getLoadingProfile, runCOCOA)
 
 ## [1.0.2] -- 2019-03-06
 

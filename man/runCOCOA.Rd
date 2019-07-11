@@ -87,10 +87,10 @@ One column for each PC in signalCol
 with score for that PC for a given region set (specific score depends
 on "scoringMetric" parameter). 
 Rows will be in the same order as region sets in GRList
-"signal_coverage" column has number of cytosines (or regions) that 
+"signalCoverage" column has number of cytosines (or regions) that 
 overlapped with the given region set (or in the general case, 
 coordinates from signalCoord that overlapped regionSet).
-"region_coverage" column has number of regions 
+"regionSetCoverage" column has number of regions 
 that overlapped any coordinates from signalCoord.
 "total_region_number" column has total number of regions. 
 "mean_region_size" has average region size (average of all regions,
