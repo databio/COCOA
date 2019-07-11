@@ -5,7 +5,7 @@
 \title{Visualize how genomic signal in a region set changes 
 along principal component axis}
 \usage{
-signalAlongPC(genomicSignal, signalCoord, regionSet, pcScores,
+signalAlongPC(genomicSignal, signalCoord, regionSet, sampleScores,
   orderByCol = "PC1", cluster_columns = FALSE, cluster_rows = FALSE,
   row_title = "Sample", column_title = "Genomic Signal",
   column_title_side = "bottom", name = "Genomic Signal Value",
@@ -16,7 +16,7 @@ signalAlongPC(genomicSignal, signalCoord, regionSet, pcScores,
 in matrix or data.frame. 
 Rows are individual signal/feature values. Columns are samples.
 Must have sample names/IDs as column names,
-These same sample names must be row names of pcScores.}
+These same sample names must be row names of sampleScores.}
 
 \item{signalCoord}{a GRanges object or data frame with coordinates 
 for the genomic signal/original data (eg DNA methylation) 
@@ -32,13 +32,13 @@ to the same biological annotation. The regions where you will visualize
 the genomic signal. Must be from the same reference genome
 as the coordinates for the actual data (signalCoord).}
 
-\item{pcScores}{A matrix. The principal component scores for the samples 
+\item{sampleScores}{A matrix. The principal component scores for the samples 
 (ie transformed methylation data). Must have sample names/IDs as row names,
 These same sample names must be column names of genomicSignal}
 
 \item{orderByCol}{a character object. PC to order samples by 
 (order rows of heatmap by PC score, from high to low score). 
-Must be the name of a column in pcScores.}
+Must be the name of a column in sampleScores.}
 
 \item{cluster_columns}{"logical" object, whether to cluster columns 
 (the genomic signal, eg DNA methylation values for each CpG).}
@@ -86,7 +86,7 @@ data("brcaPCScores")
 signalHM <- signalAlongPC(genomicSignal=brcaMethylData1,
                              signalCoord=brcaMCoord1,
                              regionSet=esr1_chr1,
-                             pcScores=brcaPCScores,
+                             sampleScores=brcaPCScores,
                              orderByCol="PC1", cluster_columns=TRUE)
 
 }

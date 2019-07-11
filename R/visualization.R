@@ -27,7 +27,7 @@
 #' in matrix or data.frame. 
 #' Rows are individual signal/feature values. Columns are samples.
 #' Must have sample names/IDs as column names,
-#' These same sample names must be row names of pcScores.
+#' These same sample names must be row names of sampleScores.
 #' @param signalCoord a GRanges object or data frame with coordinates 
 #' for the genomic signal/original data (eg DNA methylation) 
 #' included in the PCA. Coordinates should be in the 
@@ -40,12 +40,12 @@
 #' to the same biological annotation. The regions where you will visualize
 #' the genomic signal. Must be from the same reference genome
 #' as the coordinates for the actual data (signalCoord).
-#' @param pcScores A matrix. The principal component scores for the samples 
+#' @param sampleScores A matrix. The principal component scores for the samples 
 #' (ie transformed methylation data). Must have sample names/IDs as row names,
 #' These same sample names must be column names of genomicSignal
 #' @param orderByCol a character object. PC to order samples by 
 #' (order rows of heatmap by PC score, from high to low score). 
-#' Must be the name of a column in pcScores.
+#' Must be the name of a column in sampleScores.
 #' @param cluster_rows "logical" object, whether rows should be clustered. 
 #' This should be kept as FALSE to keep the correct ranking of 
 #' samples/observations according to their PC score.
@@ -74,13 +74,13 @@
 #' signalHM <- signalAlongPC(genomicSignal=brcaMethylData1,
 #'                              signalCoord=brcaMCoord1,
 #'                              regionSet=esr1_chr1,
-#'                              pcScores=brcaPCScores,
+#'                              sampleScores=brcaPCScores,
 #'                              orderByCol="PC1", cluster_columns=TRUE)
 #' 
 #' @export
 # previously called rsMethylHeatmap
 signalAlongPC <- function(genomicSignal, signalCoord, regionSet, 
-                            pcScores, orderByCol="PC1", cluster_columns = FALSE, 
+                            sampleScores, orderByCol="PC1", cluster_columns = FALSE, 
                             cluster_rows = FALSE, 
                             row_title = "Sample",
                             column_title = "Genomic Signal", 
@@ -103,14 +103,14 @@ signalAlongPC <- function(genomicSignal, signalCoord, regionSet,
         stop("signalCoord should be a data.frame or GRanges object.")
     }
     
-    if (!(is(pcScores, "matrix") || is(pcScores, "data.frame"))) {
-        stop("pcScores should be a matrix or data.frame.")
+    if (!(is(sampleScores, "matrix") || is(sampleScores, "data.frame"))) {
+        stop("sampleScores should be a matrix or data.frame.")
     }
     
     
     # PCA object must have subject_ID as row.names (corresponding 
     # to column names of genomicSignal)
-    if (sum(row.names(pcScores) %in% colnames(genomicSignal)) < 2) {
+    if (sum(row.names(sampleScores) %in% colnames(genomicSignal)) < 2) {
         stop(cleanws("Sample names on pca data (row names) 
                       must match sample names on methylation
                              (column names)"))
@@ -135,7 +135,7 @@ signalAlongPC <- function(genomicSignal, signalCoord, regionSet,
     # reducedValsPCA <- centeredPCAMeth %*% pcaData$rotation
     # reducedValsPCA <- pcaData$x
     # pcaData must have subject_ID as row name
-    thisRSMData <- thisRSMData[names(sort(pcScores[, orderByCol], 
+    thisRSMData <- thisRSMData[names(sort(sampleScores[, orderByCol], 
                                           decreasing = TRUE)), ]
     message(paste0("Number of cytosines: ", ncol(thisRSMData)))
     message(paste0("Number of regions: ", length(unique(queryHits(olList)))))

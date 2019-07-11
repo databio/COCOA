@@ -49,7 +49,7 @@ regionSet2 <- MIRA:::dtToGr(regionSet2)
 # running the tests
 
 
-# aggregateLoadings(signal = loadingMat, 
+# aggregateSignal(signal = loadingMat, 
 #                   coordinateDT = coordinates, 
 #                   regionSet = regionSet)
 
@@ -70,7 +70,7 @@ colnames(loadingMatW) <- c("PC2", "PC3")
 loadingMatW[7, "PC3"] <- 10
 dataDTW <- cbind(coordinateDTW, as.data.frame(loadingMatW))
 
-test_that("aggregateLoadings, scoring metrics, and runCOCOA", {
+test_that("aggregateSignal, scoring metrics, and runCOCOA", {
     
 
     # test wilcoxon rank sum scoring metric
@@ -78,15 +78,15 @@ test_that("aggregateLoadings, scoring metrics, and runCOCOA", {
     PC2W <- wilcox.test(x = c(-2, 0, 1), y=c(-1, 2:4))$p.value
     PC3W <- wilcox.test(x = c(8, 6, 5), y=c(7, 4, 3, 10))$p.value
     expect_equal(c(PC2W, PC3W, 3, 2, 2, mean(width(regionSetW))), 
-                 c(rsWResults$PC2, rsWResults$PC3, rsWResults$signal_coverage, 
-                   rsWResults$region_coverage, 
+                 c(rsWResults$PC2, rsWResults$PC3, rsWResults$signalCoverage, 
+                   rsWResults$regionSetCoverage, 
                    rsWResults$total_region_number, 
                    rsWResults$mean_region_size))
     
-    # same test for Wilcoxon but with aggregateLoadings (absolute value
+    # same test for Wilcoxon but with aggregateSignal (absolute value
     # of loadings will be taken), "greater" alternate hypothesis is used in
-    # aggregateLoadings
-    rsWResults <- COCOA:::aggregateLoadings(signal = loadingMatW, 
+    # aggregateSignal
+    rsWResults <- COCOA:::aggregateSignal(signal = loadingMatW, 
                       signalCoord = coordinateDTW, 
                       regionSet = regionSetW, 
                       signalCol = c("PC2", "PC3"), 
@@ -94,8 +94,8 @@ test_that("aggregateLoadings, scoring metrics, and runCOCOA", {
     PC2W <- wilcox.test(x = c(2, 0, 1), y=c(1, 2:4), alternative = "greater")$p.value
     PC3W <- wilcox.test(x = c(8, 6, 5), y=c(7, 4, 3, 10), alternative = "greater")$p.value
     expect_equal(c(PC2W, PC3W, 3, 2, 2, mean(width(regionSetW))), 
-                 c(rsWResults$PC2, rsWResults$PC3, rsWResults$signal_coverage, 
-                   rsWResults$region_coverage, 
+                 c(rsWResults$PC2, rsWResults$PC3, rsWResults$signalCoverage, 
+                   rsWResults$regionSetCoverage, 
                    rsWResults$total_region_number, 
                    rsWResults$mean_region_size))
     
@@ -104,7 +104,7 @@ test_that("aggregateLoadings, scoring metrics, and runCOCOA", {
     
     # test regionMean scoring method, average first within region, then
     # between regions
-    regionMeanRes <- COCOA:::aggregateLoadings(signal = loadingMatW, 
+    regionMeanRes <- COCOA:::aggregateSignal(signal = loadingMatW, 
                               signalCoord = coordinateDTW, 
                               regionSet = regionSetW, 
                               signalCol = c("PC2", "PC3"), 
@@ -112,8 +112,8 @@ test_that("aggregateLoadings, scoring metrics, and runCOCOA", {
     PC2R <- mean(c(2, mean(c(0, 1))))
     PC3R <- mean(c(8, mean(c(6, 5))))
     expect_equal(c(PC2R, PC3R, 3, 2, 2, mean(width(regionSetW))), 
-                 c(regionMeanRes$PC2, regionMeanRes$PC3, regionMeanRes$signal_coverage, 
-                   regionMeanRes$region_coverage, 
+                 c(regionMeanRes$PC2, regionMeanRes$PC3, regionMeanRes$signalCoverage, 
+                   regionMeanRes$regionSetCoverage, 
                    regionMeanRes$total_region_number, 
                    regionMeanRes$mean_region_size))
     
@@ -121,7 +121,7 @@ test_that("aggregateLoadings, scoring metrics, and runCOCOA", {
     # this is a mean of CpG loading values just like "raw" but instead
     # of averaging within regions then averaging regions together, this 
     # method does the simple average of all CpGs within the region set
-    simpleMeanRes <- COCOA:::aggregateLoadings(signal = loadingMatW, 
+    simpleMeanRes <- COCOA:::aggregateSignal(signal = loadingMatW, 
                                        signalCoord = coordinateDTW, 
                                        regionSet = regionSetW, 
                                        signalCol = c("PC2", "PC3"), 
@@ -129,8 +129,8 @@ test_that("aggregateLoadings, scoring metrics, and runCOCOA", {
     PC2RC <- mean(c(2, 0, 1))
     PC3RC <- mean(c(8, 6, 5))
     expect_equal(c(PC2RC, PC3RC, 3, 2, 2, mean(width(regionSetW))), 
-                 c(simpleMeanRes$PC2, simpleMeanRes$PC3, simpleMeanRes$signal_coverage, 
-                   simpleMeanRes$region_coverage, 
+                 c(simpleMeanRes$PC2, simpleMeanRes$PC3, simpleMeanRes$signalCoverage, 
+                   simpleMeanRes$regionSetCoverage, 
                    simpleMeanRes$total_region_number, 
                    simpleMeanRes$mean_region_size))
     
@@ -145,14 +145,14 @@ test_that("aggregateLoadings, scoring metrics, and runCOCOA", {
     
     PC2MD <- PC2Num / PC2Denom
     PC3MD <- PC3Num / PC3Denom
-    mdRes <- COCOA:::aggregateLoadings(signal = loadingMatW, 
+    mdRes <- COCOA:::aggregateSignal(signal = loadingMatW, 
                                        signalCoord = coordinateDTW, 
                                        regionSet = regionSetW, 
                                        signalCol = c("PC2", "PC3"), 
                                        scoringMetric = "meanDiff")
     expect_equal(c(PC2MD, PC3MD, 3, 2, 2, mean(width(regionSetW))), 
-                 c(mdRes$PC2, mdRes$PC3, mdRes$signal_coverage, 
-                   mdRes$region_coverage, 
+                 c(mdRes$PC2, mdRes$PC3, mdRes$signalCoverage, 
+                   mdRes$regionSetCoverage, 
                    mdRes$total_region_number, 
                    mdRes$mean_region_size))
     
@@ -170,8 +170,8 @@ test_that("aggregateLoadings, scoring metrics, and runCOCOA", {
                           signalCol = c("PC2", "PC3"), 
                           scoringMetric = "meanDiff")
     expect_equal(rep(c(PC2MD, PC3MD, 3, 2, 2, mean(width(regionSetW))), each=2), 
-                 c(twoResults$PC2, twoResults$PC3, twoResults$signal_coverage, 
-                   twoResults$region_coverage, 
+                 c(twoResults$PC2, twoResults$PC3, twoResults$signalCoverage, 
+                   twoResults$regionSetCoverage, 
                    twoResults$total_region_number, 
                    twoResults$mean_region_size))
     
@@ -205,7 +205,7 @@ test_that("ATAC-seq scoring methods", {
         ((101/400)+(101/201)+(51/201)+1+(26/51)+(151/451)),
         PC2=((101/400)*-1+(101/201)*-1+(51/201)*0+1*1+(26/51)*3+(151/451)*4) / 
             ((101/400)+(101/201)+(51/201)+1+(26/51)+(151/451)), 
-        signal_coverage=5, regionSet_coverage=(101/400)+(101/201)+(51/201)+1+(26/51)+(151/451))
+        signalCoverage=5, regionSetCoverage=(101/400)+(101/201)+(51/201)+1+(26/51)+(151/451))
     expect_equal(weightedAve, correctAve)
     
     # test "regionOLMean"
@@ -216,8 +216,8 @@ test_that("ATAC-seq scoring methods", {
     # proportion overlap is first then PC
     correctAve <- data.frame(PC1=(1+1+2+3+5+6)/6,
                              PC2=(-1+-1+0+1+3+4)/6, 
-                             signal_coverage=5,
-                             regionSet_coverage=5)
+                             signalCoverage=5,
+                             regionSetCoverage=5)
     expect_equal(signalAve, correctAve)
     
     # test "weightedAvePerRegion"
@@ -252,7 +252,7 @@ test_that("averagePerRegion", {
     
 })
 
-test_that("getLoadingProfile", {
+test_that("getMetaRegionProfile", {
     loadingMatP <- matrix(data = c(1:8, 10, 10, rep(1, 20)), nrow = 30)
     colnames(loadingMatP) <- "PC1"
     # two CpGs per bin of regionSetP (with 5 bins)
@@ -270,7 +270,7 @@ test_that("getLoadingProfile", {
      
     # COCOA:::dtToGr(coordinateDTP)
     binnedP <- lapply(GRangesList(regionSetP), 
-                     function(x) getLoadingProfile(signal = loadingMatP, 
+                     function(x) getMetaRegionProfile(signal = loadingMatP, 
                                                    signalCoord = coordinateDTP, 
                                                    regionSet = x, 
                                                    signalCol = "PC1", 
@@ -283,7 +283,7 @@ test_that("getLoadingProfile", {
     # making sure that different input formats still work
     #########
     alterOut <- lapply(GRangesList(regionSetP), 
-                       function(x) getLoadingProfile(signal = data.frame(loadingMatP), 
+                       function(x) getMetaRegionProfile(signal = data.frame(loadingMatP), 
                                                      signalCoord = COCOA:::dtToGr(coordinateDTP), 
                                                      regionSet = x, 
                                                      signalCol = "PC1", 

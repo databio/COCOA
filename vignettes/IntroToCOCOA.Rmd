@@ -181,7 +181,7 @@ If a region set has a high score for a PC, we would expect that DNA methylation 
 signalAlongPC(genomicSignal=brcaMethylData1,
                 signalCoord=brcaMCoord1,
                 regionSet=esr1_chr1,
-                pcScores=brcaPCScores,
+                sampleScores=brcaPCScores,
                 orderByCol="PC1", cluster_columns=TRUE,
                 column_title = "Individual cytosine/CpG",
                 name = "DNA methylation level")
@@ -195,7 +195,7 @@ Now let's look at one of the region sets, Nrf1, that had a low score for PC1:
 signalAlongPC(genomicSignal=brcaMethylData1,
               signalCoord=brcaMCoord1,
               regionSet=nrf1_chr1,
-              pcScores=brcaPCScores,
+              sampleScores=brcaPCScores,
               orderByCol="PC1", 
               cluster_columns=TRUE, 
               column_title = "Individual cytosine/CpG",

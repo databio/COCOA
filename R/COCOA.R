@@ -62,8 +62,8 @@ if (getRversion() >= "2.15.1") {
     utils::globalVariables(c(
         ".", "..calcCols", "bin", "binID", "chr", "id", "coordinateDT",
         "coverage", "pOlap", "regionGroupID", "regionID", "theme", 
-        "mean_region_size", "region_coverage", "rowIndex", "rsIndex",
-        "rsRegionID", "total_region_number", "signal_coverage", ".SD")) 
+        "mean_region_size", "regionSetCoverage", "rowIndex", "rsIndex",
+        "rsRegionID", "total_region_number", "signalCoverage", ".SD")) 
 }
 
 #########################################################################
@@ -87,6 +87,12 @@ if (getRversion() >= "2.15.1") {
 #' corresponds to a row in `signal`). If a data.frame, 
 #' must have chr and start columns. If end is included, start 
 #' and end should be the same. Start coordinate will be used for calculations.
+#' @param signalCoordType character. Can be "default", "singleBase", or 
+#' "multiBase". This describes whether the coordinates for `signal` 
+#' (`signalCoord`) are each a single base (e.g. as for DNA methylation)
+#' or a region/multiple bases (e.g. as for ATAC-seq). Different scoring
+#' options are available for each type of data. If "default" is given,
+#' the type of coordinates will be detected automatically.
 #' @param regionSet A genomic ranges (GRanges) object with regions corresponding
 #' to the same biological annotation. Must be from the same reference genome
 #' as the coordinates for the actual data/samples (signalCoord).
@@ -117,7 +123,7 @@ if (getRversion() >= "2.15.1") {
 #' @param verbose A "logical" object. Whether progress 
 #' of the function should be shown, one
 #' bar indicates the region set is completed. Useful when using 
-#' aggregateLoadings with 'apply' to do many region sets at a time.
+#' aggregateSignal with 'apply' to do many region sets at a time.
 #' @param overlapMethod A character object with the overlap method.
 #' "single" is the default method and is appropriate to use when the start and
 #' end coordinates of the genomic signal/original data included in the PCA are
@@ -136,10 +142,10 @@ if (getRversion() >= "2.15.1") {
 #' @return a data.table with one row and the following 
 #' columns: one column for each item of signalCol with names given
 #' by signalCol. These columns have scores for the region set for each PC.
-#' Other columns: signal_coverage (formerly cytosine_coverage) which
+#' Other columns: signalCoverage (formerly cytosine_coverage) which
 #' has number of cytosines that overlapped with regionSet (or in the general case, 
 #' coordinates from signalCoord that overlapped regionSet) 
-#' region_coverage which has number of regions from regionSet
+#' regionSetCoverage which has number of regions from regionSet
 #' that overlapped any coordinates from signalCoord, 
 #' total_region_number that has
 #' number of regions in regionSet, mean_region_size that has average
@@ -150,17 +156,18 @@ if (getRversion() >= "2.15.1") {
 #' data("brcaMCoord1")
 #' data("brcaLoadings1")
 #' data("esr1_chr1")
-#' rsScores <- aggregateLoadings(signal=brcaLoadings1, 
+#' rsScores <- aggregateSignal(signal=brcaLoadings1, 
 #'                                  signalCoord=brcaMCoord1, 
 #'                                  regionSet=esr1_chr1, 
 #'                                  signalCol=c("PC1", "PC2"), 
 #'                                  scoringMetric="regionMean")
 #' @export
 
-aggregateLoadings <- function(signal,
+aggregateSignal <- function(signal,
                               signalCoord,
                               regionSet,
                               signalCol = c("PC1", "PC2"),
+                              signalCoordType = "default",
                               scoringMetric = "regionMean",
                               verbose = FALSE,
                               overlapMethod = "single",
@@ -244,7 +251,7 @@ aggregateLoadings <- function(signal,
                                  regionSet = regionSet,
                                  calcCols= signalCol)
             loadAgMain <- as.data.table(loadAgMain)
-            setnames(loadAgMain, c("signal_coverage", "regionSet_coverage"),
+            setnames(loadAgMain, c("signalCoverage", "regionSetCoverage"),
                     c("numCpGsOverlapping", "numRegionsOverlapping"))
             
         } else if (overlapMethod == "unweightedMean") {
@@ -254,7 +261,7 @@ aggregateLoadings <- function(signal,
                                  regionSet = regionSet,
                                  calcCols= signalCol)
             loadAgMain <- as.data.table(loadAgMain)
-            setnames(loadAgMain, c("signal_coverage", "regionSet_coverage"),
+            setnames(loadAgMain, c("signalCoverage", "regionSetCoverage"),
                     c("numCpGsOverlapping", "numRegionsOverlapping"))
 
         } else {
@@ -273,14 +280,14 @@ aggregateLoadings <- function(signal,
         if (is.null(loadAgMain)) {
             results <- as.data.table(t(rep(NA, length(signalCol))))
             setnames(results, signalCol)
-            results[, signal_coverage := 0]
-            results[, region_coverage := 0]
+            results[, signalCoverage := 0]
+            results[, regionSetCoverage := 0]
             results[, total_region_number := numOfRegions]
             results[, mean_region_size := round(mean(width(regionSet)), 1)]
         } else {
             results <- loadAgMain[, .SD, .SDcols = signalCol]
-            results[, signal_coverage := loadAgMain[, .SD, .SDcols = "numCpGsOverlapping"]]
-            results[, region_coverage := loadAgMain[, .SD, .SDcols = "numRegionsOverlapping"]]
+            results[, signalCoverage := loadAgMain[, .SD, .SDcols = "numCpGsOverlapping"]]
+            results[, regionSetCoverage := loadAgMain[, .SD, .SDcols = "numRegionsOverlapping"]]
             results[, total_region_number := numOfRegions]
             results[, mean_region_size := round(mean(width(regionSet)), 1)]
         }
@@ -294,8 +301,8 @@ aggregateLoadings <- function(signal,
         if (is.null(loadMetrics)) {
             results <- as.data.table(t(rep(NA, length(signalCol))))
             setnames(results, signalCol)
-            results[, signal_coverage := 0]
-            results[, region_coverage := 0]
+            results[, signalCoverage := 0]
+            results[, regionSetCoverage := 0]
             results[, total_region_number := numOfRegions]
             results[, mean_region_size := round(mean(width(regionSet)), 1)]
         } else {
@@ -307,8 +314,8 @@ aggregateLoadings <- function(signal,
             # add information about degree of overlap
             results <- cbind(results, 
                              loadMetrics[1, .SD, 
-                                         .SDcols = c("signal_coverage", 
-                                                     "region_coverage", 
+                                         .SDcols = c("signalCoverage", 
+                                                     "regionSetCoverage", 
                                                      "total_region_number", 
                                                      "mean_region_size")]) 
         }
@@ -327,8 +334,8 @@ aggregateLoadings <- function(signal,
         if (is.null(loadMetrics)) {
             results <- as.data.table(t(rep(NA, length(signalCol))))
             setnames(results, signalCol)
-            results[, signal_coverage := 0]
-            results[, region_coverage := 0]
+            results[, signalCoverage := 0]
+            results[, regionSetCoverage := 0]
             results[, total_region_number := numOfRegions]
             results[, mean_region_size := round(mean(width(regionSet)), 1)]
         } else {
@@ -339,12 +346,12 @@ aggregateLoadings <- function(signal,
             # mean difference
             # error if numCpGsOverlapping > (1/2) * totalCpGs
             meanDiff <- (loadMetrics$mean_OL - loadMetrics$mean_nonOL) / 
-                (sdPool * sqrt((1 / loadMetrics$signal_coverage) - (1 / (totalCpGs - loadMetrics$signal_coverage))))
+                (sdPool * sqrt((1 / loadMetrics$signalCoverage) - (1 / (totalCpGs - loadMetrics$signalCoverage))))
             results <- as.data.table(t(meanDiff))
             colnames(results) <- loadMetrics$testCol
             
             # add information about degree of overlap
-            results <- cbind(results, loadMetrics[1, .SD, .SDcols = c("signal_coverage", "region_coverage", "total_region_number", "mean_region_size")]) 
+            results <- cbind(results, loadMetrics[1, .SD, .SDcols = c("signalCoverage", "regionSetCoverage", "total_region_number", "mean_region_size")]) 
          }
         
         
@@ -360,8 +367,8 @@ aggregateLoadings <- function(signal,
                 results <- as.data.table(t(rep(NA, length(signalCol) * 2)))
                 setnames(results, paste0(rep(signalCol, each=2), 
                                          c("_low", "_high")))
-                results[, signal_coverage := 0]
-                results[, region_coverage := 0]
+                results[, signalCoverage := 0]
+                results[, regionSetCoverage := 0]
                 results[, total_region_number := numOfRegions]
                 results[, mean_region_size := round(mean(width(regionSet)), 1)]
             } else {
@@ -377,8 +384,8 @@ aggregateLoadings <- function(signal,
             if (is.null(wRes)) {
                 results <- as.data.table(t(rep(NA, length(signalCol))))
                 setnames(results, signalCol)
-                results[, signal_coverage := 0]
-                results[, region_coverage := 0]
+                results[, signalCoverage := 0]
+                results[, regionSetCoverage := 0]
                 results[, total_region_number := numOfRegions]
                 results[, mean_region_size := round(mean(width(regionSet)), 1)]
             } else {
@@ -422,6 +429,12 @@ aggregateLoadings <- function(signal,
 #' (each item/row in signalCoord corresponds to a row in `signal`).
 #' If a data.frame, must have chr and start columns.
 #' If end is not included, start coordinate will be used for calculations.
+#' @param signalCoordType character. Can be "default", "singleBase", or 
+#' "multiBase". This describes whether the coordinates for `signal` 
+#' (`signalCoord`) are each a single base (e.g. as for DNA methylation)
+#' or a region/multiple bases (e.g. as for ATAC-seq). Different scoring
+#' options are available for each type of data. If "default" is given,
+#' the type of coordinates will be detected automatically.
 #' @param GRList GRangesList object. Each list item is 
 #' a distinct region set to test (region set: regions that correspond to 
 #' the same biological annotation). The region set database.
@@ -479,10 +492,10 @@ aggregateLoadings <- function(signal,
 #' with score for that PC for a given region set (specific score depends
 #' on "scoringMetric" parameter). 
 #' Rows will be in the same order as region sets in GRList
-#' "signal_coverage" column has number of cytosines (or regions) that 
+#' "signalCoverage" column has number of cytosines (or regions) that 
 #' overlapped with the given region set (or in the general case, 
 #' coordinates from signalCoord that overlapped regionSet).
-#' "region_coverage" column has number of regions 
+#' "regionSetCoverage" column has number of regions 
 #' that overlapped any coordinates from signalCoord.
 #' "total_region_number" column has total number of regions. 
 #' "mean_region_size" has average region size (average of all regions,
@@ -505,6 +518,7 @@ runCOCOA <- function(signal,
                      signalCoord,
                      GRList,
                      signalCol = c("PC1", "PC2"),
+                     signalCoordType = "default",
                      scoringMetric = "regionMean",
                      verbose = TRUE,
                      overlapMethod="single",
@@ -550,12 +564,21 @@ runCOCOA <- function(signal,
     
     #################################################################
     
+    # detect signalCoordType
+    if (signalCoordType == "default") {
+        if (all(start(signalCoord) == end(signalCoord)) {
+            signalCoordType <- "singleBase" 
+        } else {
+            signalCoordType <- "multiBase"
+        }
+    }
     
     # apply over the list of region sets
     resultsList <- lapplyAlias(GRList,
-                               function(x) aggregateLoadings(
+                               function(x) aggregateSignal(
                                 signal = signal,
                                 signalCoord = coordinateDT,
+                                signalCoordType = signalCoordType,
                                 regionSet = x,
                                 signalCol = signalCol,
                                 scoringMetric = scoringMetric,
@@ -651,14 +674,14 @@ runCOCOA <- function(signal,
 #' data("brcaLoadings1")
 #' data("esr1_chr1")
 #' esr1_chr1_expanded <- resize(esr1_chr1, 14000, fix="center")
-#' getLoadingProfile(signal=brcaLoadings1, 
+#' getMetaRegionProfile(signal=brcaLoadings1, 
 #'                     signalCoord=brcaMCoord1, 
 #'                     regionSet=esr1_chr1_expanded, 
 #'                     signalCol=c("PC1", "PC2"), 
 #'                     binNum=25)
 #' @export
 
-getLoadingProfile <- function(signal, signalCoord, regionSet,
+getMetaRegionProfile <- function(signal, signalCoord, regionSet,
                     signalCol = c("PC1", "PC2"), binNum = 25,
                     verbose=TRUE,  
                     overlapMethod = "single", absVal=TRUE) {
@@ -1581,9 +1604,9 @@ signalOLMetrics <- function(dataDT,
     
     # get info on degree of overlap
     # number of CpGs that overlap
-    signal_coverage <- length(unique(olCpG))
+    signalCoverage <- length(unique(olCpG))
     # number of regions that overlap
-    region_coverage <- length(unique(queryHits(OL)))
+    regionSetCoverage <- length(unique(queryHits(OL)))
     
     
     
@@ -1625,8 +1648,8 @@ signalOLMetrics <- function(dataDT,
     metricDT <- cbind(data.table(testCol=signalCol),
                       olResults,
                       nonOLResults,
-                      data.table(signal_coverage,
-                                 region_coverage,
+                      data.table(signalCoverage,
+                                 regionSetCoverage,
                                  total_region_number,
                                  mean_region_size))
     
@@ -1680,9 +1703,9 @@ rsWilcox <- function(dataDT,
     
     # get info on degree of overlap
     # number of CpGs that overlap
-    signal_coverage   <- length(unique(olCpG))
+    signalCoverage   <- length(unique(olCpG))
     # number of regions that overlap
-    region_coverage   <- length(unique(queryHits(OL)))
+    regionSetCoverage   <- length(unique(queryHits(OL)))
     
 
     
@@ -1698,8 +1721,8 @@ rsWilcox <- function(dataDT,
         
         names(confIntervals) <- paste0(rep(signalCol, each=2), c("_low", "_high"))
         wRes <- data.frame(t(confIntervals),
-                           signal_coverage,
-                           region_coverage,
+                           signalCoverage,
+                           regionSetCoverage,
                            total_region_number,
                            mean_region_size)        
             
@@ -1709,8 +1732,8 @@ rsWilcox <- function(dataDT,
         pVals <- vapply(X = signalCol, FUN = function(x) wilcox.test(x = as.numeric(as.matrix(dataDT[olCpG, x, with=FALSE])),
                                                                       y = as.numeric(as.matrix(dataDT[nonOLCpG, x, with=FALSE])), ...)$p.value, 1)
         wRes <- data.frame(t(pVals),
-                           signal_coverage,
-                           region_coverage,
+                           signalCoverage,
+                           regionSetCoverage,
                            total_region_number,
                            mean_region_size)
     }
@@ -1725,9 +1748,9 @@ rsWilcox <- function(dataDT,
 # @param regionSet GRanges object. The region set to score.
 # @param calcCols character object. Column names. A weighted sum will be done 
 # for each of these columns (columns should be numeric).
-# @value Returns data.frame with columns 'calcCols', signal_coverage col has
+# @value Returns data.frame with columns 'calcCols', signalCoverage col has
 # number of signalGR regions that overlapped with any regionSet regions, 
-# regionSet_coverage has the sum of all proportion overlaps of regions from 
+# regionSetCoverage has the sum of all proportion overlaps of regions from 
 # signalGR with regionSet (regionSet region is denominator)
 # containing weighted mean for each col.
 # Returns NULL if there is no overlap between signalGR and regionSet
@@ -1759,8 +1782,8 @@ regionOLWeightedMean <- function(signalDT, signalGR,
     # names(weightedAve) <- colsOfInterest
     
     # add columns for coverage info
-    weightedAve$signal_coverage = length(unique(queryHits(hits)))
-    weightedAve$regionSet_coverage = denom
+    weightedAve$signalCoverage = length(unique(queryHits(hits)))
+    weightedAve$regionSetCoverage = denom
 
     return(weightedAve)
 }
@@ -1772,9 +1795,9 @@ regionOLWeightedMean <- function(signalDT, signalGR,
 # @param regionSet GRanges object. The region set to score.
 # @param calcCols character object. Column names. A mean will be calculated for 
 # each of these columns (columns should be numeric).
-# @value Returns data.frame with columns 'calcCols', signal_coverage col has
+# @value Returns data.frame with columns 'calcCols', signalCoverage col has
 # number of signalGR regions that overlapped with any regionSet regions, 
-# regionSet_coverage has the number of regions from 
+# regionSetCoverage has the number of regions from 
 # signalGR that overlapped with regionSet
 # Returns NULL if there is no overlap between signalGR and regionSet
 
@@ -1794,8 +1817,8 @@ regionOLMean <- function(signalDT, signalGR, regionSet, calcCols) {
     signalAve <- as.data.frame(t(colMeans(signalDT[,..calcCols])))
 
     # add columns for coverage info
-    signalAve$signal_coverage    <- length(unique(queryHits(hits)))
-    signalAve$regionSet_coverage <- length(unique(subjectHits(hits)))
+    signalAve$signalCoverage    <- length(unique(queryHits(hits)))
+    signalAve$regionSetCoverage <- length(unique(subjectHits(hits)))
 
     return(signalAve)
 }
