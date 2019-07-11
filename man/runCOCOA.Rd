@@ -5,8 +5,9 @@
 \title{Do COCOA with many region sets}
 \usage{
 runCOCOA(signal, signalCoord, GRList, signalCol = c("PC1", "PC2"),
-  scoringMetric = "regionMean", verbose = TRUE,
-  overlapMethod = "single", wilcox.conf.int = FALSE, absVal = TRUE)
+  signalCoordType = "default", scoringMetric = "regionMean",
+  verbose = TRUE, overlapMethod = "single", wilcox.conf.int = FALSE,
+  absVal = TRUE)
 }
 \arguments{
 \item{signal}{matrix of loadings (the coefficients of 
@@ -30,6 +31,13 @@ as the coordinates for the actual data/samples (signalCoord).}
 
 \item{signalCol}{A character vector with principal components to
 include. eg c("PC1", "PC2") These should be column names of signal.}
+
+\item{signalCoordType}{character. Can be "default", "singleBase", or 
+"multiBase". This describes whether the coordinates for `signal` 
+(`signalCoord`) are each a single base (e.g. as for DNA methylation)
+or a region/multiple bases (e.g. as for ATAC-seq). Different scoring
+options are available for each type of data. If "default" is given,
+the type of coordinates will be detected automatically.}
 
 \item{scoringMetric}{A character object with the scoring metric. 
 "regionMean" is a weighted

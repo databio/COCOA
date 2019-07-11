@@ -566,7 +566,7 @@ runCOCOA <- function(signal,
     
     # detect signalCoordType
     if (signalCoordType == "default") {
-        if (all(start(signalCoord) == end(signalCoord)) {
+        if (all(start(signalCoord) == end(signalCoord))) {
             signalCoordType <- "singleBase" 
         } else {
             signalCoordType <- "multiBase"
