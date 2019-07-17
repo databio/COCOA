@@ -6,7 +6,8 @@
 along principal component axis}
 \usage{
 signalAlongPC(genomicSignal, signalCoord, regionSet, sampleScores,
-  orderByCol = "PC1", cluster_columns = FALSE, cluster_rows = FALSE,
+  orderByCol = "PC1", topXVariables = NULL, variableScores = NULL,
+  cluster_columns = FALSE, cluster_rows = FALSE,
   row_title = "Sample", column_title = "Genomic Signal",
   column_title_side = "bottom", name = "Genomic Signal Value",
   col = c("blue", "#EEEEEE", "red"), ...)
@@ -39,6 +40,15 @@ These same sample names must be column names of genomicSignal}
 \item{orderByCol}{a character object. PC to order samples by 
 (order rows of heatmap by PC score, from high to low score). 
 Must be the name of a column in sampleScores.}
+
+\item{topXVariables}{numeric. The number of variables from genomicSignal
+to plot. The variables with the highest scores according to 
+variableScores will be plotted. Can help to reduce the size of the plot.}
+
+\item{variableScores}{numeric. A vector that has a numeric score for
+each variable in genomicSignal (length(variableScores) should equal
+nrow(genomicSignal)). Only used if topXVariables is given. The highest
+`topXVariables` will be plotted.}
 
 \item{cluster_columns}{"logical" object, whether to cluster columns 
 (the genomic signal, eg DNA methylation values for each CpG).}
