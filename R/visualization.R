@@ -87,17 +87,17 @@
 #' @export
 # previously called rsMethylHeatmap
 signalAlongPC <- function(genomicSignal, signalCoord, regionSet, 
-                            sampleScores, orderByCol="PC1", topXVariables=NULL, 
-                            variableScores=NULL,
-                            cluster_columns = FALSE, 
-                            cluster_rows = FALSE, 
-                            row_title = "Sample",
-                            column_title = "Genomic Signal", 
-                            column_title_side = "bottom",
-                            name = "Genomic Signal Value",
-                            col = c("blue", "#EEEEEE", "red"), ...) {
+                          sampleScores, orderByCol="PC1", topXVariables=NULL, 
+                          variableScores=NULL,
+                          cluster_columns = FALSE, 
+                          cluster_rows = FALSE, 
+                          row_title = "Sample",
+                          column_title = "Genomic Signal", 
+                          column_title_side = "bottom",
+                          name = "Genomic Signal Value",
+                          col = c("blue", "#EEEEEE", "red"), ...) {
     
-
+    
     if (!(is(genomicSignal, "matrix") || is(genomicSignal, "data.frame"))) {
         stop("genomicSignal should be a matrix or data.frame. Check object class.")
     }
@@ -121,15 +121,15 @@ signalAlongPC <- function(genomicSignal, signalCoord, regionSet,
     # to column names of genomicSignal)
     if (sum(row.names(sampleScores) %in% colnames(genomicSignal)) < 2) {
         stop(cleanws("Sample names on pca data (row names) 
-                      must match sample names on methylation
-                             (column names)"))
+                     must match sample names on methylation
+                     (column names)"))
     }
     
     
     if (!is(regionSet, "GRanges")) {
         stop("regionSet should be a GRanges object. Check object class.")
     }
-   
+    
     if (!is.null(topXVariables)) {
         if (is.null(variableScores)) {
             stop("To plot the topXVariables, variableScores must be given.")
@@ -147,6 +147,14 @@ signalAlongPC <- function(genomicSignal, signalCoord, regionSet,
     # regionHitInd <- sort(unique(queryHits(olList)))
     cytosineHitInd <- sort(unique(subjectHits(olList)))
     thisRSMData <- t(genomicSignal[cytosineHitInd, ])
+    nRegion = length(unique(queryHits(olList)))
+    # get top variables
+    if (!is.null(topXVariables)) {
+        if (nRegion > topXVariables) {
+            # select top variables
+            thisRSMData <- thisRSMData[, order(variableScores[cytosineHitInd], decreasing = TRUE)][, 1:topXVariables]
+        }
+    }
     subject_ID <- row.names(thisRSMData)
     # centeredPCAMeth <- t(apply(t(genomicSignal), 1, 
     #                            function(x) x - pcaData$center)) #center first 
@@ -155,16 +163,11 @@ signalAlongPC <- function(genomicSignal, signalCoord, regionSet,
     # pcaData must have subject_ID as row name
     thisRSMData <- thisRSMData[names(sort(sampleScores[, orderByCol], 
                                           decreasing = TRUE)), ]
-    nRegion = length(unique(queryHits(olList)))
-    message(paste0("Number of cytosines: ", ncol(thisRSMData)))
+    
+    message(paste0("Number of cytosines: ", length(cytosineHitInd)))
     message(paste0("Number of regions: ", nRegion))
     
-    if (!is.null(topXVariables)) {
-        if (nRegion > topXVariables) {
-            # select top regions
-            thisRSMData <- thisRSMData[, sort(variableScores, decreasing = TRUE)][, 1:topXVariables]
-        }
-    }
+    
     
     ComplexHeatmap::Heatmap(thisRSMData, 
                             col = col,
