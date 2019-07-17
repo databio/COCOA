@@ -46,6 +46,13 @@
 #' @param orderByCol a character object. PC to order samples by 
 #' (order rows of heatmap by PC score, from high to low score). 
 #' Must be the name of a column in sampleScores.
+#' @param topXVariables numeric. The number of variables from genomicSignal
+#' to plot. The variables with the highest scores according to 
+#' variableScores will be plotted. Can help to reduce the size of the plot.
+#' @param variableScores numeric. A vector that has a numeric score for
+#' each variable in genomicSignal (length(variableScores) should equal
+#' nrow(genomicSignal)). Only used if topXVariables is given. The highest
+#' `topXVariables` will be plotted.
 #' @param cluster_rows "logical" object, whether rows should be clustered. 
 #' This should be kept as FALSE to keep the correct ranking of 
 #' samples/observations according to their PC score.
@@ -80,7 +87,9 @@
 #' @export
 # previously called rsMethylHeatmap
 signalAlongPC <- function(genomicSignal, signalCoord, regionSet, 
-                            sampleScores, orderByCol="PC1", cluster_columns = FALSE, 
+                            sampleScores, orderByCol="PC1", topXVariables=NULL, 
+                            variableScores=NULL,
+                            cluster_columns = FALSE, 
                             cluster_rows = FALSE, 
                             row_title = "Sample",
                             column_title = "Genomic Signal", 
@@ -121,6 +130,15 @@ signalAlongPC <- function(genomicSignal, signalCoord, regionSet,
         stop("regionSet should be a GRanges object. Check object class.")
     }
    
+    if (!is.null(topXVariables)) {
+        if (is.null(variableScores)) {
+            stop("To plot the topXVariables, variableScores must be given.")
+        }
+        if (!(length(variableScores) == nrow(genomicSignal))) {
+            stop("length(variableScores) should equal nrow(genomicSignal)")
+        }
+        
+    }
     
     
     
@@ -137,8 +155,17 @@ signalAlongPC <- function(genomicSignal, signalCoord, regionSet,
     # pcaData must have subject_ID as row name
     thisRSMData <- thisRSMData[names(sort(sampleScores[, orderByCol], 
                                           decreasing = TRUE)), ]
+    nRegion = length(unique(queryHits(olList)))
     message(paste0("Number of cytosines: ", ncol(thisRSMData)))
-    message(paste0("Number of regions: ", length(unique(queryHits(olList)))))
+    message(paste0("Number of regions: ", nRegion))
+    
+    if (!is.null(topXVariables)) {
+        if (nRegion > topXVariables) {
+            # select top regions
+            thisRSMData <- thisRSMData[, sort(variableScores, decreasing = TRUE)][, 1:topXVariables]
+        }
+    }
+    
     ComplexHeatmap::Heatmap(thisRSMData, 
                             col = col,
                             row_title = row_title,
