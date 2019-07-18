@@ -159,7 +159,7 @@ test_that("aggregateSignal, scoring metrics, and runCOCOA", {
     ################## test runCOCOA with meanDiff test data
     
     coordinateDTW2 <- copy(coordinateDTW)
-    coordinateDTW2$end <- coordinateDTW$end  + 1 # so there will be an actual range
+    coordinateDTW2$end <- coordinateDTW$end
     # make sure it works if there is metadata in GRanges object
     extraCol <- rep(0, nrow(coordinateDTW2))
     signalCoordW2 <- COCOA:::dtToGr(coordinateDTW2)
