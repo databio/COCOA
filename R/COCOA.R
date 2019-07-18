@@ -214,7 +214,7 @@ aggregateSignal <- function(signal,
     ######## check that scoringMetric is appropriate
     
     if (!(scoringMetric %in% c("default", "regionMean", "simpleMean", 
-                               "meanDiff", "rankSum"))) {
+                               "meanDiff", "rankSum", "proportionWeightedMean"))) {
         stop(cleanws("scoringMetric was not recognized. 
                       Check spelling and available options."))
     }
@@ -636,7 +636,7 @@ runCOCOA <- function(signal,
     ######## check that scoringMetric is appropriate
     
     if (!(scoringMetric %in% c("default", "regionMean", "simpleMean", 
-                               "meanDiff", "rankSum"))) {
+                               "meanDiff", "rankSum", "proportionWeightedMean"))) {
         stop(cleanws("scoringMetric was not recognized. 
                       Check spelling and available options."))
     }
