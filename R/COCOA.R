@@ -92,22 +92,41 @@ if (getRversion() >= "2.15.1") {
 #' (`signalCoord`) are each a single base (e.g. as for DNA methylation)
 #' or a region/multiple bases (e.g. as for ATAC-seq). Different scoring
 #' options are available for each type of data. If "default" is given,
-#' the type of coordinates will be detected automatically.
+#' the type of coordinates will be detected automatically. If each
+#' coordinate start value equals the coordinate end value, "singleBase"
+#' will be used. Otherwise, "multiBase" will be used. 
 #' @param regionSet A genomic ranges (GRanges) object with regions corresponding
 #' to the same biological annotation. Must be from the same reference genome
 #' as the coordinates for the actual data/samples (signalCoord).
 #' @param signalCol A character vector with principal components to 
 #' include. eg c("PC1", "PC2") These should be column names of signal.
-#' @param scoringMetric A character object with the scoring metric. 
+#' @param scoringMetric A character object with the scoring metric.
+#' There are different scoring metrics available for 
+#' signalCoordType="singleBase" vs  signalCoordType="multiBase".
+#' For "singleBase", the available scoring methods are "regionMean", 
+#' "simpleMean", and "rankSum". The default method is "regionMean".
+#' For "multiBase", the scoring methods are "proportionWeightedMean" and 
+#' "simpleMean". The default is "proportionWeightedMean".
 #' "regionMean" is a weighted
-#' average of the absolute value of the loadings
-#' with no normalization (recommended). First loadings are
-#' averaged within each region, then all the regions are averaged. With
+#' average of the signal, weighted by region (absolute value of signal 
+#' if absVal=TRUE). First the signal is
+#' averaged within each regionSet region, 
+#' then all the regions are averaged. With
 #' "regionMean" score, be cautious in interpretation for
 #' region sets with low number of regions that overlap signalCoord. 
 #' The "simpleMean"
-#' method is just the unweighted average of all absolute loadings that
-#' overlap the given region set. 
+#' method is just the unweighted average of all (absolute) signal values that
+#' overlap the given region set. For multiBase data, this includes
+#' signal regions that overlap a regionSet region at all (1 base
+#' overlap or more) and the signal for each overlapping region is
+#' given the same weight for the average regardless of how much it overlaps. 
+#' "proportionWeightedMean" is a weighted average of all signalCoord 
+#' regions that overlap with regionSet regions. For each signalCoord region
+#' that overlaps with a regionSet region, we calculate what proportion
+#' of the regionSet region is covered. Then this proportion is used to
+#' weight the signal value when calculating the mean. 
+#' The denominator of the mean
+#' is the sum of all the proportion overlaps. 
 #' Wilcoxon rank sum test ("rankSum") is also supported but is
 #' skewed toward ranking large region sets highly and is
 #' significantly slower than the "regionMean" method. 
@@ -118,16 +137,10 @@ if (getRversion() >= "2.15.1") {
 #' It is a one sided test, with the alternative hypothesis
 #' that the loadings in the region set will be greater than
 #' the loadings not in the region set.
-# @param pcLoadAv The average absolute loading value for each PC. Will
-# significantly speed up computation if this is given.
 #' @param verbose A "logical" object. Whether progress 
 #' of the function should be shown, one
 #' bar indicates the region set is completed. Useful when using 
 #' aggregateSignal with 'apply' to do many region sets at a time.
-#' @param overlapMethod A character object with the overlap method.
-#' "single" is the default method and is appropriate to use when the start and
-#' end coordinates of the genomic signal/original data included in the PCA are
-#' the same.
 #' @param wilcox.conf.int logical. Only applies when using "rankSum" scoring
 #' method. returns a 95% confidence interval from the Wilcoxon rank sum test
 #' instead of p value.
@@ -168,9 +181,8 @@ aggregateSignal <- function(signal,
                               regionSet,
                               signalCol = c("PC1", "PC2"),
                               signalCoordType = "default",
-                              scoringMetric = "regionMean",
+                              scoringMetric = "default",
                               verbose = FALSE,
-                              overlapMethod = "single",
                               wilcox.conf.int=FALSE, 
                               absVal=TRUE) {
     
@@ -201,10 +213,16 @@ aggregateSignal <- function(signal,
     
     ######## check that scoringMetric is appropriate
     
-    if (!(scoringMetric %in% c("regionMean", "simpleMean", 
+    if (!(scoringMetric %in% c("default", "regionMean", "simpleMean", 
                                "meanDiff", "rankSum"))) {
         stop(cleanws("scoringMetric was not recognized. 
                       Check spelling and available options."))
+    }
+    
+    ###### check that signalCoordType is appropriate
+    if (!(signalCoordType %in% c("default", "singleBase", "multiBase"))) {
+        stop(cleanws("signalCoordType not recognized. 
+                         Check spelling/capitalization."))
     }
     
     #######
@@ -232,9 +250,33 @@ aggregateSignal <- function(signal,
                 signalCoordType <- "multiBase"
             }
         }
-        
     }
     
+    # if "default" scoring method is given, choose based on signalCoordType
+    if (scoringMetric == "default") {
+        if (signalCoordType == "singleBase") {
+            scoringMetric <- "regionMean"   
+        } else if (signalCoordType == "multiBase") {
+            scoringMetric <- "proportionWeightedMean"
+        } else {
+            stop(cleanws("signalCoordType not recognized. 
+                         Check spelling/capitalization."))
+        }
+    }
+    
+    # make sure that scoringMetric is consistent with signalCoordType
+    if (signalCoordType == "singleBase") {
+        if (!(scoringMetric %in% c("regionMean", "simpleMean", 
+                                   "rankSum", "meanDiff"))) {
+            stop("The scoringMetric you selected is not available for
+                 this data's signalCoordType")
+        }
+    } else if (signalCoordType == "multiBase") {
+        if (!(scoringMetric %in% c("proportionWeightedMean", "simpleMean"))) {
+            stop("The scoringMetric you selected is not available for
+                 this data's signalCoordType")
+        }
+    }
     
     numOfRegions <- length(regionSet)
     totalCpGs    <- nrow(signal)
@@ -263,44 +305,159 @@ aggregateSignal <- function(signal,
     aggrCommand <- buildJ(signalCol, 
                                 rep("mean", length(signalCol)))
     
-    # do the actual aggregation
-    if (scoringMetric == "regionMean") {
+
+    
+    if (signalCoordType == "singleBase") {
+        # do the actual aggregation
+        if (scoringMetric == "regionMean") {
+            
+            
+                # previously used BSAggregate from RGenomeUtils but now using local, 
+                # modified copy
+                loadAgMain <- BSAggregate(BSDT = loadingDT, 
+                                          regionsGRL = GRangesList(regionSet),
+                                          jExpr = aggrCommand,
+                                          byRegionGroup = TRUE,
+                                          splitFactor = NULL,
+                                          returnOLInfo = TRUE)
+            
+            # if no cytosines from loadings were included in regionSet, result is NA
+            if (is.null(loadAgMain)) {
+                results <- as.data.table(t(rep(NA, length(signalCol))))
+                setnames(results, signalCol)
+                results[, signalCoverage := 0]
+                results[, regionSetCoverage := 0]
+                results[, total_region_number := numOfRegions]
+                results[, mean_region_size := round(mean(width(regionSet)), 1)]
+            } else {
+                results <- loadAgMain[, .SD, .SDcols = signalCol]
+                results[, signalCoverage := loadAgMain[, .SD, .SDcols = "numCpGsOverlapping"]]
+                results[, regionSetCoverage := loadAgMain[, .SD, .SDcols = "numRegionsOverlapping"]]
+                results[, total_region_number := numOfRegions]
+                results[, mean_region_size := round(mean(width(regionSet)), 1)]
+            }
+        } else if (scoringMetric == "simpleMean") {
+            # average of loadings for all CpGs within region set
+            loadMetrics <- signalOLMetrics(dataDT=loadingDT, regionSet=regionSet, 
+                                           signalCol = signalCol,
+                                           metrics="mean", 
+                                           alsoNonOLMet=FALSE)
+            if (is.null(loadMetrics)) {
+                results <- as.data.table(t(rep(NA, length(signalCol))))
+                setnames(results, signalCol)
+                results[, signalCoverage := 0]
+                results[, regionSetCoverage := 0]
+                results[, total_region_number := numOfRegions]
+                results[, mean_region_size := round(mean(width(regionSet)), 1)]
+            } else {
+                # simple mean 
+                results <- as.data.table(t(loadMetrics$mean_OL))
+                colnames(results) <- loadMetrics$testCol
+                
+                # add information about degree of overlap
+                results <- cbind(results, 
+                                 loadMetrics[1, .SD, 
+                                             .SDcols = c("signalCoverage", 
+                                                         "regionSetCoverage", 
+                                                         "total_region_number", 
+                                                         "mean_region_size")]) 
+            }
+        } else if (scoringMetric == "meanDiff") {
+            # if (is.null(pcLoadAv)) {
+            #     # calculate (should already be absolute)
+            #     pcLoadAv <- apply(X = loadingDT[, signalCol, with=FALSE], 
+            #                       MARGIN = 2, FUN = mean)
+            # }
+            loadMetrics <- signalOLMetrics(dataDT=loadingDT, regionSet=regionSet,
+                                           signalCol = signalCol,
+                                           metrics=c("mean", "sd"), 
+                                           alsoNonOLMet=TRUE)
+            if (is.null(loadMetrics)) {
+                results <- as.data.table(t(rep(NA, length(signalCol))))
+                setnames(results, signalCol)
+                results[, signalCoverage := 0]
+                results[, regionSetCoverage := 0]
+                results[, total_region_number := numOfRegions]
+                results[, mean_region_size := round(mean(width(regionSet)), 1)]
+            } else {
+                # calculate mean difference
+                # pooled standard deviation
+                sdPool <- sqrt((loadMetrics$sd_OL^2 + loadMetrics$sd_nonOL^2) / 2)
+                
+                # mean difference
+                # error if numCpGsOverlapping > (1/2) * totalCpGs
+                meanDiff <- (loadMetrics$mean_OL - loadMetrics$mean_nonOL) / 
+                    (sdPool * sqrt((1 / loadMetrics$signalCoverage) - (1 / (totalCpGs - loadMetrics$signalCoverage))))
+                results <- as.data.table(t(meanDiff))
+                colnames(results) <- loadMetrics$testCol
+                
+                # add information about degree of overlap
+                results <- cbind(results, loadMetrics[1, .SD, .SDcols = c("signalCoverage", "regionSetCoverage", "total_region_number", "mean_region_size")]) 
+            }
+            
+            
+        } else if (scoringMetric == "rankSum") {
+            
+            if (wilcox.conf.int) {
+                # returns confidence interval
+                wRes <- rsWilcox(dataDT = loadingDT, regionSet=regionSet, 
+                                 signalCol = signalCol, 
+                                 conf.int = wilcox.conf.int)
+                
+                if (is.null(wRes)) {
+                    results <- as.data.table(t(rep(NA, length(signalCol) * 2)))
+                    setnames(results, paste0(rep(signalCol, each=2), 
+                                             c("_low", "_high")))
+                    results[, signalCoverage := 0]
+                    results[, regionSetCoverage := 0]
+                    results[, total_region_number := numOfRegions]
+                    results[, mean_region_size := round(mean(width(regionSet)), 1)]
+                } else {
+                    results <- as.data.table(wRes)
+                }    
+                
+            } else {
+                # returns p value
+                # one sided test since I took the absolute value of the loadings 
+                wRes <- rsWilcox(dataDT = loadingDT, regionSet=regionSet, 
+                                 signalCol = signalCol, alternative="greater")
+                
+                if (is.null(wRes)) {
+                    results <- as.data.table(t(rep(NA, length(signalCol))))
+                    setnames(results, signalCol)
+                    results[, signalCoverage := 0]
+                    results[, regionSetCoverage := 0]
+                    results[, total_region_number := numOfRegions]
+                    results[, mean_region_size := round(mean(width(regionSet)), 1)]
+                } else {
+                    results <- as.data.table(wRes)
+                }    
+            }
+        }  
+    } else {
+
+        # signalCoordType == "multiBase"
+        # for ATAC-seq
+        if (scoringMetric == "proportionWeightedMean") {
+            loadAgMain <- regionOLWeightedMean(signalDT = loadingDT, 
+                                               signalGR = dtToGr(coordinateDT),
+                                               regionSet = regionSet,
+                                               calcCols= signalCol)
+            loadAgMain <- as.data.table(loadAgMain)
+            setnames(loadAgMain, c("signalCoverage", "regionSetCoverage"),
+                     c("numCpGsOverlapping", "numRegionsOverlapping"))
+        } else if (scoringMetric == "simpleMean") {
+            loadAgMain <- regionOLMean(signalDT = loadingDT, 
+                                       signalGR = dtToGr(coordinateDT),
+                                       regionSet = regionSet,
+                                       calcCols= signalCol)
+            loadAgMain <- as.data.table(loadAgMain)
+            setnames(loadAgMain, c("signalCoverage", "regionSetCoverage"),
+                     c("numCpGsOverlapping", "numRegionsOverlapping"))
+        }
 
         
-        # for ATAC-seq
-        if (overlapMethod == "proportionWeightedMean") {
-
-            loadAgMain <- regionOLWeightedMean(signalDT = loadingDT, 
-                                 signalGR = dtToGr(coordinateDT),
-                                 regionSet = regionSet,
-                                 calcCols= signalCol)
-            loadAgMain <- as.data.table(loadAgMain)
-            setnames(loadAgMain, c("signalCoverage", "regionSetCoverage"),
-                    c("numCpGsOverlapping", "numRegionsOverlapping"))
-            
-        } else if (overlapMethod == "unweightedMean") {
-
-            loadAgMain <- regionOLMean(signalDT = loadingDT, 
-                                 signalGR = dtToGr(coordinateDT),
-                                 regionSet = regionSet,
-                                 calcCols= signalCol)
-            loadAgMain <- as.data.table(loadAgMain)
-            setnames(loadAgMain, c("signalCoverage", "regionSetCoverage"),
-                    c("numCpGsOverlapping", "numRegionsOverlapping"))
-
-        } else {
-            # previously used BSAggregate from RGenomeUtils but now using local, 
-            # modified copy
-            loadAgMain <- BSAggregate(BSDT = loadingDT, 
-                                      regionsGRL = GRangesList(regionSet),
-                                      jExpr = aggrCommand,
-                                      byRegionGroup = TRUE,
-                                      splitFactor = NULL,
-                                      returnOLInfo = TRUE)
-        }
-                
-
-        # if no cytosines from loadings were included in regionSet, result is NA
+        # in the case of no overlaps
         if (is.null(loadAgMain)) {
             results <- as.data.table(t(rep(NA, length(signalCol))))
             setnames(results, signalCol)
@@ -315,112 +472,7 @@ aggregateSignal <- function(signal,
             results[, total_region_number := numOfRegions]
             results[, mean_region_size := round(mean(width(regionSet)), 1)]
         }
-    } else if (scoringMetric == "simpleMean") {
-        
-        # average of loadings for all CpGs within region set
-        loadMetrics <- signalOLMetrics(dataDT=loadingDT, regionSet=regionSet, 
-                                       signalCol = signalCol,
-                                       metrics="mean", 
-                                       alsoNonOLMet=FALSE)
-        if (is.null(loadMetrics)) {
-            results <- as.data.table(t(rep(NA, length(signalCol))))
-            setnames(results, signalCol)
-            results[, signalCoverage := 0]
-            results[, regionSetCoverage := 0]
-            results[, total_region_number := numOfRegions]
-            results[, mean_region_size := round(mean(width(regionSet)), 1)]
-        } else {
-            
-            # simple mean 
-            results <- as.data.table(t(loadMetrics$mean_OL))
-            colnames(results) <- loadMetrics$testCol
-            
-            # add information about degree of overlap
-            results <- cbind(results, 
-                             loadMetrics[1, .SD, 
-                                         .SDcols = c("signalCoverage", 
-                                                     "regionSetCoverage", 
-                                                     "total_region_number", 
-                                                     "mean_region_size")]) 
-        }
-        
-        
-    } else if (scoringMetric == "meanDiff") {
-        # if (is.null(pcLoadAv)) {
-        #     # calculate (should already be absolute)
-        #     pcLoadAv <- apply(X = loadingDT[, signalCol, with=FALSE], 
-        #                       MARGIN = 2, FUN = mean)
-        # }
-        loadMetrics <- signalOLMetrics(dataDT=loadingDT, regionSet=regionSet,
-                                       signalCol = signalCol,
-                                       metrics=c("mean", "sd"), 
-                                       alsoNonOLMet=TRUE)
-        if (is.null(loadMetrics)) {
-            results <- as.data.table(t(rep(NA, length(signalCol))))
-            setnames(results, signalCol)
-            results[, signalCoverage := 0]
-            results[, regionSetCoverage := 0]
-            results[, total_region_number := numOfRegions]
-            results[, mean_region_size := round(mean(width(regionSet)), 1)]
-        } else {
-            # calculate mean difference
-            # pooled standard deviation
-            sdPool <- sqrt((loadMetrics$sd_OL^2 + loadMetrics$sd_nonOL^2) / 2)
-            
-            # mean difference
-            # error if numCpGsOverlapping > (1/2) * totalCpGs
-            meanDiff <- (loadMetrics$mean_OL - loadMetrics$mean_nonOL) / 
-                (sdPool * sqrt((1 / loadMetrics$signalCoverage) - (1 / (totalCpGs - loadMetrics$signalCoverage))))
-            results <- as.data.table(t(meanDiff))
-            colnames(results) <- loadMetrics$testCol
-            
-            # add information about degree of overlap
-            results <- cbind(results, loadMetrics[1, .SD, .SDcols = c("signalCoverage", "regionSetCoverage", "total_region_number", "mean_region_size")]) 
-         }
-        
-        
-    } else if (scoringMetric == "rankSum"){
-        
-        if (wilcox.conf.int) {
-            # returns confidence interval
-            wRes <- rsWilcox(dataDT = loadingDT, regionSet=regionSet, 
-                             signalCol = signalCol, 
-                             conf.int = wilcox.conf.int)
-            
-            if (is.null(wRes)) {
-                results <- as.data.table(t(rep(NA, length(signalCol) * 2)))
-                setnames(results, paste0(rep(signalCol, each=2), 
-                                         c("_low", "_high")))
-                results[, signalCoverage := 0]
-                results[, regionSetCoverage := 0]
-                results[, total_region_number := numOfRegions]
-                results[, mean_region_size := round(mean(width(regionSet)), 1)]
-            } else {
-                results <- as.data.table(wRes)
-            }    
-            
-        } else {
-            # returns p value
-            # one sided test since I took the absolute value of the loadings 
-            wRes <- rsWilcox(dataDT = loadingDT, regionSet=regionSet, 
-                             signalCol = signalCol, alternative="greater")
-            
-            if (is.null(wRes)) {
-                results <- as.data.table(t(rep(NA, length(signalCol))))
-                setnames(results, signalCol)
-                results[, signalCoverage := 0]
-                results[, regionSetCoverage := 0]
-                results[, total_region_number := numOfRegions]
-                results[, mean_region_size := round(mean(width(regionSet)), 1)]
-            } else {
-                results <- as.data.table(wRes)
-            }    
-        }
-    } else {
-        stop(cleanws("scoringMetric was not recognized. 
-                      Check spelling and available options."))
     }
-    
     
     # signalOLMetrics() # make sure it works with no overlap
     if (verbose) {
@@ -458,7 +510,9 @@ aggregateSignal <- function(signal,
 #' (`signalCoord`) are each a single base (e.g. as for DNA methylation)
 #' or a region/multiple bases (e.g. as for ATAC-seq). Different scoring
 #' options are available for each type of data. If "default" is given,
-#' the type of coordinates will be detected automatically.
+#' the type of coordinates will be detected automatically. If each
+#' coordinate start value equals the coordinate end value, "singleBase"
+#' will be used. Otherwise, "multiBase" will be used. 
 #' @param GRList GRangesList object. Each list item is 
 #' a distinct region set to test (region set: regions that correspond to 
 #' the same biological annotation). The region set database.
@@ -466,16 +520,33 @@ aggregateSignal <- function(signal,
 #' as the coordinates for the actual data/samples (signalCoord).
 #' @param signalCol A character vector with principal components to  
 #' include. eg c("PC1", "PC2") These should be column names of signal.
-#' @param scoringMetric A character object with the scoring metric. 
+#' @param scoringMetric A character object with the scoring metric.
+#' There are different scoring metrics available for 
+#' signalCoordType="singleBase" vs  signalCoordType="multiBase".
+#' For "singleBase", the available scoring methods are "regionMean", 
+#' "simpleMean", and "rankSum". The default method is "regionMean".
+#' For "multiBase", the scoring methods are "proportionWeightedMean" and 
+#' "simpleMean". The default is "proportionWeightedMean".
 #' "regionMean" is a weighted
-#' average of the absolute value of the loadings
-#' with no normalization (recommended). First loadings are
-#' averaged within each region, then all the regions are averaged. With
+#' average of the signal, weighted by region (absolute value of signal 
+#' if absVal=TRUE). First the signal is
+#' averaged within each regionSet region, 
+#' then all the regions are averaged. With
 #' "regionMean" score, be cautious in interpretation for
 #' region sets with low number of regions that overlap signalCoord. 
 #' The "simpleMean"
-#' method is just the unweighted average of all absolute loadings that
-#' overlap the given region set. 
+#' method is just the unweighted average of all (absolute) signal values that
+#' overlap the given region set. For multiBase data, this includes
+#' signal regions that overlap a regionSet region at all (1 base
+#' overlap or more) and the signal for each overlapping region is
+#' given the same weight for the average regardless of how much it overlaps. 
+#' "proportionWeightedMean" is a weighted average of all signalCoord 
+#' regions that overlap with regionSet regions. For each signalCoord region
+#' that overlaps with a regionSet region, we calculate what proportion
+#' of the regionSet region is covered. Then this proportion is used to
+#' weight the signal value when calculating the mean. 
+#' The denominator of the mean
+#' is the sum of all the proportion overlaps. 
 #' Wilcoxon rank sum test ("rankSum") is also supported but is
 #' skewed toward ranking large region sets highly and is
 #' significantly slower than the "regionMean" method. 
@@ -489,18 +560,6 @@ aggregateSignal <- function(signal,
 #' @param verbose A "logical" object. Whether progress 
 #' of the function should be shown, one
 #' bar indicates the region set is completed.
-#' @param overlapMethod A character object with the overlap method.
-#' "single" is the default method and is appropriate to use when the start and
-#' end coordinates of the genomic signal/original data included in the PCA are
-#' the same.
-#' "unweightedMean" determines whether single, or multiple, genomic signal(s) 
-#' that span(s) more than a single position overlap(s) with a region set 
-#' location. This method determines the unweighted mean signal of any genomic 
-#' signal that overlaps in any amount with a region set region.
-#' "proportionWeightedMean" determines whether single, or multiple, 
-#' genomic signal(s) that span(s) more than a single position overlap(s) with a 
-#' region set location. This method weights the signals by the proportion 
-#' overlap with the corresponding region set regions.
 #' @param wilcox.conf.int logical. Only applies when using "rankSum" scoring
 #' method. returns a 95% confidence interval from the Wilcoxon rank sum test
 #' instead of p value.
@@ -543,9 +602,8 @@ runCOCOA <- function(signal,
                      GRList,
                      signalCol = c("PC1", "PC2"),
                      signalCoordType = "default",
-                     scoringMetric = "regionMean",
+                     scoringMetric = "default",
                      verbose = TRUE,
-                     overlapMethod="single",
                      wilcox.conf.int=FALSE,
                      absVal=TRUE) {
 
@@ -577,16 +635,56 @@ runCOCOA <- function(signal,
     
     ######## check that scoringMetric is appropriate
     
-    if (!(scoringMetric %in% c("regionMean", "simpleMean", 
+    if (!(scoringMetric %in% c("default", "regionMean", "simpleMean", 
                                "meanDiff", "rankSum"))) {
         stop(cleanws("scoringMetric was not recognized. 
                       Check spelling and available options."))
+    }
+    
+    ###### check that signalCoordType is appropriate
+    if (!(signalCoordType %in% c("default", "singleBase", "multiBase"))) {
+        stop(cleanws("signalCoordType not recognized. 
+                     Check spelling/capitalization."))
     }
     
     #######
     # what happens if there are NAs or Inf in `signal`?
     
     #################################################################
+    
+    # detect signalCoordType
+    if (signalCoordType == "default") {
+        if (is(signalCoord, "data.frame")) {
+            if ("end" %in% colnames(signalCoord)) {
+                if (all(signalCoord$start == signalCoord$end)) {
+                    signalCoordType <- "singleBase"
+                } else {
+                    signalCoordType <- "multiBase"
+                }
+            } else {
+                signalCoordType <- "singleBase"
+            }
+        } else {
+            # when signalCoord is a GRanges object
+            if (all(start(signalCoord) == end(signalCoord))) {
+                signalCoordType <- "singleBase" 
+            } else {
+                signalCoordType <- "multiBase"
+            }
+        }
+    }
+    
+    # if "default" scoring method is given, choose based on signalCoordType
+    if (scoringMetric == "default") {
+        if (signalCoordType == "singleBase") {
+            scoringMetric <- "regionMean"   
+        } else if (signalCoordType == "multiBase") {
+            scoringMetric <- "proportionWeightedMean"
+        } else {
+            stop(cleanws("signalCoordType not recognized. 
+                         Check spelling/capitalization."))
+        }
+    }
     
     
     # apply over the list of region sets
@@ -599,7 +697,6 @@ runCOCOA <- function(signal,
                                 signalCol = signalCol,
                                 scoringMetric = scoringMetric,
                                 verbose = verbose,
-                                overlapMethod = overlapMethod,
                                 wilcox.conf.int = wilcox.conf.int,
                                 absVal = absVal))
     resultsDT <- do.call(rbind, resultsList) 
@@ -662,6 +759,16 @@ runCOCOA <- function(signal,
 #' as the coordinates for the actual data/samples (signalCoord).
 #' @param signalCol A character vector with principal components to  
 #' include. eg c("PC1", "PC2") These should be column names of signal.
+#' @param signalCoordType character. Can be "default", "singleBase", or 
+#' "multiBase". This describes whether the coordinates for `signal` 
+#' (`signalCoord`) are each a single base (e.g. as for DNA methylation)
+#' or a region/multiple bases (e.g. as for ATAC-seq). Different aggregation
+#' options are available for each type of data. If "default" is given,
+#' the type of coordinates will be detected automatically. For "default", 
+#' if each
+#' coordinate start value equals the coordinate end value
+#' (all(start(signalCoord) == end(signalCoord))), "singleBase"
+#' will be used. Otherwise, "multiBase" will be used. 
 #' @param binNum Number of bins to split each region into when
 #' making the aggregate loading profile. More bins will
 #' give a higher resolution but perhaps more noisy profile.
@@ -669,10 +776,34 @@ runCOCOA <- function(signal,
 #' of the function should be shown, one
 #' bar indicates the region set is completed. Useful when
 #' using `lapply` to get the loading profiles of many region sets.
-#' @param overlapMethod A character object with the overlap method.
-#' "single" is the default method and is appropriate to use when the start and
-#' end coordinates of the genomic signal/original data included in the PCA are
-#' the same.
+#' @param aggrMethod character. A character object with the aggregation method.
+#' Similar to `scoringMetric`.
+#' There are different aggregation methods available for 
+#' signalCoordType="singleBase" vs  signalCoordType="multiBase".
+#' For "singleBase", the available scoring methods are "regionMean" and
+#' "simpleMean". The default method is "regionMean".
+#' For "multiBase", the scoring methods are "proportionWeightedMean" and 
+#' "simpleMean". The default is "proportionWeightedMean".
+#' "regionMean" is a weighted
+#' average of the signal, weighted by region (absolute value of signal 
+#' if absVal=TRUE). First the signal is
+#' averaged within each regionSet region, 
+#' then all the regions are averaged. With
+#' "regionMean" score, be cautious in interpretation for
+#' region sets with low number of regions that overlap signalCoord. 
+#' The "simpleMean"
+#' method is just the unweighted average of all (absolute) signal values that
+#' overlap the given region set. For multiBase data, this includes
+#' signal regions that overlap a regionSet region at all (1 base
+#' overlap or more) and the signal for each overlapping region is
+#' given the same weight for the average regardless of how much it overlaps. 
+#' "proportionWeightedMean" is a weighted average of all signalCoord 
+#' regions that overlap with regionSet regions. For each signalCoord region
+#' that overlaps with a regionSet region, we calculate what proportion
+#' of the regionSet region is covered. Then this proportion is used to
+#' weight the signal value when calculating the mean. 
+#' The denominator of the mean
+#' is the sum of all the proportion overlaps. 
 #' @param absVal logical. If TRUE, take the absolute value of values in
 #' signal. Choose TRUE if you think there may be some 
 #' genomic loci in a region set that will increase and others
@@ -698,9 +829,11 @@ runCOCOA <- function(signal,
 #' @export
 
 getMetaRegionProfile <- function(signal, signalCoord, regionSet,
-                    signalCol = c("PC1", "PC2"), binNum = 25,
+                    signalCol = c("PC1", "PC2"),
+                    signalCoordType = "default", 
+                    binNum = 25,
                     verbose=TRUE,  
-                    overlapMethod = "single", absVal=TRUE) {
+                    aggrMethod = "default", absVal=TRUE) {
     
     ################### checking inputs  #################################
     
@@ -727,11 +860,64 @@ getMetaRegionProfile <- function(signal, signalCoord, regionSet,
                             columns of signal: ", missingCols)))
     }
     
+    
+    ######## check that aggregation method is appropriate
+    
+    if (!(aggrMethod %in% c("default", "regionMean", "simpleMean", 
+                               "proportionWeightedMean"))) {
+        stop(cleanws("scoringMetric was not recognized. 
+                     Check spelling and available options."))
+    }
+    
+    ###### check that signalCoordType is appropriate
+    if (!(signalCoordType %in% c("default", "singleBase", "multiBase"))) {
+        stop(cleanws("signalCoordType not recognized. 
+                     Check spelling/capitalization."))
+    }
+    
     #######
     # what happens if there are NAs or Inf in `signal`?
     
     #################################################################
-
+    
+    # detect signalCoordType
+    if (signalCoordType == "default") {
+        if (is(signalCoord, "data.frame")) {
+            if ("end" %in% colnames(signalCoord)) {
+                if (all(signalCoord$start == signalCoord$end)) {
+                    signalCoordType <- "singleBase"
+                } else {
+                    signalCoordType <- "multiBase"
+                }
+            } else {
+                signalCoordType <- "singleBase"
+            }
+        } else {
+            # when signalCoord is a GRanges object
+            if (all(start(signalCoord) == end(signalCoord))) {
+                signalCoordType <- "singleBase" 
+            } else {
+                signalCoordType <- "multiBase"
+            }
+        }
+    }
+    
+    # if "default" aggregation method is given, choose based on signalCoordType
+    if (aggrMethod == "default") {
+        if (signalCoordType == "singleBase") {
+            aggrMethod <- "regionMean"   
+        } else if (signalCoordType == "multiBase") {
+            aggrMethod <- "proportionWeightedMean"
+        } else {
+            stop(cleanws("signalCoordType not recognized. 
+                         Check spelling/capitalization."))
+        }
+    }
+    
+    
+    
+    
+    ##################################################################
     # take absolute value or not
     if (absVal) {
         loadingDT <- as.data.table(abs(signal))
@@ -749,8 +935,8 @@ getMetaRegionProfile <- function(signal, signalCoord, regionSet,
                                byRegionGroup = TRUE, 
                                splitFactor = NULL,
                                signalCol = signalCol,
-                               overlapMethod = overlapMethod)
-
+                               aggrMethod = aggrMethod)
+    
     # if loadProf is NULL, return NULL from function, otherwise make symmetrical
     # it will be NULL when there was no overlap between data and any of the bins
     if (!is.null(loadProf)) {
@@ -794,10 +980,7 @@ makeSymmetric <- function(prof) {
 # bar indicates the region set is completed.
 # useful when using BSBinAggregate with 'apply' to do many 
 # region sets at a time.
-# @param overlapMethod A character object with the overlap method.
-# "single" is the default method and is appropriate to use when the start and
-# end coordinates of the genomic signal/original data included in the PCA are
-# the same.
+# @param aggrMethod 
 # "unweightedMean" determines whether single, or multiple, genomic signal(s) 
 # that span(s) more than a single position overlap(s) with a region set 
 # location. This method determines the unweighted mean signal of any genomic 
@@ -811,7 +994,7 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
                            splitFactor = NULL,
                            signalCol,
                            verbose = FALSE,
-                           overlapMethod) {
+                           aggrMethod) {
     if (!is(rangeDT, "data.table")) {
     stop("rangeDT must be a data.table")
 }
@@ -834,7 +1017,7 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
     binnedGR <- sapply(split(binnedDT, binnedDT$binID), dtToGr)
     # message("Aggregating...")
     
-    if (overlapMethod == "proportionWeightedMean") {
+    if (aggrMethod == "proportionWeightedMean") {
 
         binMeansList <- lapply(X = binnedGR, 
                                FUN = function(x) regionOLWeightedMean(signalDT = BSDT, 
@@ -852,7 +1035,7 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
         # regionGroupID = regionGroupID[!vapply(X = binMeansList, FUN = is.null, FUN.VALUE = TRUE)]
         binnedBSDT[, regionGroupID := regionGroupID]
 
-    } else if (overlapMethod == "unweightedMean") {
+    } else if (aggrMethod == "simpleMean") {
 
         binMeansList <- lapply(X = binnedGR, 
                                FUN = function(x) regionOLMean(signalDT = BSDT, 
@@ -870,7 +1053,7 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
         # regionGroupID = regionGroupID[!vapply(X = binMeansList, FUN = is.null, FUN.VALUE = TRUE)]
         binnedBSDT[, regionGroupID := regionGroupID]
 
-    } else {
+    } else { # aggrMethod == "regionMean"
         
         # what is output if a region set has no overlap?
         binnedBSDT <- BSAggregate(BSDT,
@@ -1345,7 +1528,7 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL,
     #TODO: if overlap method is single, but "end" is present, find center
     # and set that to start!
     if (all(start(bsgr[[1]]) != end(bsgr[[1]]))) {
-        stop("BSDT start and end coordinates are not the same. Choose a different overlapMethod.")
+        stop("BSDT start and end coordinates are not the same. Choose a different aggrMethod.")
     } else {
         fo <- findOverlaps(query = bsgr[[1]], subject = regionsGR)
     }

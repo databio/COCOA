@@ -5,8 +5,8 @@
 \title{Create a "meta-region" loading profile}
 \usage{
 getMetaRegionProfile(signal, signalCoord, regionSet, signalCol = c("PC1",
-  "PC2"), binNum = 25, verbose = TRUE, overlapMethod = "single",
-  absVal = TRUE)
+  "PC2"), signalCoordType = "default", binNum = 25, verbose = TRUE,
+  aggrMethod = "default", absVal = TRUE)
 }
 \arguments{
 \item{signal}{matrix of loadings (the coefficients of 
@@ -30,6 +30,17 @@ as the coordinates for the actual data/samples (signalCoord).}
 \item{signalCol}{A character vector with principal components to
 include. eg c("PC1", "PC2") These should be column names of signal.}
 
+\item{signalCoordType}{character. Can be "default", "singleBase", or 
+"multiBase". This describes whether the coordinates for `signal` 
+(`signalCoord`) are each a single base (e.g. as for DNA methylation)
+or a region/multiple bases (e.g. as for ATAC-seq). Different aggregation
+options are available for each type of data. If "default" is given,
+the type of coordinates will be detected automatically. For "default", 
+if each
+coordinate start value equals the coordinate end value
+(all(start(signalCoord) == end(signalCoord))), "singleBase"
+will be used. Otherwise, "multiBase" will be used.}
+
 \item{binNum}{Number of bins to split each region into when
 making the aggregate loading profile. More bins will
 give a higher resolution but perhaps more noisy profile.}
@@ -39,10 +50,34 @@ of the function should be shown, one
 bar indicates the region set is completed. Useful when
 using `lapply` to get the loading profiles of many region sets.}
 
-\item{overlapMethod}{A character object with the overlap method.
-"single" is the default method and is appropriate to use when the start and
-end coordinates of the genomic signal/original data included in the PCA are
-the same.}
+\item{aggrMethod}{character. A character object with the aggregation method.
+Similar to `scoringMetric`.
+There are different aggregation methods available for 
+signalCoordType="singleBase" vs  signalCoordType="multiBase".
+For "singleBase", the available scoring methods are "regionMean" and
+"simpleMean". The default method is "regionMean".
+For "multiBase", the scoring methods are "proportionWeightedMean" and 
+"simpleMean". The default is "proportionWeightedMean".
+"regionMean" is a weighted
+average of the signal, weighted by region (absolute value of signal 
+if absVal=TRUE). First the signal is
+averaged within each regionSet region, 
+then all the regions are averaged. With
+"regionMean" score, be cautious in interpretation for
+region sets with low number of regions that overlap signalCoord. 
+The "simpleMean"
+method is just the unweighted average of all (absolute) signal values that
+overlap the given region set. For multiBase data, this includes
+signal regions that overlap a regionSet region at all (1 base
+overlap or more) and the signal for each overlapping region is
+given the same weight for the average regardless of how much it overlaps. 
+"proportionWeightedMean" is a weighted average of all signalCoord 
+regions that overlap with regionSet regions. For each signalCoord region
+that overlaps with a regionSet region, we calculate what proportion
+of the regionSet region is covered. Then this proportion is used to
+weight the signal value when calculating the mean. 
+The denominator of the mean
+is the sum of all the proportion overlaps.}
 
 \item{absVal}{logical. If TRUE, take the absolute value of values in
 signal. Choose TRUE if you think there may be some 

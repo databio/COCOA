@@ -5,9 +5,8 @@
 \title{Use PCA loadings to score a region set}
 \usage{
 aggregateSignal(signal, signalCoord, regionSet, signalCol = c("PC1",
-  "PC2"), signalCoordType = "default", scoringMetric = "regionMean",
-  verbose = FALSE, overlapMethod = "single", wilcox.conf.int = FALSE,
-  absVal = TRUE)
+  "PC2"), signalCoordType = "default", scoringMetric = "default",
+  verbose = FALSE, wilcox.conf.int = FALSE, absVal = TRUE)
 }
 \arguments{
 \item{signal}{matrix of loadings (the coefficients of 
@@ -36,18 +35,37 @@ include. eg c("PC1", "PC2") These should be column names of signal.}
 (`signalCoord`) are each a single base (e.g. as for DNA methylation)
 or a region/multiple bases (e.g. as for ATAC-seq). Different scoring
 options are available for each type of data. If "default" is given,
-the type of coordinates will be detected automatically.}
+the type of coordinates will be detected automatically. If each
+coordinate start value equals the coordinate end value, "singleBase"
+will be used. Otherwise, "multiBase" will be used.}
 
-\item{scoringMetric}{A character object with the scoring metric. 
+\item{scoringMetric}{A character object with the scoring metric.
+There are different scoring metrics available for 
+signalCoordType="singleBase" vs  signalCoordType="multiBase".
+For "singleBase", the available scoring methods are "regionMean", 
+"simpleMean", and "rankSum". The default method is "regionMean".
+For "multiBase", the scoring methods are "proportionWeightedMean" and 
+"simpleMean". The default is "proportionWeightedMean".
 "regionMean" is a weighted
-average of the absolute value of the loadings
-with no normalization (recommended). First loadings are
-averaged within each region, then all the regions are averaged. With
+average of the signal, weighted by region (absolute value of signal 
+if absVal=TRUE). First the signal is
+averaged within each regionSet region, 
+then all the regions are averaged. With
 "regionMean" score, be cautious in interpretation for
 region sets with low number of regions that overlap signalCoord. 
 The "simpleMean"
-method is just the unweighted average of all absolute loadings that
-overlap the given region set. 
+method is just the unweighted average of all (absolute) signal values that
+overlap the given region set. For multiBase data, this includes
+signal regions that overlap a regionSet region at all (1 base
+overlap or more) and the signal for each overlapping region is
+given the same weight for the average regardless of how much it overlaps. 
+"proportionWeightedMean" is a weighted average of all signalCoord 
+regions that overlap with regionSet regions. For each signalCoord region
+that overlaps with a regionSet region, we calculate what proportion
+of the regionSet region is covered. Then this proportion is used to
+weight the signal value when calculating the mean. 
+The denominator of the mean
+is the sum of all the proportion overlaps. 
 Wilcoxon rank sum test ("rankSum") is also supported but is
 skewed toward ranking large region sets highly and is
 significantly slower than the "regionMean" method. 
@@ -63,11 +81,6 @@ the loadings not in the region set.}
 of the function should be shown, one
 bar indicates the region set is completed. Useful when using 
 aggregateSignal with 'apply' to do many region sets at a time.}
-
-\item{overlapMethod}{A character object with the overlap method.
-"single" is the default method and is appropriate to use when the start and
-end coordinates of the genomic signal/original data included in the PCA are
-the same.}
 
 \item{wilcox.conf.int}{logical. Only applies when using "rankSum" scoring
 method. returns a 95% confidence interval from the Wilcoxon rank sum test
