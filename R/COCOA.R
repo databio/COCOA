@@ -1618,9 +1618,8 @@ BSFilter <- function(BSDT, minReads = 10, excludeGR = NULL) {
 #' column will be the original index of the region set that ranked second
 #' for that PC, etc. You can use this function to make it easier 
 #' when you want to select the top region sets for further analysis or
-#' just for sorting the results. Region set scores are sorted in
-#' decreasing order so if you have p values they should be log transformed:
-#' -log(pval, 10)
+#' just for sorting the results. Region set scores are sorted in decreasing
+#' or increasing order according to the `decreasing` parameter.
 #' 
 #' @param rsScores a data.frame with scores for each 
 #' region set from the main COCOA function. 
@@ -1630,8 +1629,11 @@ BSFilter <- function(BSDT, minReads = 10, excludeGR = NULL) {
 #' @param signalCol a character vector. PCs in rsScores for which you want
 #' the indices of the original region sets (must be column names of rsScores)
 #' eg c("PC1", "PC2")
+#' @param decreasing logical. Whether to sort rsScores in decreasing 
+#' or increasing order. 
 #' @return A data.frame with columns signalCol. Each column has been 
-#' sorted by score for region sets for that PC (decreasing order).
+#' sorted by score for region sets for that PC (order given by `decreasing`
+#' param).
 #' Original indices for region sets that were used to create rsScores
 #' are given. Region sets with a score of NA are counted as having the 
 #' lowest scores and indices for these region sets will be at the bottom of the
@@ -1646,7 +1648,7 @@ BSFilter <- function(BSDT, minReads = 10, excludeGR = NULL) {
 #' 
 #' @export
 #' 
-rsRankingIndex <- function(rsScores, signalCol) {
+rsRankingIndex <- function(rsScores, signalCol, decreasing=TRUE) {
     
     if (!(is(rsScores, "data.frame") || is(rsScores, "matrix"))) {
         stop("rsScores should be a data.frame. Check object class.")
@@ -1655,6 +1657,14 @@ rsRankingIndex <- function(rsScores, signalCol) {
     
     if (!is(signalCol, "character")) {
         stop("signalCol should be a character object (eg 'PC1').")
+    }
+    # how to sort scores
+    if (decreasing) {
+        # -1 for decreasing order of scores
+        dtOrder = -1L
+    } else {
+        # +1 for increasing order of scores
+        dtOrder = 1L
     }
     
     # so by references changes will not be a problem
@@ -1669,8 +1679,8 @@ rsRankingIndex <- function(rsScores, signalCol) {
     # this object will be used to pull out region sets that were top hits for each PC
     for (i in seq_along(signalCol)) {
         
-        # -1 for decreasing order of scores
-        setorderv(rsScores, cols = signalCol[i], order=-1L, na.last=TRUE)
+        
+        setorderv(rsScores, cols = signalCol[i], order=dtOrder, na.last=TRUE)
         
         rsEnSortedInd[, signalCol[i] := rsScores[, rsIndex]]
     }

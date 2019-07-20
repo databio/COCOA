@@ -4,7 +4,7 @@
 \alias{rsRankingIndex}
 \title{Get indices for top scored region sets}
 \usage{
-rsRankingIndex(rsScores, signalCol)
+rsRankingIndex(rsScores, signalCol, decreasing = TRUE)
 }
 \arguments{
 \item{rsScores}{a data.frame with scores for each 
@@ -16,10 +16,14 @@ region sets used to create it.)}
 \item{signalCol}{a character vector. PCs in rsScores for which you want
 the indices of the original region sets (must be column names of rsScores)
 eg c("PC1", "PC2")}
+
+\item{decreasing}{logical. Whether to sort rsScores in decreasing 
+or increasing order.}
 }
 \value{
 A data.frame with columns signalCol. Each column has been 
-sorted by score for region sets for that PC (decreasing order).
+sorted by score for region sets for that PC (order given by `decreasing`
+param).
 Original indices for region sets that were used to create rsScores
 are given. Region sets with a score of NA are counted as having the 
 lowest scores and indices for these region sets will be at the bottom of the
@@ -35,9 +39,8 @@ original index of the region set ranked first for that PC. Second row for a
 column will be the original index of the region set that ranked second
 for that PC, etc. You can use this function to make it easier 
 when you want to select the top region sets for further analysis or
-just for sorting the results. Region set scores are sorted in
-decreasing order so if you have p values they should be log transformed:
--log(pval, 10)
+just for sorting the results. Region set scores are sorted in decreasing
+or increasing order according to the `decreasing` parameter.
 }
 \examples{
 data("rsScores")
