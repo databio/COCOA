@@ -1658,14 +1658,13 @@ rsRankingIndex <- function(rsScores, signalCol, decreasing=TRUE) {
     if (!is(signalCol, "character")) {
         stop("signalCol should be a character object (eg 'PC1').")
     }
+    
+    dtOrder = rep(-99L, length(decreasing))
     # how to sort scores
-    if (decreasing) {
-        # -1 for decreasing order of scores
-        dtOrder = -1L
-    } else {
-        # +1 for increasing order of scores
-        dtOrder = 1L
-    }
+    # -1 for decreasing order of scores
+    dtOrder[decreasing] = -1L
+    # +1 for increasing order of scores
+    dtOrder[!decreasing] = 1L
     
     # so by references changes will not be a problem
     rsScores <- copy(rsScores)
