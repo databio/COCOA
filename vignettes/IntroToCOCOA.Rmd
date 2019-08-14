@@ -178,7 +178,7 @@ These plots show that Esr1 and Gata3 binding regions demonstrate higher covariat
 If a region set has a high score for a PC, we would expect that DNA methylation in at least some of those regions would correlate with PC score. In other words, as you go from high PC score to low PC score along the PC axis, DNA methylation will either go up or down. Let's look at DNA methylation at CpGs in Esr1 regions. In the following plot, each column is a CpG in an Esr1 region and each row is a patient. Patients are ordered by their PC score for PC1.
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
-signalAlongPC(genomicSignal=brcaMethylData1,
+signalAlongAxis(genomicSignal=brcaMethylData1,
                 signalCoord=brcaMCoord1,
                 regionSet=esr1_chr1,
                 sampleScores=brcaPCScores,
@@ -192,7 +192,7 @@ It appears that some but not all CpGs vary greatly along the PC axis. The CpGs t
 Now let's look at one of the region sets, Nrf1, that had a low score for PC1:
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
-signalAlongPC(genomicSignal=brcaMethylData1,
+signalAlongAxis(genomicSignal=brcaMethylData1,
               signalCoord=brcaMCoord1,
               regionSet=nrf1_chr1,
               sampleScores=brcaPCScores,

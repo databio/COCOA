@@ -80,8 +80,8 @@ test_that("aggregateSignal, scoring metrics, and runCOCOA", {
     expect_equal(c(PC2W, PC3W, 3, 2, 2, mean(width(regionSetW))), 
                  c(rsWResults$PC2, rsWResults$PC3, rsWResults$signalCoverage, 
                    rsWResults$regionSetCoverage, 
-                   rsWResults$total_region_number, 
-                   rsWResults$mean_region_size))
+                   rsWResults$totalRegionNumber, 
+                   rsWResults$meanRegionSize))
     
     # same test for Wilcoxon but with aggregateSignal (absolute value
     # of loadings will be taken), "greater" alternate hypothesis is used in
@@ -96,8 +96,8 @@ test_that("aggregateSignal, scoring metrics, and runCOCOA", {
     expect_equal(c(PC2W, PC3W, 3, 2, 2, mean(width(regionSetW))), 
                  c(rsWResults$PC2, rsWResults$PC3, rsWResults$signalCoverage, 
                    rsWResults$regionSetCoverage, 
-                   rsWResults$total_region_number, 
-                   rsWResults$mean_region_size))
+                   rsWResults$totalRegionNumber, 
+                   rsWResults$meanRegionSize))
     
     
     
@@ -114,8 +114,8 @@ test_that("aggregateSignal, scoring metrics, and runCOCOA", {
     expect_equal(c(PC2R, PC3R, 3, 2, 2, mean(width(regionSetW))), 
                  c(regionMeanRes$PC2, regionMeanRes$PC3, regionMeanRes$signalCoverage, 
                    regionMeanRes$regionSetCoverage, 
-                   regionMeanRes$total_region_number, 
-                   regionMeanRes$mean_region_size))
+                   regionMeanRes$totalRegionNumber, 
+                   regionMeanRes$meanRegionSize))
     
     ########### test simpleMean scoring method ################
     # this is a mean of CpG loading values just like "raw" but instead
@@ -131,8 +131,8 @@ test_that("aggregateSignal, scoring metrics, and runCOCOA", {
     expect_equal(c(PC2RC, PC3RC, 3, 2, 2, mean(width(regionSetW))), 
                  c(simpleMeanRes$PC2, simpleMeanRes$PC3, simpleMeanRes$signalCoverage, 
                    simpleMeanRes$regionSetCoverage, 
-                   simpleMeanRes$total_region_number, 
-                   simpleMeanRes$mean_region_size))
+                   simpleMeanRes$totalRegionNumber, 
+                   simpleMeanRes$meanRegionSize))
     
 
     # test mean difference scoring method
@@ -153,8 +153,8 @@ test_that("aggregateSignal, scoring metrics, and runCOCOA", {
     expect_equal(c(PC2MD, PC3MD, 3, 2, 2, mean(width(regionSetW))), 
                  c(mdRes$PC2, mdRes$PC3, mdRes$signalCoverage, 
                    mdRes$regionSetCoverage, 
-                   mdRes$total_region_number, 
-                   mdRes$mean_region_size))
+                   mdRes$totalRegionNumber, 
+                   mdRes$meanRegionSize))
     
     ################## test runCOCOA with meanDiff test data
     
@@ -172,8 +172,8 @@ test_that("aggregateSignal, scoring metrics, and runCOCOA", {
     expect_equal(rep(c(PC2MD, PC3MD, 3, 2, 2, mean(width(regionSetW))), each=2), 
                  c(twoResults$PC2, twoResults$PC3, twoResults$signalCoverage, 
                    twoResults$regionSetCoverage, 
-                   twoResults$total_region_number, 
-                   twoResults$mean_region_size))
+                   twoResults$totalRegionNumber, 
+                   twoResults$meanRegionSize))
     
     ########## testing signalOLMetrics, used for meanDiff scoring method #######
     olMetrics <- COCOA:::signalOLMetrics(dataDT=dataDTW, 

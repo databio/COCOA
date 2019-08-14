@@ -14,11 +14,11 @@
 # color schemes: red/blue, yellow/red, red/grey, skyblue/coral, skyblue/yellow
 
 #' Visualize how genomic signal in a region set changes 
-#' along principal component axis
+#' along a given axis
 #' 
 #' Look at genomic signal (eg, DNA methylation values) in regions of 
 #' interest across samples, 
-#' with samples ordered according to score for PC of interest. 
+#' with samples ordered according to a variable of interest (e.g. PC score). 
 #' The ComplexHeatmap package
 #' is used and additional parameters for the ComplexHeatmap::Heatmap function
 #' may be passed to this function to modify the heatmap.   
@@ -29,8 +29,8 @@
 #' Must have sample names/IDs as column names,
 #' These same sample names must be row names of sampleScores.
 #' @param signalCoord a GRanges object or data frame with coordinates 
-#' for the genomic signal/original data (eg DNA methylation) 
-#' included in the PCA. Coordinates should be in the 
+#' for the genomic signal/original data (eg DNA methylation/ATAC-seq) 
+#' Coordinates should be in the 
 #' same order as the original data and the loadings 
 #' (each item/row in signalCoord
 #' corresponds to a row in signal). If a data.frame, 
@@ -40,12 +40,19 @@
 #' to the same biological annotation. The regions where you will visualize
 #' the genomic signal. Must be from the same reference genome
 #' as the coordinates for the actual data (signalCoord).
-#' @param sampleScores A matrix. The principal component scores for the samples 
+#' @param sampleScores A matrix. Must contain a column with name given
+#' by "orderByCol" that will be used to order samples.  
+#' E.g. Could be the principal component scores for the samples 
 #' (ie transformed methylation data). Must have sample names/IDs as row names,
 #' These same sample names must be column names of genomicSignal
-#' @param orderByCol a character object. PC to order samples by 
-#' (order rows of heatmap by PC score, from high to low score). 
-#' Must be the name of a column in sampleScores.
+#' @param orderByCol a character object. A variable to order samples by
+#' (order rows of heatmap by variable, from high to low value).
+#' Must be the name of a column in sampleScores. For instance, if doing
+#' unsupervised COCOA with PCA, orderByCol might be the name of one of the PCs
+#' (e.g. "PC1"). If doing supervised COCOA, orderByCol might be the name
+#' of the variable that is the focus of the supervised analysis. 
+#'  
+#' 
 #' @param topXVariables numeric. The number of variables from genomicSignal
 #' to plot. The variables with the highest scores according to 
 #' variableScores will be plotted. Can help to reduce the size of the plot.
@@ -78,7 +85,7 @@
 #' data("brcaMCoord1")
 #' data("esr1_chr1")
 #' data("brcaPCScores")
-#' signalHM <- signalAlongPC(genomicSignal=brcaMethylData1,
+#' signalHM <- signalAlongAxis(genomicSignal=brcaMethylData1,
 #'                              signalCoord=brcaMCoord1,
 #'                              regionSet=esr1_chr1,
 #'                              sampleScores=brcaPCScores,
@@ -86,7 +93,7 @@
 #' 
 #' @export
 # previously called rsMethylHeatmap
-signalAlongPC <- function(genomicSignal, signalCoord, regionSet, 
+signalAlongAxis <- function(genomicSignal, signalCoord, regionSet, 
                           sampleScores, orderByCol="PC1", topXVariables=NULL, 
                           variableScores=NULL,
                           cluster_columns = FALSE, 

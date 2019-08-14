@@ -9,13 +9,14 @@ Notable changes to this project will be documented in this file.
         - orderByPC => orderByCol
         - regionGR => regionSet (some functions already had regionSet param)
         - pcScores => sampleScores
-        - signalAlongPC => signalAlongVariable?, signalOrderedByVariable?
+        - signalAlongPC => signalAlongAxis
         - cytosine_coverage (column name in output of runCOCOA()) => signalCoverage
         - region_coverage (column name in output of runCOCOA())=> regionSetCoverage
         - aggregateLoadings => aggregateSignal
         - getLoadingProfile => getMetaRegionProfile
-        - total_region_number => totalRegionNumber?
-        - mean_region_size => meanRegionSize?
+        - total_region_number => totalRegionNumber
+        - mean_region_size => meanRegionSize
+        - new column added to output of runCOCOA (only for multi-base data): sumProportionOverlap
     - Addition of functionality for region-based data such as ATAC-seq
         - default setting automatically detects whether data is single base(e.g. DNA methylation or multiple bases like ATAC-seq.
         - different scoring method for single base vs multiple base data
