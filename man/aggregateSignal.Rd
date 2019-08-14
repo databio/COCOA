@@ -99,14 +99,21 @@ a data.table with one row and the following
 columns: one column for each item of signalCol with names given
 by signalCol. These columns have scores for the region set for each PC.
 Other columns: signalCoverage (formerly cytosine_coverage) which
-has number of cytosines that overlapped with regionSet (or in the general case, 
-coordinates from signalCoord that overlapped regionSet) 
+has number of cytosines that overlapped with regionSet (or for "multiBase"
+data, 
+the number of regions from signalCoord that overlapped regionSet) 
 regionSetCoverage which has number of regions from regionSet
 that overlapped any coordinates from signalCoord, 
-total_region_number that has
-number of regions in regionSet, mean_region_size that has average
+totalRegionNumber that has
+number of regions in regionSet, meanRegionSize that has average
 size in base pairs of regions in regionSet, the average is based on
 all regions in regionSet and not just ones that overlap.
+For "multiBase" data, if the "proportionWeightedMean" scoring metric 
+is used, then the output will also have a "sumProportionOverlap" column.
+During this scoring method, the proportion overlap between each signalCoord
+region and overlapping regionSet region is calculated. This column is
+the sum of all those proportion overlaps and is another method to quantify
+coverage of regionSet in addition to regionSetCoverage.
 }
 \description{
 First, this function identifies which loadings are within the region set. 
