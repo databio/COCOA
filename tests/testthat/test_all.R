@@ -205,7 +205,8 @@ test_that("ATAC-seq scoring methods", {
         ((101/400)+(101/201)+(51/201)+1+(26/51)+(151/451)),
         PC2=((101/400)*-1+(101/201)*-1+(51/201)*0+1*1+(26/51)*3+(151/451)*4) / 
             ((101/400)+(101/201)+(51/201)+1+(26/51)+(151/451)), 
-        signalCoverage=5, regionSetCoverage=(101/400)+(101/201)+(51/201)+1+(26/51)+(151/451))
+        signalCoverage=5, regionSetCoverage=5,
+        sumProportionOverlap=(101/400)+(101/201)+(51/201)+1+(26/51)+(151/451))
     expect_equal(weightedAve, correctAve)
     
     # test "regionOLMean"
