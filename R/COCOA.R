@@ -1649,7 +1649,7 @@ BSFilter <- function(BSDT, minReads = 10, excludeGR = NULL) {
 #' Each row is a region set. Columns are PCs and info on region set overlap
 #' with DNA methylation data. Should be in the same order as GRList (the list of 
 #' region sets used to create it.)
-#' @param signalCol a character vector. PCs in rsScores for which you want
+#' @param signalCol a character vector. columns in rsScores for which you want
 #' the indices of the original region sets (must be column names of rsScores)
 #' eg c("PC1", "PC2")
 #' @param decreasing logical. Whether to sort rsScores in decreasing 
@@ -1678,8 +1678,23 @@ rsRankingIndex <- function(rsScores, signalCol, decreasing=TRUE) {
     }
     rsScores <- as.data.table(rsScores)
     
-    if (!is(signalCol, "character")) {
-        stop("signalCol should be a character object (eg 'PC1').")
+    if (!(is(signalCol, "character") | is(signalCol, "list"))) {
+        stop("signalCol should be a character vector or list of character vectors.")
+    }
+    if (is(signalCol, "list")) {
+        if (!all(sapply(signalCol, FUN = class) %in% "character")) {
+            stop("Items of signalCol should be character vectors.")
+        }
+        if (!length(unique(sapply(signalCol, FUN = length)))) {
+            stop("Items of signalCol should be the same length as each other.")
+        }
+        if (!all(unlist(signalCol) %in% colnames(rsScores))) {
+            stop("Some column names in signalCol are not present in rsScores.")
+        }
+    } else { # signalCol is character
+        if (!all(signalCol %in% colnames(rsScores))) {
+            stop("Some column names in signalCol are not present in rsScores.")
+        }
     }
     
     dtOrder = rep(-99L, length(decreasing))
@@ -1693,18 +1708,39 @@ rsRankingIndex <- function(rsScores, signalCol, decreasing=TRUE) {
     rsScores <- copy(rsScores)
     rsScores[, rsIndex := seq_len(nrow(rsScores))]
     
-    signalCol <- signalCol[signalCol %in% colnames(rsScores)]
-    
-    rsEnSortedInd <- subset(rsScores, select= signalCol)
-    
-    # then scores by each PC and make a column with the original index for sorted region sets
-    # this object will be used to pull out region sets that were top hits for each PC
-    for (i in seq_along(signalCol)) {
+    if (is(signalCol, "list")) {
         
+        rsEnSortedInd <- subset(rsScores, select= signalCol[[1]])
         
-        setorderv(rsScores, cols = signalCol[i], order=dtOrder, na.last=TRUE)
+        colNameMat = do.call(rbind, signalCol) 
         
-        rsEnSortedInd[, signalCol[i] := rsScores[, rsIndex]]
+        # then scores by each PC and make a column with the original index for sorted region sets
+        # this object will be used to pull out region sets that were top hits for each PC
+        for (i in seq_along(signalCol[[1]])) {
+            theseOrderCols = colNameMat[, i]
+            
+            setorderv(rsScores, cols = theseOrderCols, order=dtOrder, na.last=TRUE)
+            
+            rsEnSortedInd[, signalCol[[1]][i] := rsScores[, rsIndex]]
+        }
+    } else if (is(signalCol, "character")) {
+        
+        signalCol <- signalCol[signalCol %in% colnames(rsScores)]
+        
+        rsEnSortedInd <- subset(rsScores, select= signalCol)
+        
+        # then scores by each PC and make a column with the original index for sorted region sets
+        # this object will be used to pull out region sets that were top hits for each PC
+        for (i in seq_along(signalCol)) {
+            
+            
+            setorderv(rsScores, cols = signalCol[i], order=dtOrder, na.last=TRUE)
+            
+            rsEnSortedInd[, signalCol[i] := rsScores[, rsIndex]]
+        }
+        
+    } else {
+        stop("signalCol should be a character vector or list of character vectors.")
     }
     
     # reset order
