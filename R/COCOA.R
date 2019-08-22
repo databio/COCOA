@@ -1213,7 +1213,7 @@ averagePerRegion <- function(signal,
 
     } else if (dataCoordType == "region") {
 
-        avePerRegion <- weightedAvePerRegion(signalDT = signalDT,
+        avPerRegion <- weightedAvePerRegion(signalDT = signalDT,
                              signalCoord=signalCoord,
                              regionSet=regionSet,
                              calcCols = signalCol,
@@ -1229,12 +1229,17 @@ averagePerRegion <- function(signal,
 
 # signalDT 
 # average by region for region-based data (eg ATAC-seq)
-# @return One value per region
+# @return data.table. chr, start, end columns. One column for each calcCols
+# that has the average value in each region for that col
 weightedAvePerRegion <- function(signalDT,
                                  signalCoord,
                                  regionSet,
                                  calcCols = c("PC1", "PC2"),
                                  returnQuantile = FALSE) {
+    
+    if (is(signalCoord, "data.frame")) {
+        signalCoord <- dtToGr(signalCoord)
+    }
 
     hits  <- findOverlaps(query = signalCoord, subject = regionSet)
     # if no overlap, return NULL
@@ -1259,11 +1264,16 @@ weightedAvePerRegion <- function(signalDT,
                                 calcCols, " * pOlap)"), collapse = ", "), ")")
     weightedSumByRegionDT <- pOlapDT[, eval(parse(text=aggrCommand)), by=rsRegionID]
 
+    # weightedSumByRegionDT and pOlapByRegionDT should be in the same order 
+    regionInd <- weightedSumByRegionDT$rsRegionID
+    olCoord <- grToDt(regionSet)[regionInd, .(chr, start, end)]
+    
     # divide by total proportion overlap to get mean value 
     jCommand <- paste("list(", paste(paste0(calcCols, "=", calcCols, " / regionPOlap"), collapse = ", "), ")")
     meanPerRegion <- cbind(pOlapByRegionDT, weightedSumByRegionDT)
     meanPerRegion <- meanPerRegion[, eval(parse(text=jCommand))]
-
+    meanPerRegion <- cbind(olCoord, meanPerRegion)
+    
     if (returnQuantile) {
         for (i in seq_along(calcCols)) {
             # perhaps this could be more efficient with mapply
@@ -1719,6 +1729,9 @@ BSFilter <- function(BSDT, minReads = 10, excludeGR = NULL) {
 #' eg c("PC1", "PC2")
 #' @param decreasing logical. Whether to sort rsScores in decreasing 
 #' or increasing order. 
+#' @param newColName character. The names of the columns of the output data.frame.
+#' The order should correspond to the order of the
+#'  input columns given by signalCol.
 #' @return A data.frame with columns signalCol. Each column has been 
 #' sorted by score for region sets for that PC (order given by `decreasing`
 #' param).
@@ -1736,7 +1749,7 @@ BSFilter <- function(BSDT, minReads = 10, excludeGR = NULL) {
 #' 
 #' @export
 #' 
-rsRankingIndex <- function(rsScores, signalCol, decreasing=TRUE) {
+rsRankingIndex <- function(rsScores, signalCol, decreasing=TRUE, newColName = signalCol) {
     
     if (!(is(rsScores, "data.frame") || is(rsScores, "matrix"))) {
         stop("rsScores should be a data.frame. Check object class.")
@@ -1756,11 +1769,18 @@ rsRankingIndex <- function(rsScores, signalCol, decreasing=TRUE) {
         if (!all(unlist(signalCol) %in% colnames(rsScores))) {
             stop("Some column names in signalCol are not present in rsScores.")
         }
+        
+        # the first item in the list is taken for newColName
+        if (is(newColName, "list")) {
+            newColName <- signalCol[[1]]    
+        }
+        
     } else { # signalCol is character
         if (!all(signalCol %in% colnames(rsScores))) {
             stop("Some column names in signalCol are not present in rsScores.")
         }
     }
+    
     
     dtOrder = rep(-99L, length(decreasing))
     # how to sort scores
@@ -1774,8 +1794,12 @@ rsRankingIndex <- function(rsScores, signalCol, decreasing=TRUE) {
     rsScores[, rsIndex := seq_len(nrow(rsScores))]
     
     if (is(signalCol, "list")) {
+        if (length(newColName) != length(signalCol[[1]])) {
+            stop("newColName is not the same length as columns given in signalCol.")
+        }
         
         rsEnSortedInd <- subset(rsScores, select= signalCol[[1]])
+        setnames(rsEnSortedInd, newColName)
         
         colNameMat = do.call(rbind, signalCol) 
         
@@ -1786,13 +1810,18 @@ rsRankingIndex <- function(rsScores, signalCol, decreasing=TRUE) {
             
             setorderv(rsScores, cols = theseOrderCols, order=dtOrder, na.last=TRUE)
             
-            rsEnSortedInd[, signalCol[[1]][i] := rsScores[, rsIndex]]
+            rsEnSortedInd[, newColName[i] := rsScores[, rsIndex]]
         }
     } else if (is(signalCol, "character")) {
+        
+        if (length(newColName) != length(signalCol)) {
+            stop("newColName is not the same length as columns given in signalCol.")
+        }
         
         signalCol <- signalCol[signalCol %in% colnames(rsScores)]
         
         rsEnSortedInd <- subset(rsScores, select= signalCol)
+        setnames(rsEnSortedInd, newColName)
         
         # then scores by each PC and make a column with the original index for sorted region sets
         # this object will be used to pull out region sets that were top hits for each PC
@@ -1801,7 +1830,7 @@ rsRankingIndex <- function(rsScores, signalCol, decreasing=TRUE) {
             
             setorderv(rsScores, cols = signalCol[i], order=dtOrder, na.last=TRUE)
             
-            rsEnSortedInd[, signalCol[i] := rsScores[, rsIndex]]
+            rsEnSortedInd[, newColName[i] := rsScores[, rsIndex]]
         }
         
     } else {

@@ -4,7 +4,8 @@
 \alias{rsRankingIndex}
 \title{Get indices for top scored region sets}
 \usage{
-rsRankingIndex(rsScores, signalCol, decreasing = TRUE)
+rsRankingIndex(rsScores, signalCol, decreasing = TRUE,
+  newColName = signalCol)
 }
 \arguments{
 \item{rsScores}{a data.frame with scores for each 
@@ -13,12 +14,16 @@ Each row is a region set. Columns are PCs and info on region set overlap
 with DNA methylation data. Should be in the same order as GRList (the list of 
 region sets used to create it.)}
 
-\item{signalCol}{a character vector. PCs in rsScores for which you want
+\item{signalCol}{a character vector. columns in rsScores for which you want
 the indices of the original region sets (must be column names of rsScores)
 eg c("PC1", "PC2")}
 
 \item{decreasing}{logical. Whether to sort rsScores in decreasing 
 or increasing order.}
+
+\item{newColName}{character. The names of the columns of the output data.frame.
+The order should correspond to the order of the
+ input columns given by signalCol.}
 }
 \value{
 A data.frame with columns signalCol. Each column has been 
