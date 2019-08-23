@@ -966,7 +966,7 @@ getMetaRegionProfile <- function(signal, signalCoord, regionSet,
         setnames(loadProf, old = "regionGroupID", new="binID")
         loadProf <- as.data.frame(loadProf)
     } else {
-        warning("No overlap between regionSet and signalCoord")
+        warning("Insufficient overlap between regionSet and signalCoord")
     }
     
     return(loadProf)
@@ -1045,14 +1045,19 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
                                                                       signalGR = dtToGr(BSDT[, .(chr, start, end)]), 
                                                                       regionSet = x, 
                                                                       calcCols = signalCol))
-        binnedBSDT <- rbindlist(binMeansList)
-        regionGroupID = 1:length(binMeansList)
+        
         # any bins that had no overlap with data will be NULL
         # if any bins had no data, return NULL
         if (any(vapply(X = binMeansList, FUN = is.null, FUN.VALUE = TRUE))) {
             return(NULL)
         }
-         
+        
+        # rbindlist of all NULL's will still return an (empty) data.table
+        # otherwise any NULL items will just be skipped and other rows will
+        # be concatenated
+        binnedBSDT <- rbindlist(binMeansList)
+        regionGroupID = 1:length(binMeansList)
+
         # regionGroupID = regionGroupID[!vapply(X = binMeansList, FUN = is.null, FUN.VALUE = TRUE)]
         binnedBSDT[, regionGroupID := regionGroupID]
 
@@ -1063,13 +1068,15 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
                                                               signalGR = dtToGr(BSDT[, .(chr, start, end)]), 
                                                               regionSet = x, 
                                                               calcCols = signalCol))
-        binnedBSDT <- rbindlist(binMeansList)
-        regionGroupID = 1:length(binMeansList)
         # any bins that had no overlap with data will be NULL
         # if any bins had no data, return NULL
         if (any(vapply(X = binMeansList, FUN = is.null, FUN.VALUE = TRUE))) {
             return(NULL)
         }
+        
+        binnedBSDT <- rbindlist(binMeansList)
+        regionGroupID = 1:length(binMeansList)
+
          
         # regionGroupID = regionGroupID[!vapply(X = binMeansList, FUN = is.null, FUN.VALUE = TRUE)]
         binnedBSDT[, regionGroupID := regionGroupID]
