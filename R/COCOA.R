@@ -451,7 +451,7 @@ aggregateSignal <- function(signal,
                                                signalGR = dtToGr(coordinateDT),
                                                regionSet = regionSet,
                                                calcCols= signalCol)
-            loadAgMain <- as.data.table(loadAgMain)
+            
             # setnames(loadAgMain, c("signalCoverage", "regionSetCoverage"),
             #          c("numCpGsOverlapping", "numRegionsOverlapping"))
         } else if (scoringMetric == "simpleMean") {
@@ -459,7 +459,6 @@ aggregateSignal <- function(signal,
                                        signalGR = dtToGr(coordinateDT),
                                        regionSet = regionSet,
                                        calcCols= signalCol)
-            loadAgMain <- as.data.table(loadAgMain)
             # setnames(loadAgMain, c("signalCoverage", "regionSetCoverage"),
             #          c("numCpGsOverlapping", "numRegionsOverlapping"))
         }
@@ -478,6 +477,7 @@ aggregateSignal <- function(signal,
                 results[, sumProportionOverlap := 0]
             }
         } else {
+            loadAgMain <- as.data.table(loadAgMain)
             results <- loadAgMain[, .SD, .SDcols = signalCol]
             results[, signalCoverage := loadAgMain[, .SD, .SDcols = "signalCoverage"]]
             results[, regionSetCoverage := loadAgMain[, .SD, .SDcols = "regionSetCoverage"]]
