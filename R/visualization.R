@@ -51,8 +51,6 @@
 #' unsupervised COCOA with PCA, orderByCol might be the name of one of the PCs
 #' (e.g. "PC1"). If doing supervised COCOA, orderByCol might be the name
 #' of the variable that is the focus of the supervised analysis. 
-#'  
-#' 
 #' @param topXVariables numeric. The number of variables from genomicSignal
 #' to plot. The variables with the highest scores according to 
 #' variableScores will be plotted. Can help to reduce the size of the plot.
