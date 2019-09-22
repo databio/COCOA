@@ -153,7 +153,7 @@ if (getRversion() >= "2.15.1") {
 #' given region set to all change in the same direction (all be positively
 #' correlated with each other).
 
-#' @return a data.table with one row and the following 
+#' @return a data.frame with one row and the following 
 #' columns: one column for each item of signalCol with names given
 #' by signalCol. These columns have scores for the region set for each PC.
 #' Other columns: signalCoverage (formerly cytosine_coverage) which
@@ -493,7 +493,7 @@ aggregateSignal <- function(signal,
         message("|")
     }
         
-    return(results)
+    return(as.data.frame(results))
 }
 
 
@@ -734,6 +734,108 @@ runCOCOA <- function(signal,
     return(resultsDF)
 }    
 
+# @param dataMat columns of dataMat should be samples/patients, rows should be genomic signal
+# (each row corresponds to one genomic coordinate/range)
+# @param featureMat Rows should be samples, columns should be "features" 
+# (whatever you want to get correlation with: eg PC scores),
+# all columns in featureMat will be used (subset when passing to function
+# in order to not use all columns)
+# @param centerDataMat logical object. Should rows in dataMat be centered based on
+# their means? (subtracting row means from each row)
+# @param centerFeatureMat. logical.
+# @param testType character object. Can be "cor" (Pearson correlation),
+# "spearmanCor (Spearman correlation)
+# "pcor" (partial correlation), "cov" (covariance (Pearson)), "spearmanCov" 
+# (Spearman covariance)
+# @param covariate
+#
+# If a row in dataMat has 0 stand. deviation, correlation will be set to 0
+# instead of NA as would be done by cor()
+#
+# @return returns a matrix where rows are the genomic signal (eg a CpG or region) and
+# columns are the columns of featureMat
+# @examples dataMat = matrix(rnorm(50), 5, 10)
+# featureMat = matrix(rnorm(20), 10, 2)
+createCorFeatureMat = function(dataMat, featureMat, 
+                               centerDataMat=TRUE, centerFeatureMat = TRUE, 
+                               testType="cor", covariate=NULL) {
+    
+    featureMat = as.matrix(featureMat)
+    featureNames = colnames(featureMat)
+    nFeatures = ncol(featureMat)
+    nDataDims = nrow(dataMat)
+    
+    if (centerDataMat) {
+        cpgMeans = rowMeans(dataMat, na.rm = TRUE)
+        # centering before calculating correlation
+        dataMat = apply(X = dataMat, MARGIN = 2, function(x) x - cpgMeans)
+        
+    }
+    
+    if (centerFeatureMat) {
+        featureMeans = colMeans(featureMat, na.rm = TRUE)
+        # centering before calculating correlation
+        featureMat = t(apply(X = t(featureMat), MARGIN = 2, function(x) x - featureMeans))
+        if (dim(featureMat)[1] == 1) {
+            featureMat = t(featureMat)
+        }
+        featureMat = as.matrix(featureMat)
+    }
+    
+    dataMat = data.table::copy(as.data.frame(t(dataMat)))
+    
+    
+    if (testType == "cor") {
+        # create feature correlation matrix with PCs (rows: features/CpGs, columns:PCs)
+        # how much do features correlate with each PC?
+        
+        # featurePCCor = as.data.frame(matrix(rep(0, nFeatures * nDataDims), nrow=nDataDims, ncol=nFeatures))
+        # for (i in 1:nFeatures) {
+        #     for (j in 1:nDataDims) {
+        #         featurePCCor[j, i] = cor(x = featureMat[, i], y = dataMat[, j], use="pairwise.complete.obs")
+        #     }
+        #     
+        # }
+        featurePCCor = apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 2,
+                                                                           FUN = function(x) cor(x = x, y,
+                                                                                                 use="pairwise.complete.obs",
+                                                                                                 method="pearson")))
+    } else if (testType == "spearmanCor") {
+        featurePCCor = apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 2,
+                                                                           FUN = function(x) cor(x = x, y,
+                                                                                                 use="pairwise.complete.obs",
+                                                                                                 method="spearman")))
+    } else if (testType == "pcor") {
+        featurePCCor = apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 2, 
+                                                                           FUN = function(x) pcor.test(x = x, y=y,
+                                                                                                       z=covariate)$estimate))
+        
+    } else if (testType == "cov") {
+        # featurePCCor = as.data.frame(matrix(rep(0, nFeatures * nDataDims), nrow=nDataDims, ncol=nFeatures))
+        # for (i in 1:nFeatures) {
+        #     for (j in 1:nDataDims) {
+        #         featurePCCor[j, i] = cov(x = featureMat[, i], y = dataMat[, j], use="pairwise.complete.obs")
+        #     }
+        #     
+        # }
+        
+        featurePCCor = apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 2,
+                                                                           FUN = function(x) cov(x = x, y,
+                                                                                                 use="pairwise.complete.obs")))
+    } else {
+        stop("invalid testType")
+    }
+    
+    
+    # if standard deviation of the data was zero, NA will be produced
+    # set to 0 because no standard deviation means no correlation with attribute of interest
+    featurePCCor[is.na(featurePCCor)] = 0
+    colnames(featurePCCor) <- featureNames
+    
+    return(featurePCCor)
+    # corLoadRatio = signal[, signalCol] / featurePCCor 
+    # hist(corLoadRatio[, "PC10"])
+}
 
 
 #' Create a "meta-region" loading profile 
@@ -951,8 +1053,7 @@ getMetaRegionProfile <- function(signal, signalCoord, regionSet,
     
     loadProf <- BSBinAggregate(BSDT = loadingDT,
                                rangeDT = GRDT, 
-                               binCount = binNum, 
-                               minReads = 0, 
+                               binCount = binNum,
                                byRegionGroup = TRUE, 
                                splitFactor = NULL,
                                signalCol = signalCol,
@@ -993,7 +1094,6 @@ makeSymmetric <- function(prof) {
 # with columns named start, end
 # @param binCount Number of bins across the region
 # @param byRegionGroup Pass along to binCount (see ?binCount)
-# @param minReads Filter out bins with fewer than X reads before returning.
 # @param signalCol A character vector with principal components to 
 # analyze. eg c("PC1", "PC2")
 # @param verbose A "logical" object. Whether progress 
@@ -1010,7 +1110,7 @@ makeSymmetric <- function(prof) {
 # genomic signal(s) that span(s) more than a single position overlap(s) with a 
 # region set location. This method weights the signals by the proportion 
 # overlap with the corresponding region set regions.
-BSBinAggregate <- function(BSDT, rangeDT, binCount, minReads = 500,
+BSBinAggregate <- function(BSDT, rangeDT, binCount,
                            byRegionGroup = TRUE,
                            splitFactor = NULL,
                            signalCol,
@@ -1339,8 +1439,6 @@ getTopRegions <- function(signal,
                           signalCol = c("PC1", "PC2"), cutoff = 0.8, 
                           returnQuantile=TRUE) {
     
-    
-    
     regionLoadDT = averagePerRegion(signal=signal,
                             signalCoord=signalCoord, regionSet=regionSet, 
                             signalCol = signalCol,
@@ -1356,7 +1454,6 @@ getTopRegions <- function(signal,
     values(highGR) <- as.data.frame(regionLoadDT[keepInd, signalCol, with=FALSE])
     
     return(highGR)
-
 }
 
 
@@ -2064,34 +2161,5 @@ regionOLMean <- function(signalDT, signalGR, regionSet, calcCols) {
     return(signalAve)
 }
 
-
-# Create null distribution based on permutations
-createNullDist <- function(signal, signalCol, nPerm = 1000, sampleSize = 1000) {
-    
-    signal = abs(signal)
-    permScoreList = list()
-    for (i in 1:nPerm) {
-        permInd = sample(1:nrow(signal), size=sampleSize, replace = FALSE)
-        # reformat into data.table with chromosome location and weight
-        permScoreList[[i]] = colMeans(signal[permInd, signalCol])
-        
-        # naming does not work if only using one PC so add this line for that case
-        # setnames(loadingDT, c("chr", "start", signalCol)) 
-        
-    }
-    
-    permScoreMat = do.call(rbind, permScoreList)
-    return(permScoreMat)
-}
-
-multiNullDist <- function(signal, signalCol, nPerm = 1000, sampleSize = c(10, 100, 1000, 10000, 100000)) {
-    
-    # MIRA:::setLapplyAlias(cores = 8)
-    # create distribution for each sample
-    nullDistList = MIRA:::lapplyAlias(X = sampleSize, FUN = function(x) createNullDist(signal=signal, 
-                                                            signalCol=signalCol, 
-                                                            nPerm=nPerm, 
-                                                            sampleSize = x))#, mc.set.seed = FALSE)
-}
 
 
