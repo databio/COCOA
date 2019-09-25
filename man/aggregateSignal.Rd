@@ -95,7 +95,7 @@ given region set to all change in the same direction (all be positively
 correlated with each other).}
 }
 \value{
-a data.table with one row and the following 
+a data.frame with one row and the following 
 columns: one column for each item of signalCol with names given
 by signalCol. These columns have scores for the region set for each PC.
 Other columns: signalCoverage (formerly cytosine_coverage) which

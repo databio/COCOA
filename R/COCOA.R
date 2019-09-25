@@ -34,12 +34,12 @@
 #'             scale_x_discrete scale_fill_brewer scale_color_manual
 #'             scale_color_brewer
 #' @importFrom ComplexHeatmap Heatmap draw
-#' @import BiocGenerics S4Vectors IRanges GenomicRanges
+#' @import BiocGenerics S4Vectors IRanges GenomicRanges simpleCache
 #' @importFrom data.table ":=" setDT data.table setkey fread setnames 
 #'             setcolorder rbindlist setattr setorder copy is.data.table 
 #'             setorderv as.data.table
 #' @importFrom Biobase sampleNames
-#' @importFrom stats lm coefficients poly wilcox.test ecdf
+#' @importFrom stats lm coefficients poly wilcox.test ecdf pgamma p.adjust
 #' @importFrom methods is
 #' @importFrom MIRA binRegion
 #' @importFrom tidyr gather
@@ -47,6 +47,9 @@
 #'             pushViewport unit viewport
 #' @importFrom grDevices dev.off
 #' @importFrom methods hasArg
+#' @importFrom fitdistrplus fitdist
+#' @importFrom simpleCache simpleCache
+#' @importFrom ppcor pcor
 NULL
 
 # now package lists GenomicRanges in "Depends" instead of "Imports" in 
@@ -60,7 +63,8 @@ NULL
 # in order to pass some R CMD check NOTES.
 if (getRversion() >= "2.15.1") {
     utils::globalVariables(c(
-        ".", "..calcCols", "bin", "binID", "chr", "id", "coordinateDT",
+        ".", "..calcCols", "bin", "binID", "chr", "id", "colsToAnnotate", 
+        "coordinateDT",
         "coverage", "pOlap", "regionGroupID", "regionID", "theme", 
         "meanRegionSize", "regionSetCoverage", "rowIndex", "rsIndex",
         "rsRegionID", "totalRegionNumber", "signalCoverage", ".SD",
@@ -808,9 +812,11 @@ createCorFeatureMat = function(dataMat, featureMat,
                                                                                                  use="pairwise.complete.obs",
                                                                                                  method="spearman")))
     } else if (testType == "pcor") {
+        # partial correlation (account for covariates), ppcor package
         featurePCCor = apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 2, 
                                                                            FUN = function(x) pcor.test(x = x, y=y,
-                                                                                                       z=covariate)$estimate))
+                                                                                                       z=covariate,
+                                                                                                       method="pearson")$estimate))
         
     } else if (testType == "cov") {
         # featurePCCor = as.data.frame(matrix(rep(0, nFeatures * nDataDims), nrow=nDataDims, ncol=nFeatures))

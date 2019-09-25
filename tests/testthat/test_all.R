@@ -292,6 +292,19 @@ test_that("getMetaRegionProfile", {
     
     expect_equal(binnedP, alterOut)    
     
+    ##########################################################
+    # # test multiBase data like ATAC-seq
+    # coordinateDTP <- data.frame(chr = rep("chr3", nrow(loadingMatP)), 
+    #                             start = .start,
+    #                             end = .start+1,
+    #                             extraCol = rep(1, length(.start)))
+    # # make 1 region overlap multiple bins ( % first bin, % second bin)
+    # # 150 to 
+    # coordinateDTP$end[2] = 225
+    # meanPerBin <- (c(seq(from=1.5, to=7.5, by=2), 10) * (x, x, 1, 1, 1) + 
+    #                    rep(1, 5) + rep(1, 5)) / 3
+    # 
+    
 })
 
 

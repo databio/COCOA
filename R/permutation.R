@@ -8,13 +8,13 @@
 #' 
 #' For reproducibility, set seed with 'set.seed()' function before running.
 #' @param nPerm numeric. The number of permutations to do.
+#' @param genomicSignal
+#' @param signalCoord
+#' @param GRList
 #' @param sampleLabels data.frame/matrix. Sample labels/values that 
 #' you are running COCOA to find region sets associated with. These 
 #' values will be shuffled for the permutation test. Rows are samples.
 #' Each column is a sample label.
-#' @param genomicSignal
-#' @param signalCoord
-#' @param GRList
 #' @param colsToAnnotate character. The column names of `sampleLabels` that
 #' you want to test.
 #' @param dataID character. A unique identifier for this dataset 
@@ -23,8 +23,9 @@
 #' correlation), or "cov" (covariation)
 #' @param useSimpleCache logical. 
 #' @param cacheDir character.
-#' @param correctionMethod character. P value correction method. For acceptable 
-#' arguments see ?p.adjust() (method parameter) 
+#' @param correctionMethod character. P value correction method. Default
+#' is "BH" for Benjamini and Hochberg false discovery rate. For acceptable 
+#' arguments and more info see ?stats::p.adjust() (method parameter) 
 #' @param resultType character. "pval" or "zscore"
 #' @param ... character. Optional additional arguments for simpleCache
 #' 
@@ -38,6 +39,8 @@
 runCOCOAPerm <- function(genomicSignal,
                                  signalCoord,
                                  GRList,
+                                 realRSScores,
+                                 sampleLabels,
                                  signalCol=c("PC1", "PC2"),
                                  signalCoordType = "default",
                                  scoringMetric="default",
@@ -45,7 +48,8 @@ runCOCOAPerm <- function(genomicSignal,
                                  nPerm=300,
                                  useSimpleCache=TRUE,
                                  cacheDir=getwd(),
-                                 dataID="tmp", ...) {
+                                 dataID="tmp",
+                                 correctionMethod="BH", ...) {
 
 
     indList <- list()
@@ -95,10 +99,6 @@ runCOCOAPerm <- function(genomicSignal,
     }, assignToVariable="rsPermScores")
     
     .analysisID = paste0("_", nPerm, "Perm_", variationMetric, "_", dataID)
-    .plotSubdir = paste0(plotSubdir, "StatsPlots", .analysisID, "/")
-    if (!dir.exists(ffPlot(.plotSubdir))) {
-        dir.create(ffPlot(.plotSubdir))
-    }
     
     # remove region sets that had no overlap
     keepInd = apply(rsPermScores[[1]], MARGIN = 1, FUN = function(x) !any(is.na(x)))
@@ -129,7 +129,7 @@ runCOCOAPerm <- function(genomicSignal,
     #################
     # simpleCache(paste0("rsScore_", dataID), assignToVariable = "realRSScores")
     # p-values based on fitted gamma distributions
-    correctionMethod = "BH" # input to p.adjust
+     # input to p.adjust
     gPValDF = getGammaPVal(scores = realRSScores[, colsToAnnotate, drop=FALSE], nullDistList = nullDistList, method = "mme", realScoreInDist = TRUE)
     gPValDF = apply(X = gPValDF, MARGIN = 2, FUN = function(x) p.adjust(p = x, method = correctionMethod))
     gPValDF = cbind(gPValDF, realRSScores[, colnames(realRSScores)[!(colnames(realRSScores) %in% colsToAnnotate)]])
@@ -302,3 +302,83 @@ pGammaList <- function(scoreVec, fitDistrList) {
                                                  lower.tail = FALSE), x = fitDistrList, y = scoreVec)
     return(pValVec)
 }
+
+
+# @param rsScores is a data.frame of 
+# @param nullDistList list. one item per region set. Each item is a 
+# data.frame with the 
+# null distribution for a single region set. Each column in the data.frame
+# is for a single variable (e.g. PC or latent factor)
+# @param testType character. "greater", "lesser", "two-sided" Whether to
+# create p values based on one sided test or not.
+# @param whichMetric character. Can be "pval" or "zscore"
+
+getPermStat <- function(rsScores, nullDistList, calcCols, testType="greater", whichMetric = "pval") {
+    
+    if (is(rsScores, "data.table")) {
+        rsScores = as.data.frame(rsScores)
+    }
+    
+    # get p values for a single region set (can get p val for multiple columns)
+    # @param rsScore a row of values for a single region set. One 
+    # value for each calcCols
+    getPermStatSingle <- function(rsScore, nullDist, 
+                                  calcCols, testType="greater", whichMetric = "pval") {
+        
+        if (is(nullDist, "data.table")) {
+            nullDist = as.data.frame(nullDist)
+        }
+        if (whichMetric == "pval") {
+            
+            pVal = rep(-1, length(rsScore))
+            if (testType == "greater") {
+                
+                for (i in seq_along(pVal)) {
+                    # only for one sided test (greater than)
+                    pVal[i] = 1 - ecdf(x = nullDist[, calcCols[i]])(rsScore[i])
+                }
+            }
+            
+            # (-abs(x-0.5) + 0.5) * 2
+            
+            thisStat = pVal
+        }
+        
+        if (whichMetric == "zscore") {
+            
+            
+            zScore = rep(NA, length(rsScore))
+            for (i in seq_along(zScore)) {
+                # only for one sided test (greater than)
+                zScore[i] = (rsScore[i] - mean(nullDist[, calcCols[i]])) / sd(x = nullDist[, calcCols[i]])
+            }
+            
+            thisStat = as.numeric(zScore)
+        }
+        
+        
+        return(thisStat)
+    }
+    
+    
+    # do once for each region set
+    thisStatList = list()
+    for (i in 1:nrow(rsScores)) {
+        thisStatList[[i]] = as.data.frame(t(getPermStatSingle(rsScore=rsScores[i, calcCols], 
+                                                              nullDist = nullDistList[[i]],
+                                                              calcCols = calcCols,
+                                                              whichMetric=whichMetric)))
+        colnames(thisStatList[[i]]) <- calcCols
+    }
+    thisStat = rbindlist(thisStatList)
+    # add back on annotation info
+    thisStat = cbind(thisStat, rsScores[, colnames(rsScores)[!(colnames(rsScores) %in% calcCols)]])
+    
+    # pVals = mapply(FUN = function(x, y) getPermPvalSingle(rsScore=x, 
+    #                                            nullDist = y,
+    #                                            calcCols = calcCols), 
+    #        x = rsScores[, calcCols], y=nullDistList)
+    
+    
+    return(thisStat)
+} 

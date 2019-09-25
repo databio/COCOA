@@ -31,6 +31,9 @@ Imports:
     tidyr,
     grid,
     grDevices
+    simpleCache
+    fitdistrplus
+    ppcor
 Suggests:
     knitr,
     parallel,
