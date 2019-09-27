@@ -2,15 +2,23 @@
 # and getting p values from that test with the gamma distribution
 
 
-# permutation test by shuffling sample labels
+
 # expected inputs: 
-#' permutation test by shuffling sample labels
+#' Run COCOA permutations to get p-values
+#' 
+#' This is a convenience function that runs multiple steps of the 
+#' permutation process together: it runs COCOA permutations, converts these
+#' to null distributions, fits a gamma distribution to each null distribution,
+#' and gets p-values for the previously calculated real COCOA scores. 
+#' See the individual functions for more info on each step. 
+#' 
 #' 
 #' For reproducibility, set seed with 'set.seed()' function before running.
 #' @param nPerm numeric. The number of permutations to do.
 #' @param genomicSignal
 #' @param signalCoord
 #' @param GRList
+#' @param realRSScores
 #' @param sampleLabels data.frame/matrix. Sample labels/values that 
 #' you are running COCOA to find region sets associated with. These 
 #' values will be shuffled for the permutation test. Rows are samples.
@@ -28,9 +36,8 @@
 #' arguments and more info see ?stats::p.adjust() (method parameter) 
 #' @param resultType character. "pval" or "zscore"
 #' @param ... character. Optional additional arguments for simpleCache
+#'
 #' 
-# # for visualization
-#' @param realRSScores
 #' @return Returns a list where each item is a data.frame of COCOA results 
 #' from a separate permutation
 #' 
@@ -57,46 +64,43 @@ runCOCOAPerm <- function(genomicSignal,
     for (i in 1:nPerm) {
         indList[[i]] <- sample(1:nrow(sampleLabels), nrow(sampleLabels))
     }
+
+    if (useSimpleCache) {
+        # create the main permutation cache
+        simpleCache(paste0("rsPermScores_", nPerm, "Perm_", variationMetric, "_", dataID), {
+            
+            rsPermScores <- list()
+            for (i in seq_along(indList)) {
+                # for (i in (length(rsPermScores) + 1):nPerm) {
+                onePermCacheName <- paste0("rsPermScores_", nPerm, "Perm_", variationMetric, "_", dataID, "_Cache", i)
+                # create sub caches, one for each permutation
+                simpleCache(onePermCacheName, cacheSubDir = paste0("rsPermScores_", nPerm, "Perm_", variationMetric, "_", dataID), {
+                    
+                    tmp <- corPerm(randomInd=indList[[i]],
+                                   genomicSignal=genomicSignal,
+                                   signalCoord=signalCoord,
+                                   GRList=GRList,
+                                   calcCols=colsToAnnotate,
+                                   sampleLabels=sampleLabels,
+                                   variationMetric = variationMetric)
+                    message(i) # must be ahead of object that is saved as cache, not after
+                    tmp
+                    
+                })
+            }
+            
+            # combining all individual permutations/caches into one object
+            for (i in seq_along(indList)) {
+                onePermCacheName <- paste0("rsPermScores_", nPerm, "Perm_", variationMetric, "_", dataID, "_Cache", i)
+                rsPermScores[[i]] <- get(onePermCacheName)
+            }
+            rsPermScores
+            
+        }, assignToVariable="rsPermScores")    
+    } else {
+        
+    }
     
-    # # plug random indices into parallelized function
-    # rsPermScores <- COCOA:::lapplyAlias(X= indList, FUN=function(x) corPerm(randomInd=x,
-    #                                                         genomicSignal=methylMat,
-    #                                                         signalCoord=signalCoord,
-    #                                                         GRList=GRList,
-    #                                                         calcCols=colsToAnnotate,
-    #                                                         sampleLabels=latentFactors))
-    
-    # create the main permutation cache
-    simpleCache(paste0("rsPermScores_", nPerm, "Perm_", variationMetric, "_", dataID), {
-        
-        rsPermScores <- list()
-        for (i in seq_along(indList)) {
-            # for (i in (length(rsPermScores) + 1):nPerm) {
-            onePermCacheName <- paste0("rsPermScores_", nPerm, "Perm_", variationMetric, "_", dataID, "_Cache", i)
-            # create sub caches, one for each permutation
-            simpleCache(onePermCacheName, cacheSubDir = paste0("rsPermScores_", nPerm, "Perm_", variationMetric, "_", dataID), {
-                
-                tmp <- corPerm(randomInd=indList[[i]],
-                               genomicSignal=genomicSignal,
-                               signalCoord=signalCoord,
-                               GRList=GRList,
-                               calcCols=colsToAnnotate,
-                               sampleLabels=sampleLabels,
-                               variationMetric = variationMetric)
-                message(i) # must be ahead of object that is saved as cache, not after
-                tmp
-                
-            })
-        }
-        
-        # combining all individual permutations/caches into one object
-        for (i in seq_along(indList)) {
-            onePermCacheName <- paste0("rsPermScores_", nPerm, "Perm_", variationMetric, "_", dataID, "_Cache", i)
-            rsPermScores[[i]] <- get(onePermCacheName)
-        }
-        rsPermScores
-        
-    }, assignToVariable="rsPermScores")
     
     .analysisID = paste0("_", nPerm, "Perm_", variationMetric, "_", dataID)
     
@@ -104,7 +108,7 @@ runCOCOAPerm <- function(genomicSignal,
     keepInd = apply(rsPermScores[[1]], MARGIN = 1, FUN = function(x) !any(is.na(x)))
     
     nullDistList = lapply(X = 1:nrow(rsPermScores[[1]]),
-                          FUN = function(x) extractNullDist(resultsList=rsPermScores, rsInd = x))
+                          FUN = function(x) permListToNullDist(resultsList=rsPermScores, rsInd = x))
     
     # screen out region sets with no overlap
     nullDistList = nullDistList[keepInd]
@@ -190,39 +194,79 @@ corPerm <- function(randomInd, genomicSignal,
     return(thisPermRes)
     
 }
-# This function will take a list of results of permutation tests that included
-# many region sets and return a data.frame/data.table with the null
-# distribution for a single region set (row)
-# @param resultsList each item in the list is a data.frame, one item for
-# each permutation with the results of that permutation. Each row in the 
-# data.frame is a region set. Rows in all the data.frames should be
-# in the same order.
+#' This function will take a list of results of permutation tests that included
+#' many region sets and return a list of data.frames where each data.frame
+#' contains the null distribution for a single region set.
+#' The function can 
+#' also convert in the reverse order from a list of null distributions to a 
+#' list of COCOA results. 
+#' @param resultsList each item in the list is a data.frame, one item for
+#' each permutation with the results of that permutation. Each row in the 
+#' data.frame is a region set. All data.frames should be the same size and
+#' each data.frame's rows should be in the same order
+
+#' distributions (the normal output of this function) and convert it
+#' to a list of COCOA results (the normal input of this function). 
+#' 
+
+convertToFromNullDist <- function(resultsList, reverse=FALSE) {
+
+    nullDistList = lapply(X = 1:nrow(rsPermScores[[1]]),
+                          FUN = function(x) permListToOneNullDist(resultsList=rsPermScores, 
+                                                                  rsInd = x))
+    return(nullDistList)
+}
+
+
 # @param rsInd numeric. The row number for the region set of interest.
-extractNullDist <- function(resultsList, rsInd) {
+# do for only one region set
+permListToOneNullDist <- function(resultsList, rsInd, reverse=FALSE) {
+    
     rowList = lapply(resultsList, FUN = function(x) x[rsInd, ])
     rsNullDist = as.data.frame(rbindlist(rowList))
     return(rsNullDist)
 }
+
+
+
+#' Run COCOA permutations to get null distributions for each region set.
+#' For one permutation, there are several steps: 
+#' First, we shuffle the sample labels. Second, we calculate the association
+#' between the epigenetic data and the shuffled sample labels using the 
+#' chosen metric (e.g. correlation). Third, the resulting feature coefficients
+#' are used as input to the runCOCOA function to score each region set.
+#' This process is repeated `nPerm` times.
+#' 
+#' @param groupByRS logical
+
+#' @return A list where each item is a data.frame with the null 
+#' distribution for a single region set. The length of the list
+#' is equal to the number of region sets. The number of rows of 
+#' each data.frame is equal to the number of permutations.
+getNullDist( groupByRS=TRUE) {
+    
+}
+
 
 ################################################################################
 # p value functions 
 
 
 
-#' Get p value after fitting a gamma distribution to the null distribution
-#' @param nullDistList list of a data.frame. Each list item 
-#' has null distributions for a single 
-#' region set. Each column corresponds to a null distribution for that 
-#' region set for a given variable/sample attribute.   
-#' @param scores a data.frame. Has same columns as nullDistDF. One row per
-#' region set (should be in same order as nullDistDF) The scores
-#' that will be used to get p values.
-#' @param realScoreInDist logical. Should the actual score (from 
-#' test with no permutations) be included in the null distribution 
-#' when fitting the gamma distribution
-#' 
-#' @return Returns a data.frame with p values, one column for each col in
-#' scores and nullDistDF 
+# Get p value after fitting a gamma distribution to the null distribution
+# @param nullDistList list of a data.frame. Each list item 
+# has null distributions for a single 
+# region set. Each column corresponds to a null distribution for that 
+# region set for a given variable/sample attribute.   
+# @param scores a data.frame. Has same columns as nullDistDF. One row per
+# region set (should be in same order as nullDistDF) The scores
+# that will be used to get p values.
+# @param realScoreInDist logical. Should the actual score (from 
+# test with no permutations) be included in the null distribution 
+# when fitting the gamma distribution
+# 
+# @return Returns a data.frame with p values, one column for each col in
+# scores and nullDistDF 
 
 getGammaPVal <- function(scores, nullDistList, method="mme", realScoreInDist=FALSE, force=FALSE) {
     
@@ -242,7 +286,7 @@ getGammaPVal <- function(scores, nullDistList, method="mme", realScoreInDist=FAL
     
     # returns list, each item in list is also a list.
     # in sub list: each col in nullDistDF has one list item
-    fittedDistList = lapply(X = nullDistList, function(x) fitGammaNullDistr(nullDistDF = x[, colsToAnnotate, drop=FALSE], 
+    fittedDistList = lapply(X = nullDistList, function(x) fitGammaNullDist(nullDistDF = x[, colsToAnnotate, drop=FALSE], 
                                                                             method=method, 
                                                                             force=force))
     
@@ -260,20 +304,20 @@ getGammaPVal <- function(scores, nullDistList, method="mme", realScoreInDist=FAL
 }
 
 
-#' @param nullDistDF a data.frame. Has null distributions for a single 
-#' region set. Each column corresponds to a null distribution for that 
-#' region set for a given variable/sample attribute.   
-#' 
-#' @return Returns a list. Each list item is a "fitdist" object which is 
-#' a fitted function 
-#' for one of the columns in nullDistDF (output of fitdist() from
-#' fitdistrplus.
-#' These are gamma distributions and can be used to get p values for the 
-#' null distribution so that a large number of permutations 
-#' are not required.The list is in order of the columns and will
-#' have the names of the data.frame columns. 
+# @param nullDistDF a data.frame. Has null distributions for a single 
+# region set. Each column corresponds to a null distribution for that 
+# region set for a given variable/sample attribute.   
+# 
+# @return Returns a list. Each list item is a "fitdist" object which is 
+# a fitted function 
+# for one of the columns in nullDistDF (output of fitdist() from
+# fitdistrplus.
+# These are gamma distributions and can be used to get p values for the 
+# null distribution so that a large number of permutations 
+# are not required.The list is in order of the columns and will
+# have the names of the data.frame columns. 
 
-fitGammaNullDistr <- function(nullDistDF, method="mme", force=FALSE) {
+fitGammaNullDist <- function(nullDistDF, method="mme", force=FALSE) {
     if (force) {
         modelList = apply(X = nullDistDF, 
                           MARGIN = 2, 
