@@ -18,18 +18,25 @@
 #' @param genomicSignal
 #' @param signalCoord
 #' @param GRList
-#' @param realRSScores
+#' @param realRSScores data.frame. A data.frame with region set
+#' scores. The output of the 'runCOCOA' function.
+#' Rows should be in the same order as the region sets in GRList. 
+#' Must include columns with names given by 'colsToAnnotate'.
 #' @param sampleLabels data.frame/matrix. Sample labels/values that 
 #' you are running COCOA to find region sets associated with. These 
 #' values will be shuffled for the permutation test. Rows are samples.
 #' Each column is a sample label.
 #' @param colsToAnnotate character. The column names of `sampleLabels` that
-#' you want to test.
+#' you want to test. These must also be columns in realRSScores.
 #' @param dataID character. A unique identifier for this dataset 
-#' (for saving results)
-#' @param variationMetric character. Either "cor" (correlation), "pcor" (partial
-#' correlation), or "cov" (covariation)
-#' @param useSimpleCache logical. 
+#' (for saving results with simpleCache)
+#' @param variationMetric character. Either "cor" (Pearson correlation), 
+#' "pcor" (partial correlation), "spearmanCor (Spearman correlation) 
+#' or "cov" (covariation). 
+#' @param useSimpleCache logical. Whether to use save caches. Caches
+#' will be created for each permutation so that if the function is disrupted
+#' it can restart where it left off. The final results are also saved 
+#' as a cache.  
 #' @param cacheDir character.
 #' @param correctionMethod character. P value correction method. Default
 #' is "BH" for Benjamini and Hochberg false discovery rate. For acceptable 
@@ -86,7 +93,7 @@ runCOCOAPerm <- function(genomicSignal,
                     message(i) # must be ahead of object that is saved as cache, not after
                     tmp
                     
-                })
+                }, ...)
             }
             
             # combining all individual permutations/caches into one object
@@ -96,36 +103,50 @@ runCOCOAPerm <- function(genomicSignal,
             }
             rsPermScores
             
-        }, assignToVariable="rsPermScores")    
+        }, assignToVariable="rsPermScores", ...)    
     } else {
         
+        rsPermScores <- list()
+        for (i in seq_along(indList)) {
+            # for (i in (length(rsPermScores) + 1):nPerm) {
+                
+            rsPermScores[[i]] <- corPerm(randomInd=indList[[i]],
+                                         genomicSignal=genomicSignal,
+                                         signalCoord=signalCoord,
+                                         GRList=GRList,
+                                         calcCols=colsToAnnotate,
+                                         sampleLabels=sampleLabels,
+                                         variationMetric = variationMetric)
+            message(i) # must be ahead of object that is saved as cache, not after
+            
+        }
+
     }
     
     
     .analysisID = paste0("_", nPerm, "Perm_", variationMetric, "_", dataID)
     
-    # remove region sets that had no overlap
-    keepInd = apply(rsPermScores[[1]], MARGIN = 1, FUN = function(x) !any(is.na(x)))
+    # # remove region sets that had no overlap
+    # keepInd = apply(rsPermScores[[1]], MARGIN = 1, FUN = function(x) !any(is.na(x)))
+    # 
+    # # screen out region sets with no overlap
+    # nullDistList = nullDistList[keepInd]
+    # realRSScores = realRSScores[keepInd, ]
     
-    nullDistList = lapply(X = 1:nrow(rsPermScores[[1]]),
-                          FUN = function(x) permListToNullDist(resultsList=rsPermScores, rsInd = x))
-    
-    # screen out region sets with no overlap
-    nullDistList = nullDistList[keepInd]
-    realRSScores = realRSScores[keepInd, ]
+    nullDistList = convertToFromNullDist(resultsList=rsPermScores)
     
     simpleCache(paste0("permPValsUncorrected", .analysisID), {
         rsPVals = getPermStat(rsScores=realRSScores, nullDistList=nullDistList,
                               calcCols=colsToAnnotate, whichMetric = "pval")
         rsPVals
-    }, recreate = TRUE, reload = TRUE)
+    }, ...)
     
     simpleCache(paste0("permZScores", .analysisID), {
         rsZScores = getPermStat(rsScores=realRSScores, nullDistList=nullDistList,
                                 calcCols=colsToAnnotate, whichMetric = "zscore")
         rsZScores
         
-    }, recreate = TRUE, reload=TRUE)
+    }, ...)
     
     
     #topRSInd = rsRankingIndex(rsScores = rsZScores, signalCol = colsToAnnotate)
@@ -140,8 +161,13 @@ runCOCOAPerm <- function(genomicSignal,
     
     simpleCache(paste0("permPValsCorrected", .analysisID), {
         gPValDF
-    }, recreate = TRUE, reload = TRUE)
+    }, ...)
     
+    # return(list)
+    # definitely: rsPermScores or nullDistList,
+    # possible outputs:  
+    # uncorrected pvals perm and gamma, corrected pvals perm and gamma
+    # zscores
 }
 
 # @param genomicSignal columns of dataMat should be samples/patients, rows should be genomic signal
@@ -209,10 +235,10 @@ corPerm <- function(randomInd, genomicSignal,
 #' to a list of COCOA results (the normal input of this function). 
 #' 
 
-convertToFromNullDist <- function(resultsList, reverse=FALSE) {
+convertToFromNullDist <- function(resultsList) {
 
-    nullDistList = lapply(X = 1:nrow(rsPermScores[[1]]),
-                          FUN = function(x) permListToOneNullDist(resultsList=rsPermScores, 
+    nullDistList = lapply(X = 1:nrow(resultsList[[1]]),
+                          FUN = function(x) permListToOneNullDist(resultsList=resultsList, 
                                                                   rsInd = x))
     return(nullDistList)
 }
@@ -220,7 +246,7 @@ convertToFromNullDist <- function(resultsList, reverse=FALSE) {
 
 # @param rsInd numeric. The row number for the region set of interest.
 # do for only one region set
-permListToOneNullDist <- function(resultsList, rsInd, reverse=FALSE) {
+permListToOneNullDist <- function(resultsList, rsInd) {
     
     rowList = lapply(resultsList, FUN = function(x) x[rsInd, ])
     rsNullDist = as.data.frame(rbindlist(rowList))
@@ -243,7 +269,7 @@ permListToOneNullDist <- function(resultsList, rsInd, reverse=FALSE) {
 #' distribution for a single region set. The length of the list
 #' is equal to the number of region sets. The number of rows of 
 #' each data.frame is equal to the number of permutations.
-getNullDist( groupByRS=TRUE) {
+getNullDist <- function(groupByRS=TRUE) {
     
 }
 
