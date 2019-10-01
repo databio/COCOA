@@ -30,7 +30,7 @@ Based on this, we might expect that the variation captured by these PCs would be
 ## Inputs
 
 There are three main inputs for COCOA:
-
+c
 1. PCA loadings (`prcomp()$rotation`).
 2. Genomic coordinates associated with the raw data used for the PCA and with the PCA loadings.
 3. Region sets (normally a database of region sets).

@@ -1,0 +1,43 @@
+---
+title: "Supervised COCOA"
+author: "John Lawson"
+date: "`r Sys.Date()`"
+output: 
+  BiocStyle::html_document
+vignette: >
+  %\VignetteIndexEntry{Introduction to Coordinate Covariation Analysis}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# Supervised COCOA
+
+explanation of the goals and concept
+
+
+# Quantify relationship between sample attribute and epigenetic data
+
+```{r, eval=TRUE, message=FALSE, warning=FALSE}
+library(COCOA)
+library(data.table)
+library(ggplot2)
+data("esr1_chr1")
+data("gata3_chr1")
+data("nrf1_chr1")
+data("atf3_chr1")
+data("brcaLoadings1")
+data("brcaMCoord1")
+data("brcaPCScores")
+data("brcaMethylData1")
+```
+
+methylCor <- cor(brcaMethylData1, survival)
+
+# Score region sets
+runCOCOA()
+
+Done in one step with corPerm
+
+# How to choose a metric?
+    
+    

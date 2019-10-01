@@ -1187,7 +1187,7 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount,
         # regionGroupID = regionGroupID[!vapply(X = binMeansList, FUN = is.null, FUN.VALUE = TRUE)]
         binnedBSDT[, regionGroupID := regionGroupID]
 
-    } else { # aggrMethod == "regionMean"
+    } else if (aggrMethod == "regionMean") { # aggrMethod == "regionMean"
         
         # what is output if a region set has no overlap?
         binnedBSDT <- BSAggregate(BSDT,
@@ -1290,7 +1290,7 @@ averagePerRegion <- function(signal,
         if (all(coordinateDT$start == coordinateDT$end)) {
             dataCoordType <- "singleBase"
         } else {
-            dataCoordType <- "region"
+            dataCoordType <- "multiBase"
         }
     }
 
@@ -1322,7 +1322,7 @@ averagePerRegion <- function(signal,
                                    meanPerRegion = TRUE,
                                    returnQuantile = returnQuantile) 
 
-    } else if (dataCoordType == "region") {
+    } else if (dataCoordType == "multiBase") {
 
         avPerRegion <- weightedAvePerRegion(signalDT = signalDT,
                              signalCoord=signalCoord,
