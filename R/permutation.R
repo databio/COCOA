@@ -3,6 +3,24 @@
 
 
 
+# Run COCOA permutations to get null distributions for each region set.
+# For one permutation, there are several steps: 
+# First, we shuffle the sample labels. Second, we calculate the association
+# between the epigenetic data and the shuffled sample labels using the 
+# chosen metric (e.g. correlation). Third, the resulting feature coefficients
+# are used as input to the runCOCOA function to score each region set.
+# This process is repeated `nPerm` times.
+# 
+# @param groupByRS logical
+
+# @return A list where each item is a data.frame with the null 
+# distribution for a single region set. The length of the list
+# is equal to the number of region sets. The number of rows of 
+# each data.frame is equal to the number of permutations.
+getNullDist <- function(groupByRS=TRUE) {
+    
+}
+
 #' Run COCOA permutations to get p-values
 #' 
 #' This is a convenience function that runs multiple steps of the 
@@ -50,24 +68,46 @@
 #' 
 #' @return Returns a list where each item is a data.frame of COCOA results 
 #' from a separate permutation
+#' @examples data("brcaMCoord1")
+#' data("brcaLoadings1")
+#' data("esr1_chr1")
+#' data("nrf1_chr1")
+#' data("brcaMethylData1")
+#' data("brcaPCScores657")
+#' pcCor = corFeature
+#' sampleLabels <- brcaPCScores657[colnames(brcaMethylData1), ]
+#' sampleLabels$ER_Status <- scale(as.numeric(sampleLabels$ER_Status), 
+#'                                center=TRUE, scale=FALSE)
+#' # give the actual order of samples to randomInd to get the real scores
+#' realRSScores <- corPerm(randomInd=1:4, genomicSignal=brcaMethylData1, 
+#'         signalCoord=brcaMCoord1, GRList=GRangesList(esr1_chr1, nrf1_chr1),
+#'         calcCols=c("PC1", "PC2"), sampleLabels=sampleLabels, 
+#'         variationMetric="cor")
+#' 
+#' a=runCOCOAPerm(genomicSignal=brcaMethylData1, 
+#'         signalCoord=brcaMCoord1, GRList=GRangesList(esr1_chr1, nrf1_chr1),
+#'         realRSScores=realRSScores, 
+#'         sampleLabels=sampleLabels, signalCol=c("PC1", "PC2"),
+#'         variationMetric="cor", nPerm = 10, useSimpleCache=FALSE)
 #' 
 #' @export
 
 runCOCOAPerm <- function(genomicSignal,
-                                 signalCoord,
-                                 GRList,
-                                 realRSScores,
-                                 sampleLabels,
-                                 signalCol=c("PC1", "PC2"),
-                                 signalCoordType = "default",
-                                 scoringMetric="default",
-                                 variationMetric="cor",
-                                 nPerm=300,
-                                 useSimpleCache=TRUE,
-                                 cacheDir=getwd(),
-                                 dataID="tmp",
-                                 correctionMethod="BH", ...) {
-
+                         signalCoord,
+                         GRList,
+                         realRSScores,
+                         sampleLabels,
+                         signalCol=c("PC1", "PC2"),
+                         signalCoordType = "default",
+                         scoringMetric="default",
+                         variationMetric="cor",
+                         nPerm=300,
+                         useSimpleCache=TRUE,
+                         cacheDir=getwd(),
+                         dataID="tmp",
+                         correctionMethod="BH", ...) {
+    
+    colsToAnnotate = signalCol
     allResultsList = list()
     
     
@@ -199,19 +239,44 @@ runCOCOAPerm <- function(genomicSignal,
     # zscores
 }
 
-# @param genomicSignal columns of dataMat should be samples/patients, rows should be genomic signal
-# (each row corresponds to one genomic coordinate/range)
-# @param sampleLabels Matrix or data.frame. Rows should be samples, 
-# columns should be "features" 
-# (whatever you want to get correlation with: eg PC scores),
-# all columns in featureMat will be used (subset when passing to function
-# in order to not use all columns)
-# @param calcCols character. the columns in `sampleLabels` for which to calculate
-# correlation and then to run COCOA on
-# @return data.frame. The output of runCOCOA for one permutation
+#' @param randomInd
+#' @param genomicSignal columns of dataMat should be samples/patients, rows should be genomic signal
+#' (each row corresponds to one genomic coordinate/range)
+#' @param signalCoord
+#' @param GRList
+#' @param calcCols character. the columns in `sampleLabels` for which to calculate
+#' correlation and then to run COCOA on
+#' @param sampleLabels Matrix or data.frame. Rows should be samples, 
+#' columns should be "features" 
+#' (whatever you want to get correlation with: eg PC scores),
+#' all columns in featureMat will be used (subset when passing to function
+#' in order to not use all columns)
+#' @param variationMetric
+#' @param scoringMetric
+#' @param verbose
+#' @param absVal
+#' @return data.frame. The output of runCOCOA for one permutation
+#' @examples data("brcaMCoord1")
+#' data("brcaLoadings1")
+#' data("esr1_chr1")
+#' data("nrf1_chr1")
+#' data("brcaMethylData1")
+#' data("brcaPCScores657")
+#' sampleLabels = brcaPCScores657[colnames(brcaMethylData1), ]
+#' sampleLabels$ER_Status = scale(as.numeric(sampleLabels$ER_Status), 
+#'                                center=TRUE, scale=FALSE)
+#' # shuffling sample labels
+#' randomInd = sample(1:nrow(sampleLabels), nrow(sampleLabels))
+#' corPerm(randomInd=randomInd, genomicSignal=brcaMethylData1, 
+#'         signalCoord=brcaMCoord1, GRList=GRangesList(esr1_chr1, nrf1_chr1),
+#'         calcCols="ER_Status", sampleLabels=sampleLabels, 
+#'         variationMetric="cor")
+#' 
 corPerm <- function(randomInd, genomicSignal, 
                     signalCoord, GRList, calcCols,
-                    sampleLabels, variationMetric = "cor") {
+                    sampleLabels, variationMetric = "cor", 
+                    scoringMetric="default", verbose=TRUE,
+                    absVal=TRUE) {
     
     # if vector is given, return error
     if (is.null(dim(sampleLabels))) {
@@ -235,20 +300,23 @@ corPerm <- function(randomInd, genomicSignal,
     # calculate correlation
     featureLabelCor = createCorFeatureMat(dataMat = genomicSignal, 
                                           featureMat = sampleLabels, 
-                                          centerDataMat = TRUE, 
-                                          centerFeatureMat = TRUE,
+                                          centerDataMat = FALSE, 
+                                          centerFeatureMat = FALSE,
                                           testType = variationMetric)
     
     # run COCOA
     thisPermRes = runCOCOA(signal=featureLabelCor, 
                            signalCoord=signalCoord, GRList=GRList, 
                            signalCol = calcCols, 
-                           scoringMetric = "default", verbose = TRUE)
+                           scoringMetric = scoringMetric, verbose = verbose,
+                           absVal = absVal)
     
     # return
     return(thisPermRes)
     
 }
+
+
 #' This function will take a list of results of permutation tests that included
 #' many region sets and return a list of data.frames where each data.frame
 #' contains the null distribution for a single region set.
@@ -259,10 +327,18 @@ corPerm <- function(randomInd, genomicSignal,
 #' each permutation with the results of that permutation. Each row in the 
 #' data.frame is a region set. All data.frames should be the same size and
 #' each data.frame's rows should be in the same order
-
-#' distributions (the normal output of this function) and convert it
-#' to a list of COCOA results (the normal input of this function). 
+#' @return 
 #' 
+#' @example 
+#' 
+#' # six region sets (rows), 2 signals (columns)
+#' fakePermScores = data.frame(abs(rnorm(6)), abs(rnorm(6)))
+#' fakePermScores2 = data.frame(abs(rnorm(6)), abs(rnorm(6)))
+#' # 2 fake COCOA results (ie nPerm=2)
+#' permRSScores = list(fakePermScores, fakePermScores2)
+#' convertToFromNullDist(permRSScores)
+#' 
+#' @export
 
 convertToFromNullDist <- function(resultsList) {
 
@@ -284,23 +360,6 @@ permListToOneNullDist <- function(resultsList, rsInd) {
 
 
 
-#' Run COCOA permutations to get null distributions for each region set.
-#' For one permutation, there are several steps: 
-#' First, we shuffle the sample labels. Second, we calculate the association
-#' between the epigenetic data and the shuffled sample labels using the 
-#' chosen metric (e.g. correlation). Third, the resulting feature coefficients
-#' are used as input to the runCOCOA function to score each region set.
-#' This process is repeated `nPerm` times.
-#' 
-#' @param groupByRS logical
-
-#' @return A list where each item is a data.frame with the null 
-#' distribution for a single region set. The length of the list
-#' is equal to the number of region sets. The number of rows of 
-#' each data.frame is equal to the number of permutations.
-getNullDist <- function(groupByRS=TRUE) {
-    
-}
 
 
 ################################################################################
@@ -323,6 +382,17 @@ getNullDist <- function(groupByRS=TRUE) {
 # 
 #' @return Returns a data.frame with p values, one column for each col in
 #' scores and nullDistDF 
+#' 
+#' @examples 
+#' fakeOriginalScores = data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
+#' fakePermScores = data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
+#' fakePermScores2 = data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
+#' fakePermScores3 = data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
+#' permRSScores = list(fakePermScores, fakePermScores2, fakePermScores3)
+#' nullDistList = convertToFromNullDist(permRSScores)
+#' getGammaPVal(scores=fakeOriginalScores, nullDistList=nullDistList, calcCols=c("PC1", "PC2")) 
+#' 
+#' @export
 
 getGammaPVal <- function(scores, nullDistList, calcCols, method="mme", realScoreInDist=TRUE, force=FALSE) {
     
@@ -401,7 +471,11 @@ fitGammaNullDist <- function(nullDistDF, method="mme", force=FALSE) {
                                                                                                 method="mme")}))   
     }
     
-    return(modelList)    
+    return(modelList)    #' rsScores <- runCOCOA(signal=brcaLoadings1, 
+    #'                                  signalCoord=brcaMCoord1, 
+    #'                                  GRList=GRangesList(esr1_chr1), 
+    #'                                  signalCol=c("PC1", "PC2"), 
+    #'                                  scoringMetric="regionMean")
 }
 
 pGammaList <- function(scoreVec, fitDistrList) {
@@ -418,14 +492,28 @@ pGammaList <- function(scoreVec, fitDistrList) {
 }
 
 
-# @param rsScores is a data.frame of 
-# @param nullDistList list. one item per region set. Each item is a 
-# data.frame with the 
-# null distribution for a single region set. Each column in the data.frame
-# is for a single variable (e.g. PC or latent factor)
-# @param testType character. "greater", "lesser", "two-sided" Whether to
-# create p values based on one sided test or not.
-# @param whichMetric character. Can be "pval" or "zscore"
+#' @param rsScores is a data.frame of 
+#' @param nullDistList list. one item per region set. Each item is a 
+#' data.frame with the 
+#' null distribution for a single region set. Each column in the data.frame
+#' is for a single variable (e.g. PC or latent factor)
+#' @param calcCols
+#' @param testType character. "greater", "lesser", "two-sided" Whether to
+#' create p values based on one sided test or not.
+#' @param whichMetric character. Can be "pval" or "zscore"
+#' @examples 
+#' fakeOriginalScores = data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
+#' fakePermScores = data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
+#' fakePermScores2 = data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
+#' fakePermScores3 = data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
+#' permRSScores = list(fakePermScores, fakePermScores2, fakePermScores3)
+#' nullDistList = convertToFromNullDist(permRSScores)
+#' getPermStat(rsScores=fakeOriginalScores, nullDistList=nullDistList, 
+#'             calcCols=c("PC1", "PC2"), whichMetric="pval") 
+#' getPermStat(rsScores=fakeOriginalScores, nullDistList=nullDistList, 
+#'             calcCols=c("PC1", "PC2"), whichMetric="zscore") 
+#' 
+#' @export
 
 getPermStat <- function(rsScores, nullDistList, calcCols, testType="greater", whichMetric = "pval") {
     

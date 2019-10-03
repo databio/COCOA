@@ -788,6 +788,7 @@ createCorFeatureMat = function(dataMat, featureMat,
         featureMat = as.matrix(featureMat)
     }
     
+    #remove this line
     dataMat = data.table::copy(as.data.frame(t(dataMat)))
     
     
@@ -802,11 +803,15 @@ createCorFeatureMat = function(dataMat, featureMat,
         #     }
         #     
         # }
+        
+        # put epigenetic data first in cor()
+        # cor(dataMat, featureMat, use="pairwise.complete.obs", method="pearson")
         featurePCCor = apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 2,
                                                                            FUN = function(x) cor(x = x, y,
                                                                                                  use="pairwise.complete.obs",
                                                                                                  method="pearson")))
     } else if (testType == "spearmanCor") {
+        # xtfrm(x) ranking
         featurePCCor = apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 2,
                                                                            FUN = function(x) cor(x = x, y,
                                                                                                  use="pairwise.complete.obs",
