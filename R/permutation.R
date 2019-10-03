@@ -3,14 +3,17 @@
 
 
 
-# expected inputs: 
 #' Run COCOA permutations to get p-values
 #' 
 #' This is a convenience function that runs multiple steps of the 
 #' permutation process together: it runs COCOA permutations, converts these
-#' to null distributions, fits a gamma distribution to each null distribution,
-#' and gets p-values for the previously calculated real COCOA scores. 
-#' See the individual functions for more info on each step. 
+#' to null distributions, gets the empirical p value (which is limited by the
+#' number of permutations), gets z scores, and fits a gamma distribution 
+#' to each null distribution to estimate p values (not limited by the 
+#' number of permutations),
+#' Requires that the user has previously calculated the real COCOA scores. 
+#' See these individual functions for more info on each step: corPerm, 
+#' convertToFromNullDist, getPermStat, and getGammaPVal. 
 #' 
 #' 
 #' For reproducibility, set seed with 'set.seed()' function before running.
@@ -65,7 +68,9 @@ runCOCOAPerm <- function(genomicSignal,
                                  dataID="tmp",
                                  correctionMethod="BH", ...) {
 
-
+    allResultsList = list()
+    
+    
     indList <- list()
     # generate random indices for shuffling of samples
     for (i in 1:nPerm) {
@@ -120,7 +125,6 @@ runCOCOAPerm <- function(genomicSignal,
             message(i) # must be ahead of object that is saved as cache, not after
             
         }
-
     }
     
     
@@ -134,37 +138,62 @@ runCOCOAPerm <- function(genomicSignal,
     # realRSScores = realRSScores[keepInd, ]
     
     nullDistList = convertToFromNullDist(resultsList=rsPermScores)
+    if (useSimpleCache) {
+
+        simpleCache(paste0("permPValsUncorrected", .analysisID), {
+            rsPVals = getPermStat(rsScores=realRSScores, nullDistList=nullDistList,
+                                  calcCols=colsToAnnotate, whichMetric = "pval")
+            rsPVals
+        }, assignToVariable=rsPVals, ...)
+        
+        simpleCache(paste0("permZScores", .analysisID), {
+            rsZScores = getPermStat(rsScores=realRSScores, nullDistList=nullDistList,
+                                    calcCols=colsToAnnotate, whichMetric = "zscore")
+            rsZScores
+            
+        }, assignToVariable="rsZScores", ...)
     
-    simpleCache(paste0("permPValsUncorrected", .analysisID), {
+        simpleCache(paste0("permPValsCorrected", .analysisID), {
+            # p-values based on fitted gamma distributions
+            gPValDF = getGammaPVal(scores = realRSScores, 
+                                   nullDistList = nullDistList, 
+                                   calcCols = colsToAnnotate, 
+                                   method = "mme", realScoreInDist = TRUE)
+            gPValDF = apply(X = gPValDF, MARGIN = 2, 
+                            FUN = function(x) p.adjust(p = x, method = correctionMethod))
+            gPValDF = cbind(gPValDF, 
+                            realRSScores[, colnames(realRSScores)[!(colnames(realRSScores) 
+                                                                    %in% colsToAnnotate)]])
+            gPValDF
+        }, assignToVariable="gPValDF", ...)    
+        
+    } else {
         rsPVals = getPermStat(rsScores=realRSScores, nullDistList=nullDistList,
                               calcCols=colsToAnnotate, whichMetric = "pval")
-        rsPVals
-    }, ...)
-    
-    simpleCache(paste0("permZScores", .analysisID), {
+        
         rsZScores = getPermStat(rsScores=realRSScores, nullDistList=nullDistList,
                                 calcCols=colsToAnnotate, whichMetric = "zscore")
-        rsZScores
         
-    }, ...)
+        # p-values based on fitted gamma distributions
+        gPValDF = getGammaPVal(scores = realRSScores, 
+                               nullDistList = nullDistList, 
+                               calcCols = colsToAnnotate, 
+                               method = "mme", realScoreInDist = TRUE)
+        gPValDF = cbind(gPValDF, 
+                        realRSScores[, colnames(realRSScores)[!(colnames(realRSScores) 
+                                                                %in% colsToAnnotate)]])
+        
+    }
     
-    
-    #topRSInd = rsRankingIndex(rsScores = rsZScores, signalCol = colsToAnnotate)
-    
-    #################
-    # simpleCache(paste0("rsScore_", dataID), assignToVariable = "realRSScores")
-    # p-values based on fitted gamma distributions
-     # input to p.adjust
-    gPValDF = getGammaPVal(scores = realRSScores[, colsToAnnotate, drop=FALSE], nullDistList = nullDistList, method = "mme", realScoreInDist = TRUE)
-    gPValDF = apply(X = gPValDF, MARGIN = 2, FUN = function(x) p.adjust(p = x, method = correctionMethod))
-    gPValDF = cbind(gPValDF, realRSScores[, colnames(realRSScores)[!(colnames(realRSScores) %in% colsToAnnotate)]])
-    
-    simpleCache(paste0("permPValsCorrected", .analysisID), {
-        gPValDF
-    }, ...)
-    
-    # return(list)
-    # definitely: rsPermScores or nullDistList,
+    allResultsList$permRSScores = rsPermScores
+    allResultsList$empiricalPVals = rsPVals
+    allResultsList$zScores = rsZScores
+    allResultsList$gammaPVal = gPValDF
+    return(allResultsList)
+
+    # return(named list)
+    # definitely: rsPermScores or nullDistList, 
+    # also uncorrected perm pvals, z scores, uncorrected gamma pvals
     # possible outputs:  
     # uncorrected pvals perm and gamma, corrected pvals perm and gamma
     # zscores
@@ -279,27 +308,28 @@ getNullDist <- function(groupByRS=TRUE) {
 
 
 
-# Get p value after fitting a gamma distribution to the null distribution
-# @param nullDistList list of a data.frame. Each list item 
-# has null distributions for a single 
-# region set. Each column corresponds to a null distribution for that 
-# region set for a given variable/sample attribute.   
-# @param scores a data.frame. Has same columns as nullDistDF. One row per
-# region set (should be in same order as nullDistDF) The scores
-# that will be used to get p values.
-# @param realScoreInDist logical. Should the actual score (from 
-# test with no permutations) be included in the null distribution 
-# when fitting the gamma distribution
+#' Get p value after fitting a gamma distribution to the null distribution
+#' 
+#' @param nullDistList list of data.frames. Each list item 
+#' has null distributions for a single 
+#' region set. Each column corresponds to a null distribution for that 
+#' region set for a given variable/sample attribute.   
+#' @param scores a data.frame. Has same columns as nullDistDF. One row per
+#' region set (should be in same order as nullDistDF) The scores
+#' that will be used to get p values.
+#' @param realScoreInDist logical. Should the actual score (from 
+#' test with no permutations) be included in the null distribution 
+#' when fitting the gamma distribution
 # 
-# @return Returns a data.frame with p values, one column for each col in
-# scores and nullDistDF 
+#' @return Returns a data.frame with p values, one column for each col in
+#' scores and nullDistDF 
 
-getGammaPVal <- function(scores, nullDistList, method="mme", realScoreInDist=FALSE, force=FALSE) {
+getGammaPVal <- function(scores, nullDistList, calcCols, method="mme", realScoreInDist=TRUE, force=FALSE) {
     
     # make sure the same columns are present/in the same order
     
     
-    colsToAnnotate = colnames(scores)
+    colsToAnnotate = calcCols[calcCols %in% colnames(scores)]
     
     if (realScoreInDist) {
         # to get a more accurate gamma distribution, include the score from unpermuted test.
@@ -309,6 +339,7 @@ getGammaPVal <- function(scores, nullDistList, method="mme", realScoreInDist=FAL
         }
     }
     
+    scores = scores[, colsToAnnotate, drop=FALSE]  
     
     # returns list, each item in list is also a list.
     # in sub list: each col in nullDistDF has one list item
@@ -334,8 +365,9 @@ getGammaPVal <- function(scores, nullDistList, method="mme", realScoreInDist=FAL
 # region set. Each column corresponds to a null distribution for that 
 # region set for a given variable/sample attribute.   
 # 
-# @return Returns a list. Each list item is a "fitdist" object which is 
-# a fitted function 
+# @return Returns a list or NA. Each list item is a "fitdist" object which is 
+# a fitted function. If there are any NA's in nullDistDF, then NA will 
+# be returned instead.
 # for one of the columns in nullDistDF (output of fitdist() from
 # fitdistrplus.
 # These are gamma distributions and can be used to get p values for the 
@@ -344,7 +376,14 @@ getGammaPVal <- function(scores, nullDistList, method="mme", realScoreInDist=FAL
 # have the names of the data.frame columns. 
 
 fitGammaNullDist <- function(nullDistDF, method="mme", force=FALSE) {
+    
+    if (any(is.na(nullDistDF))) {
+        
+        return(NA)
+    }
+    
     if (force) {
+        # apply returns a list of "fitdist" objects, one list item for each column
         modelList = apply(X = nullDistDF, 
                           MARGIN = 2, 
                           FUN = function(x) fitdistrplus::fitdist(data=x, 
@@ -366,6 +405,11 @@ fitGammaNullDist <- function(nullDistDF, method="mme", force=FALSE) {
 }
 
 pGammaList <- function(scoreVec, fitDistrList) {
+    
+    if (any(is.na(scoreVec))) {
+        return(rep(NA, length(scoreVec)))
+    }
+    
     pValVec = mapply(FUN = function(x, y) pgamma(q = y, 
                                                  shape = x$estimate["shape"], 
                                                  rate = x$estimate["rate"], 
@@ -389,48 +433,6 @@ getPermStat <- function(rsScores, nullDistList, calcCols, testType="greater", wh
         rsScores = as.data.frame(rsScores)
     }
     
-    # get p values for a single region set (can get p val for multiple columns)
-    # @param rsScore a row of values for a single region set. One 
-    # value for each calcCols
-    getPermStatSingle <- function(rsScore, nullDist, 
-                                  calcCols, testType="greater", whichMetric = "pval") {
-        
-        if (is(nullDist, "data.table")) {
-            nullDist = as.data.frame(nullDist)
-        }
-        if (whichMetric == "pval") {
-            
-            pVal = rep(-1, length(rsScore))
-            if (testType == "greater") {
-                
-                for (i in seq_along(pVal)) {
-                    # only for one sided test (greater than)
-                    pVal[i] = 1 - ecdf(x = nullDist[, calcCols[i]])(rsScore[i])
-                }
-            }
-            
-            # (-abs(x-0.5) + 0.5) * 2
-            
-            thisStat = pVal
-        }
-        
-        if (whichMetric == "zscore") {
-            
-            
-            zScore = rep(NA, length(rsScore))
-            for (i in seq_along(zScore)) {
-                # only for one sided test (greater than)
-                zScore[i] = (rsScore[i] - mean(nullDist[, calcCols[i]])) / sd(x = nullDist[, calcCols[i]])
-            }
-            
-            thisStat = as.numeric(zScore)
-        }
-        
-        
-        return(thisStat)
-    }
-    
-    
     # do once for each region set
     thisStatList = list()
     for (i in 1:nrow(rsScores)) {
@@ -452,3 +454,52 @@ getPermStat <- function(rsScores, nullDistList, calcCols, testType="greater", wh
     
     return(thisStat)
 } 
+
+
+# get p values for a single region set (can get p val for multiple columns)
+# @param rsScore a row of values for a single region set. One 
+# value for each calcCols
+getPermStatSingle <- function(rsScore, nullDist, 
+                              calcCols, testType="greater", whichMetric = "pval") {
+    
+    if (is(nullDist, "data.table")) {
+        nullDist = as.data.frame(nullDist)
+    }
+    
+    # if score was NA, return NA
+    if (any(is.na(rsScore))) {
+        return(rep(NA, length(rsScore)))
+    }
+    
+    
+    if (whichMetric == "pval") {
+        
+        pVal = rep(-1, length(rsScore))
+        if (testType == "greater") {
+            
+            for (i in seq_along(pVal)) {
+                # only for one sided test (greater than)
+                pVal[i] = 1 - ecdf(x = nullDist[, calcCols[i]])(rsScore[i])
+            }
+        }
+        
+        # (-abs(x-0.5) + 0.5) * 2
+        
+        thisStat = pVal
+    }
+    
+    if (whichMetric == "zscore") {
+        
+        
+        zScore = rep(NA, length(rsScore))
+        for (i in seq_along(zScore)) {
+            # only for one sided test (greater than)
+            zScore[i] = (rsScore[i] - mean(nullDist[, calcCols[i]])) / sd(x = nullDist[, calcCols[i]])
+        }
+        
+        thisStat = as.numeric(zScore)
+    }
+    
+    
+    return(thisStat)
+}
