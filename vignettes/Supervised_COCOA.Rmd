@@ -12,31 +12,110 @@ vignette: >
 
 # Supervised COCOA
 
-explanation of the goals and concept
+Goal: Understand epigenetic variation related to a specific phenotype
 
+In a supervised COCOA analysis, we want to annotate epigenetic variation that is related to variation in one or more sample phenotypes. These sample phenotypes could be molecular (e.g. expression of a protein marker, presence/variant allele frequency of a mutation, or expression of a certain gene). The sample phenotypes can also be higher-level organism phenotypes (e.g. patient survival, cancer stage, disease severity). COCOA will identify region sets where the epigenetic signal is most related to the phenotype. These region sets then can help to understand the relationship between the phenotype and epigenetic state. 
 
-# Quantify relationship between sample attribute and epigenetic data
+Vignette analysis goal: Understand epigenetic variation related to our phenotype of interest, estrogen receptor (ER) status
+
+# Quantify relationship between chosen sample phenotype and epigenetic data
+
+First we will load the necessary data: region sets to test, BRCA DNA methylation data with genomic coordinates, and our phenotype of interest, ER status (part of `brcaPCScores657`)
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 library(COCOA)
-library(data.table)
-library(ggplot2)
+devtools::load_all()
 data("esr1_chr1")
 data("gata3_chr1")
 data("nrf1_chr1")
 data("atf3_chr1")
-data("brcaLoadings1")
 data("brcaMCoord1")
-data("brcaPCScores")
 data("brcaMethylData1")
+data("brcaPCScores657")
+sampleLabels = brcaPCScores657[colnames(brcaMethylData1), ]
 ```
 
-methylCor <- cor(brcaMethylData1, survival)
+
+
+```{r, eval=TRUE, message=FALSE, warning=FALSE}
+sampleLabels$ER_Status <- scale(as.numeric(sampleLabels$ER_Status), 
+                               center=TRUE, scale=FALSE)
+methylCor <- cor(t(brcaMethylData1), sampleLabels$ER_Status)
+colnames(methylCor) <- "ER_Status"
+```
+
 
 # Score region sets
-runCOCOA()
+
+```{r, eval=TRUE, message=FALSE, warning=FALSE}
+GRList <- GRangesList(esr1_chr1, gata3_chr1, atf3_chr1, nrf1_chr1)
+rsNames <- c("esr1", "gata3", "atf3", "nrf1")
+rsScores <- runCOCOA(signal=methylCor,
+                     signalCoord=brcaMCoord1,
+                     GRList=GRList,
+                     signalCol="ER_Status",
+                     scoringMetric="regionMean",
+                     absVal=TRUE)
+rsScores
+```
 
 Done in one step with corPerm
+
+# Estimating statistical significance
+
+
+## Permutations
+
+We need to set the seed for reproducible results since we are doing random shuffling of the sample phenotypes.
+
+```{r, eval=TRUE, message=FALSE, warning=FALSE}
+set.seed(100)
+
+nPerm = 5
+permRSScores = list()
+
+for (i in 1:nPerm) {
+    # shuffling sample labels
+    randomInd = sample(1:nrow(sampleLabels), nrow(sampleLabels))
+    permRSScores[[i]] = corPerm(randomInd=randomInd, 
+                           genomicSignal=brcaMethylData1, 
+                           signalCoord=brcaMCoord1, 
+                           GRList=GRList,
+                           calcCols="ER_Status", 
+                           sampleLabels=sampleLabels, 
+                           variationMetric="cor")
+}
+
+permRSScores
+
+```
+
+We now have a list where each item is a result of runCOCOA but we'll reformat it so that we have a list where each item is a null distribution for a single region set. We have `nPerm` list items in permRSScores.
+
+```{r, eval=TRUE, message=FALSE, warning=FALSE}
+nullDistList = convertToFromNullDist(permRSScores)
+nullDistList
+```
+
+We have four null distributions, one for each region set in `GRList`.
+
+## Fit gamma distribution to null distributions and get p-values
+
+To reduce the number of permutations (and the run time for COCOA), we will approximate each null distribution with a gamma distribution [citation]. After fitting the gamma distribution to each null distribution, we can use the gamma distributions to get p-values. 
+
+```{r, eval=TRUE, message=FALSE, warning=FALSE}
+# p-values based on fitted gamma distributions
+        gPValDF = getGammaPVal(scores = rsScores, 
+                               nullDistList = nullDistList, 
+                               calcCols = "ER_Status", 
+                               method = "mme", realScoreInDist = TRUE)
+        gPValDF = cbind(gPValDF, 
+                        rsScores[, colnames(rsScores)[!(colnames(rsScores) 
+                                                                %in% "ER_Status")]])
+        gPValDF = cbind(gPValDF, rsNames)
+        gPValDF
+```
+
 
 # How to choose a metric?
     
