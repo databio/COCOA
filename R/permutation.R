@@ -138,7 +138,7 @@ runCOCOAPerm <- function(genomicSignal,
                     message(i) # must be ahead of object that is saved as cache, not after
                     tmp
                     
-                }, ...)
+                }, cacheDir=cacheDir, ...)
             }
             
             # combining all individual permutations/caches into one object
@@ -148,7 +148,7 @@ runCOCOAPerm <- function(genomicSignal,
             }
             rsPermScores
             
-        }, assignToVariable="rsPermScores", ...)    
+        }, assignToVariable="rsPermScores", cacheDir=cacheDir, ...)    
     } else {
         
         rsPermScores <- list()
@@ -184,14 +184,14 @@ runCOCOAPerm <- function(genomicSignal,
             rsPVals = getPermStat(rsScores=realRSScores, nullDistList=nullDistList,
                                   calcCols=colsToAnnotate, whichMetric = "pval")
             rsPVals
-        }, assignToVariable=rsPVals, ...)
+        }, assignToVariable=rsPVals, cacheDir=cacheDir, ...)
         
         simpleCache(paste0("permZScores", .analysisID), {
             rsZScores = getPermStat(rsScores=realRSScores, nullDistList=nullDistList,
                                     calcCols=colsToAnnotate, whichMetric = "zscore")
             rsZScores
             
-        }, assignToVariable="rsZScores", ...)
+        }, assignToVariable="rsZScores", cacheDir=cacheDir, ...)
     
         simpleCache(paste0("permPValsCorrected", .analysisID), {
             # p-values based on fitted gamma distributions
@@ -205,7 +205,7 @@ runCOCOAPerm <- function(genomicSignal,
                             realRSScores[, colnames(realRSScores)[!(colnames(realRSScores) 
                                                                     %in% colsToAnnotate)]])
             gPValDF
-        }, assignToVariable="gPValDF", ...)    
+        }, assignToVariable="gPValDF", cacheDir=cacheDir, ...)    
         
     } else {
         rsPVals = getPermStat(rsScores=realRSScores, nullDistList=nullDistList,
