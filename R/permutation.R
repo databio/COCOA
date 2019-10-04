@@ -239,8 +239,13 @@ runCOCOAPerm <- function(genomicSignal,
     # zscores
 }
 
-#' @param randomInd
-#' @param genomicSignal columns of dataMat should be samples/patients, rows should be genomic signal
+#' @param randomInd numeric. A vector of 1:(number of samples) but shuffled in a
+#' random order. E.g. randomInd = sample(1:ncol(genomicSignal), ncol(genomicSignal))
+#' where ncol(genomicSignal) is the number of samples. 
+#' Set the seed with set.seed() before making randomInd to ensure reproducibility.
+#' If the vector is unshuffled,
+#' this will give the real COCOA results.
+#' @param genomicSignal columns of genomicSignal should be samples/patients, rows should be genomic signal
 #' (each row corresponds to one genomic coordinate/range)
 #' @param signalCoord
 #' @param GRList
@@ -300,8 +305,8 @@ corPerm <- function(randomInd, genomicSignal,
     # calculate correlation
     featureLabelCor = createCorFeatureMat(dataMat = genomicSignal, 
                                           featureMat = sampleLabels, 
-                                          centerDataMat = FALSE, 
-                                          centerFeatureMat = FALSE,
+                                          centerDataMat = TRUE, 
+                                          centerFeatureMat = TRUE,
                                           testType = variationMetric)
     
     # run COCOA
@@ -317,6 +322,8 @@ corPerm <- function(randomInd, genomicSignal,
 }
 
 
+#' Converts COCOA permutation results to null distributions and vice versa
+#' 
 #' This function will take a list of results of permutation tests that included
 #' many region sets and return a list of data.frames where each data.frame
 #' contains the null distribution for a single region set.
@@ -327,14 +334,22 @@ corPerm <- function(randomInd, genomicSignal,
 #' each permutation with the results of that permutation. Each row in the 
 #' data.frame is a region set. All data.frames should be the same size and
 #' each data.frame's rows should be in the same order
-#' @return 
+#' @return a list of data.frames. If given a list where each item is 
+#' a data.frame with results from one COCOA permutation, this function
+#' will return a list of data.frames where each data.frame contains the
+#' null distributions for a single region set. The output data.frames will
+#' have the same columns as the input data.frames. If given a list where each
+#' item is a data.frame with the null distribution/s for a single region
+#' set, this function will return a list where each item is a data.frame
+#' with one row for each region set (e.g. a data.frame with results for
+#' a single COCOA permutation).
 #' 
 #' @example 
 #' 
 #' # six region sets (rows), 2 signals (columns)
 #' fakePermScores = data.frame(abs(rnorm(6)), abs(rnorm(6)))
 #' fakePermScores2 = data.frame(abs(rnorm(6)), abs(rnorm(6)))
-#' # 2 fake COCOA results (ie nPerm=2)
+#' # 2 fake COCOA results (i.e. nPerm=2)
 #' permRSScores = list(fakePermScores, fakePermScores2)
 #' convertToFromNullDist(permRSScores)
 #' 
@@ -366,19 +381,24 @@ permListToOneNullDist <- function(resultsList, rsInd) {
 # p value functions 
 
 
-
 #' Get p value after fitting a gamma distribution to the null distribution
 #' 
-#' @param nullDistList list of data.frames. Each list item 
-#' has null distributions for a single 
-#' region set. Each column corresponds to a null distribution for that 
-#' region set for a given variable/sample attribute.   
 #' @param scores a data.frame. Has same columns as nullDistDF. One row per
 #' region set (should be in same order as nullDistDF) The scores
 #' that will be used to get p values.
+#' @param nullDistList list of data.frames. Each list item 
+#' has null distributions for a single 
+#' region set. Each column corresponds to a null distribution for that 
+#' region set for a given variable/sample attribute.  
+#' @param calcCols character.
+#' @param method character. Has the method to use to fit the gamma 
+#' distribution to the null distribution. See ?fitdistrplus::fitdist() for
+#' available options and meaning. The default method "mme" is the 
+#' "moment matching estimation"
 #' @param realScoreInDist logical. Should the actual score (from 
 #' test with no permutations) be included in the null distribution 
 #' when fitting the gamma distribution
+#' @param force logical.
 # 
 #' @return Returns a data.frame with p values, one column for each col in
 #' scores and nullDistDF 

@@ -762,7 +762,7 @@ runCOCOA <- function(signal,
 # columns are the columns of featureMat
 # @examples dataMat = matrix(rnorm(50), 5, 10)
 # featureMat = matrix(rnorm(20), 10, 2)
-createCorFeatureMat = function(dataMat, featureMat, 
+createCorFeatureMat <- function(dataMat, featureMat, 
                                centerDataMat=TRUE, centerFeatureMat = TRUE, 
                                testType="cor", covariate=NULL) {
     
@@ -789,52 +789,32 @@ createCorFeatureMat = function(dataMat, featureMat,
     }
     
     #remove this line
-    dataMat = data.table::copy(as.data.frame(t(dataMat)))
+    # dataMat = data.table::copy(as.data.frame(t(dataMat)))
+    dataMat = as.data.frame(t(dataMat))
     
     
     if (testType == "cor") {
         # create feature correlation matrix with PCs (rows: features/CpGs, columns:PCs)
         # how much do features correlate with each PC?
         
-        # featurePCCor = as.data.frame(matrix(rep(0, nFeatures * nDataDims), nrow=nDataDims, ncol=nFeatures))
-        # for (i in 1:nFeatures) {
-        #     for (j in 1:nDataDims) {
-        #         featurePCCor[j, i] = cor(x = featureMat[, i], y = dataMat[, j], use="pairwise.complete.obs")
-        #     }
-        #     
-        # }
-        
         # put epigenetic data first in cor()
-        # cor(dataMat, featureMat, use="pairwise.complete.obs", method="pearson")
-        featurePCCor = apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 2,
-                                                                           FUN = function(x) cor(x = x, y,
-                                                                                                 use="pairwise.complete.obs",
-                                                                                                 method="pearson")))
+        featurePCCor <- cor(dataMat, featureMat, use="pairwise.complete.obs", method="pearson")
+
     } else if (testType == "spearmanCor") {
         # xtfrm(x) ranking
-        featurePCCor = apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 2,
-                                                                           FUN = function(x) cor(x = x, y,
-                                                                                                 use="pairwise.complete.obs",
-                                                                                                 method="spearman")))
+        featurePCCor <- cor(dataMat, featureMat, use="pairwise.complete.obs", method="spearman")
+
     } else if (testType == "pcor") {
         # partial correlation (account for covariates), ppcor package
+        
         featurePCCor = apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 2, 
                                                                            FUN = function(x) pcor.test(x = x, y=y,
                                                                                                        z=covariate,
                                                                                                        method="pearson")$estimate))
         
     } else if (testType == "cov") {
-        # featurePCCor = as.data.frame(matrix(rep(0, nFeatures * nDataDims), nrow=nDataDims, ncol=nFeatures))
-        # for (i in 1:nFeatures) {
-        #     for (j in 1:nDataDims) {
-        #         featurePCCor[j, i] = cov(x = featureMat[, i], y = dataMat[, j], use="pairwise.complete.obs")
-        #     }
-        #     
-        # }
-        
-        featurePCCor = apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 2,
-                                                                           FUN = function(x) cov(x = x, y,
-                                                                                                 use="pairwise.complete.obs")))
+        featurePCCor <- cov(dataMat, featureMat, use="pairwise.complete.obs")
+
     } else {
         stop("invalid testType")
     }
