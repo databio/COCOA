@@ -4,22 +4,31 @@
 \alias{getGammaPVal}
 \title{Get p value after fitting a gamma distribution to the null distribution}
 \usage{
-getGammaPVal(scores, nullDistList, method = "mme",
-  realScoreInDist = FALSE, force = FALSE)
+getGammaPVal(scores, nullDistList, calcCols, method = "mme",
+  realScoreInDist = TRUE, force = FALSE)
 }
 \arguments{
 \item{scores}{a data.frame. Has same columns as nullDistDF. One row per
 region set (should be in same order as nullDistDF) The scores
 that will be used to get p values.}
 
-\item{nullDistList}{list of a data.frame. Each list item 
+\item{nullDistList}{list of data.frames. Each list item 
 has null distributions for a single 
 region set. Each column corresponds to a null distribution for that 
 region set for a given variable/sample attribute.}
 
+\item{calcCols}{character.}
+
+\item{method}{character. Has the method to use to fit the gamma 
+distribution to the null distribution. See ?fitdistrplus::fitdist() for
+available options and meaning. The default method "mme" is the 
+"moment matching estimation"}
+
 \item{realScoreInDist}{logical. Should the actual score (from 
 test with no permutations) be included in the null distribution 
 when fitting the gamma distribution}
+
+\item{force}{logical.}
 }
 \value{
 Returns a data.frame with p values, one column for each col in
@@ -27,4 +36,14 @@ scores and nullDistDF
 }
 \description{
 Get p value after fitting a gamma distribution to the null distribution
+}
+\examples{
+fakeOriginalScores = data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
+fakePermScores = data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
+fakePermScores2 = data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
+fakePermScores3 = data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
+permRSScores = list(fakePermScores, fakePermScores2, fakePermScores3)
+nullDistList = convertToFromNullDist(permRSScores)
+getGammaPVal(scores=fakeOriginalScores, nullDistList=nullDistList, calcCols=c("PC1", "PC2")) 
+
 }

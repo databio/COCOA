@@ -50,6 +50,10 @@
 #' @importFrom fitdistrplus fitdist
 #' @importFrom simpleCache simpleCache
 #' @importFrom ppcor pcor
+#' @eval addParamDocs <- function(signal=FALSE, signalCoord=FALSE, 
+#' signalCoordType=FALSE, GRList=FALSE, 
+#' regionSet=FALSE, signalCol=FALSE, 
+#' scoringMetric=FALSE, verbose=FALSE, absVal=FALSE ) { x +100}
 NULL
 
 # now package lists GenomicRanges in "Depends" instead of "Imports" in 
@@ -80,18 +84,12 @@ if (getRversion() >= "2.15.1") {
 #' Then the loadings are used to score the region set 
 #' according to the `scoringMetric` parameter.  
 #' 
+#' @eval print("@param testP my test param ")
 #' @param signal matrix of loadings (the coefficients of 
 #' the linear combination that defines each PC). One named column for each PC.
 #' One row for each original dimension/variable (should be same order 
 #' as original data/signalCoord). The x$rotation output of prcomp().
-#' @param signalCoord a GRanges object or data frame with coordinates 
-#' for the genomic signal/original data (e.g. DNA methylation) 
-#' included in the PCA. Coordinates should be in the 
-#' same order as the original data and the loadings 
-#' (each item/row in signalCoord
-#' corresponds to a row in `signal`). If a data.frame, 
-#' must have chr and start columns. If end is included, start 
-#' and end should be the same. Start coordinate will be used for calculations.
+#' @template signalCoord
 #' @param signalCoordType character. Can be "default", "singleBase", or 
 #' "multiBase". This describes whether the coordinates for `signal` 
 #' (`signalCoord`) are each a single base (e.g. as for DNA methylation)
@@ -518,7 +516,7 @@ aggregateSignal <- function(signal,
 #' the linear combination that defines each PC). One named column for each PC.
 #' One row for each original dimension/variable (should be same order 
 #' as original data/signalCoord). The x$rotation output of prcomp().
-#' @param signalCoord a GRanges object or data frame with coordinates 
+#' @param signalCoord a GRanges object or data.frame with coordinates 
 #' for the genomic signal/original data (eg DNA methylation) 
 #' included in the PCA. Coordinates should be in the 
 #' same order as the original data and the loadings 
@@ -535,8 +533,8 @@ aggregateSignal <- function(signal,
 #' will be used. Otherwise, "multiBase" will be used. 
 #' @param GRList GRangesList object. Each list item is 
 #' a distinct region set to test (region set: regions that correspond to 
-#' the same biological annotation). The region set database.
-#' Must be from the same reference genome
+#' the same biological annotation). The region set database
+#' must be from the same reference genome
 #' as the coordinates for the actual data/samples (signalCoord).
 #' @param signalCol A character vector with principal components to  
 #' include. eg c("PC1", "PC2") These should be column names of signal.
@@ -788,8 +786,7 @@ createCorFeatureMat <- function(dataMat, featureMat,
         featureMat = as.matrix(featureMat)
     }
     
-    #remove this line
-    # dataMat = data.table::copy(as.data.frame(t(dataMat)))
+    # avoid this copy and/or delay transpose until after calculating correlation?
     dataMat = as.data.frame(t(dataMat))
     
     
@@ -862,7 +859,7 @@ createCorFeatureMat <- function(dataMat, featureMat,
 #' the linear combination that defines each PC). One named column for each PC.
 #' One row for each original dimension/variable (should be same order 
 #' as original data/signalCoord). Given by prcomp(x)$rotation.
-#' @param signalCoord a GRanges object or data frame with coordinates 
+#' @param signalCoord a GRanges object or data.frame with coordinates 
 #' for the genomic signal/original data (eg DNA methylation) 
 #' included in the PCA. Coordinates should be in the 
 #' same order as the original data and the loadings 
@@ -1203,7 +1200,7 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount,
 # the linear combination that defines each PC). One named column for each PC.
 # One row for each original dimension/variable (should be same order 
 # as original data/signalCoord). The x$rotation output of prcomp().
-# @param signalCoord a GRanges object or data frame with coordinates 
+# @param signalCoord a GRanges object or data.frame with coordinates 
 # for the genomic signal/original data (eg DNA methylation) 
 # included in the PCA. Coordinates should be in the 
 # same order as the original data and the loadings 
@@ -1389,42 +1386,43 @@ weightedAvePerRegion <- function(signalDT,
 
 
 
-# Get regions that are most associated with PCs of interest
-#
-# Get a GRanges with top regions from the region set based on average
-# loadings for the regions or the quantile of the region's loading.
-# Returns average loading or quantile as GRanges metadata.
-# 
-# @param signal matrix of loadings (the coefficients of 
-# the linear combination that defines each PC). One named column for each PC.
-# One row for each original dimension/variable (should be same order 
-# as original data/signalCoord). The x$rotation output of prcomp().
-# @param signalCoord a GRanges object or data frame with coordinates 
-# for the genomic signal/original data (eg DNA methylation) 
-# included in the PCA. Coordinates should be in the 
-# same order as the original data and the loadings 
-# (each item/row in signalCoord
-# corresponds to a row in `signal`). If a data.frame, 
-# must have chr and start columns. If end is included, start 
-# and end should be the same. Start coordinate will be used for calculations.
-# @param regionSet A GRanges object with regions corresponding
-# to the same biological annotation.
-# @param signalCol A character vector with principal components to  
-# include. eg c("PC1", "PC2") These should be column names of signal.
-# @param returnQuantile "logical" object. If FALSE, return region averages. If TRUE,
-# for each region, return the quantile of that region's average value
-# based on the distribution of individual genomic signal/feature values
-# @return a GRanges object with region coordinates for regions with
-# scores/quantiles above "cutoff" for any PC in signalCol. The scores/quantiles
-# for signalCol are given as metadata in the GRanges.
+#' Get regions that are most associated with PCs of interest
+#'
+#' Get a GRanges with top regions from the region set based on average
+#' loadings for the regions or the quantile of the region's loading.
+#' Returns average loading or quantile as GRanges metadata.
+#' 
+#' @param signal matrix of loadings (the coefficients of 
+#' the linear combination that defines each PC). One named column for each PC.
+#' One row for each original dimension/variable (should be same order 
+#' as original data/signalCoord). The x$rotation output of prcomp().
+#' @param signalCoord a GRanges object or data.frame with coordinates 
+#' for the genomic signal/original data (eg DNA methylation) 
+#' included in the PCA. Coordinates should be in the 
+#' same order as the original data and the loadings 
+#' (each item/row in signalCoord
+#' corresponds to a row in `signal`). If a data.frame, 
+#' must have chr and start columns. If end is included, start 
+#' and end should be the same. Start coordinate will be used for calculations.
+#' @param regionSet A GRanges object with regions corresponding
+#' to the same biological annotation.
+#' @param signalCol A character vector with principal components to  
+#' include. eg c("PC1", "PC2") These should be column names of signal.
+#' @param returnQuantile "logical" object. If FALSE, return region averages. If TRUE,
+#' for each region, return the quantile of that region's average value
+#' based on the distribution of individual genomic signal/feature values
+#' @return a GRanges object with region coordinates for regions with
+#' scores/quantiles above "cutoff" for any PC in signalCol. The scores/quantiles
+#' for signalCol are given as metadata in the GRanges.
 
 # Are regions in order along the rows of the data.table?
 #
-# @examples data("brcaLoadings1")
-# data("brcaMCoord1")
-# data("esr1_chr1")
-# COCOA:::getTopRegions(signal=brcaLoadings1,
-# signalCoord=brcaMCoord1, regionSet=esr1_chr1, returnQuantile = TRUE)
+#' @examples 
+#' data("brcaLoadings1")
+#' data("brcaMCoord1")
+#' data("esr1_chr1")
+#' getTopRegions(signal=brcaLoadings1,
+#' signalCoord=brcaMCoord1, regionSet=esr1_chr1, returnQuantile = TRUE)
 
 getTopRegions <- function(signal, 
                           signalCoord, 

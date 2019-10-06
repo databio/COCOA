@@ -344,8 +344,7 @@ corPerm <- function(randomInd, genomicSignal,
 #' with one row for each region set (e.g. a data.frame with results for
 #' a single COCOA permutation).
 #' 
-#' @example 
-#' 
+#' @examples
 #' # six region sets (rows), 2 signals (columns)
 #' fakePermScores = data.frame(abs(rnorm(6)), abs(rnorm(6)))
 #' fakePermScores2 = data.frame(abs(rnorm(6)), abs(rnorm(6)))

@@ -2,7 +2,7 @@
 % Please edit documentation in R/permutation.R
 \name{runCOCOAPerm}
 \alias{runCOCOAPerm}
-\title{permutation test by shuffling sample labels}
+\title{Run COCOA permutations to get p-values}
 \usage{
 runCOCOAPerm(genomicSignal, signalCoord, GRList, realRSScores,
   sampleLabels, signalCol = c("PC1", "PC2"),
@@ -11,22 +11,31 @@ runCOCOAPerm(genomicSignal, signalCoord, GRList, realRSScores,
   cacheDir = getwd(), dataID = "tmp", correctionMethod = "BH", ...)
 }
 \arguments{
+\item{realRSScores}{data.frame. A data.frame with region set
+scores. The output of the 'runCOCOA' function.
+Rows should be in the same order as the region sets in GRList. 
+Must include columns with names given by 'colsToAnnotate'.}
+
 \item{sampleLabels}{data.frame/matrix. Sample labels/values that 
 you are running COCOA to find region sets associated with. These 
 values will be shuffled for the permutation test. Rows are samples.
 Each column is a sample label.}
 
-\item{variationMetric}{character. Either "cor" (correlation), "pcor" (partial
-correlation), or "cov" (covariation)}
+\item{variationMetric}{character. Either "cor" (Pearson correlation), 
+"pcor" (partial correlation), "spearmanCor (Spearman correlation) 
+or "cov" (covariation).}
 
 \item{nPerm}{numeric. The number of permutations to do.}
 
-\item{useSimpleCache}{logical.}
+\item{useSimpleCache}{logical. Whether to use save caches. Caches
+will be created for each permutation so that if the function is disrupted
+it can restart where it left off. The final results are also saved 
+as a cache.}
 
 \item{cacheDir}{character.}
 
 \item{dataID}{character. A unique identifier for this dataset 
-(for saving results)}
+(for saving results with simpleCache)}
 
 \item{correctionMethod}{character. P value correction method. Default
 is "BH" for Benjamini and Hochberg false discovery rate. For acceptable 
@@ -35,7 +44,7 @@ arguments and more info see ?stats::p.adjust() (method parameter)}
 \item{...}{character. Optional additional arguments for simpleCache}
 
 \item{colsToAnnotate}{character. The column names of `sampleLabels` that
-you want to test.}
+you want to test. These must also be columns in realRSScores.}
 
 \item{resultType}{character. "pval" or "zscore"}
 }
@@ -44,5 +53,40 @@ Returns a list where each item is a data.frame of COCOA results
 from a separate permutation
 }
 \description{
+This is a convenience function that runs multiple steps of the 
+permutation process together: it runs COCOA permutations, converts these
+to null distributions, gets the empirical p value (which is limited by the
+number of permutations), gets z scores, and fits a gamma distribution 
+to each null distribution to estimate p values (not limited by the 
+number of permutations),
+Requires that the user has previously calculated the real COCOA scores. 
+See these individual functions for more info on each step: corPerm, 
+convertToFromNullDist, getPermStat, and getGammaPVal.
+}
+\details{
 For reproducibility, set seed with 'set.seed()' function before running.
+}
+\examples{
+data("brcaMCoord1")
+data("brcaLoadings1")
+data("esr1_chr1")
+data("nrf1_chr1")
+data("brcaMethylData1")
+data("brcaPCScores657")
+pcCor = corFeature
+sampleLabels <- brcaPCScores657[colnames(brcaMethylData1), ]
+sampleLabels$ER_Status <- scale(as.numeric(sampleLabels$ER_Status), 
+                               center=TRUE, scale=FALSE)
+# give the actual order of samples to randomInd to get the real scores
+realRSScores <- corPerm(randomInd=1:4, genomicSignal=brcaMethylData1, 
+        signalCoord=brcaMCoord1, GRList=GRangesList(esr1_chr1, nrf1_chr1),
+        calcCols=c("PC1", "PC2"), sampleLabels=sampleLabels, 
+        variationMetric="cor")
+
+a=runCOCOAPerm(genomicSignal=brcaMethylData1, 
+        signalCoord=brcaMCoord1, GRList=GRangesList(esr1_chr1, nrf1_chr1),
+        realRSScores=realRSScores, 
+        sampleLabels=sampleLabels, signalCol=c("PC1", "PC2"),
+        variationMetric="cor", nPerm = 10, useSimpleCache=FALSE)
+
 }

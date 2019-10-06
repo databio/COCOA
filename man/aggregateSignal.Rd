@@ -14,7 +14,7 @@ the linear combination that defines each PC). One named column for each PC.
 One row for each original dimension/variable (should be same order 
 as original data/signalCoord). The x$rotation output of prcomp().}
 
-\item{signalCoord}{a GRanges object or data frame with coordinates 
+\item{signalCoord}{a GRanges object or data.frame with coordinates 
 for the genomic signal/original data (e.g. DNA methylation) 
 included in the PCA. Coordinates should be in the 
 same order as the original data and the loadings 
@@ -93,6 +93,8 @@ will decrease (if there may be anticorrelation between
 regions in a region set). Choose FALSE if you expect regions in a 
 given region set to all change in the same direction (all be positively
 correlated with each other).}
+
+\item{testP}{my test param}
 }
 \value{
 a data.frame with one row and the following 
