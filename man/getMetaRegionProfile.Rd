@@ -14,7 +14,7 @@ the linear combination that defines each PC). One named column for each PC.
 One row for each original dimension/variable (should be same order 
 as original data/signalCoord). Given by prcomp(x)$rotation.}
 
-\item{signalCoord}{a GRanges object or data frame with coordinates 
+\item{signalCoord}{a GRanges object or data.frame with coordinates 
 for the genomic signal/original data (eg DNA methylation) 
 included in the PCA. Coordinates should be in the 
 same order as the original data and the loadings 
