@@ -28,16 +28,9 @@
 #' Rows are individual signal/feature values. Columns are samples.
 #' Must have sample names/IDs as column names,
 #' These same sample names must be row names of sampleScores.
-#' @param signalCoord a GRanges object or data frame with coordinates 
-#' for the genomic signal/original data (eg DNA methylation/ATAC-seq) 
-#' Coordinates should be in the 
-#' same order as the original data and the loadings 
-#' (each item/row in signalCoord
-#' corresponds to a row in signal). If a data.frame, 
-#' must have chr and start columns. If end is included, start 
-#' and end should be the same. Start coordinate will be used for calculations.
-#' @param regionSet A genomic ranges object with regions corresponding
-#' to the same biological annotation. The regions where you will visualize
+#' @template signalCoord
+#' @template regionSet
+#' The regions where you will visualize
 #' the genomic signal. Must be from the same reference genome
 #' as the coordinates for the actual data (signalCoord).
 #' @param sampleScores A matrix. Must contain a column with name given
@@ -346,16 +339,9 @@ rsScoreHeatmap <- function(rsScores, signalCol=paste0("PC", 1:5),
 #' the linear combination that defines each PC). One named column for each PC.
 #' One row for each original dimension/variable (should be same order 
 #' as original data/signalCoord). The x$rotation output of prcomp().
-#' @param signalCoord a GRanges object or data frame with coordinates 
-#' for the genomic signal/original data (eg DNA methylation) 
-#' included in the PCA. Coordinates should be in the 
-#' same order as the original data and the loadings 
-#' (each item/row in signalCoord
-#' corresponds to a row in `signal`). If a data.frame, 
-#' must have chr and start columns. If end is included, start 
-#' and end should be the same. Start coordinate will be used for calculations.
-#' @param regionSet A genomic ranges object with regions corresponding
-#' to the same biological annotation. These are the regions that will be 
+#' @template signalCoord
+#' @template regionSet
+#' These are the regions that will be 
 #' visualized. Must be from the same reference genome
 #' as the coordinates for the actual data (signalCoord).
 #' @param rsName character vector. Names of the region sets in the same

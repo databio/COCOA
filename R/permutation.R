@@ -37,8 +37,8 @@ getNullDist <- function(groupByRS=TRUE) {
 #' For reproducibility, set seed with 'set.seed()' function before running.
 #' @param nPerm numeric. The number of permutations to do.
 #' @param genomicSignal
-#' @param signalCoord
-#' @param GRList
+#' @template signalCoord
+#' @template GRList
 #' @param realRSScores data.frame. A data.frame with region set
 #' scores. The output of the 'runCOCOA' function.
 #' Rows should be in the same order as the region sets in GRList. 
@@ -247,8 +247,8 @@ runCOCOAPerm <- function(genomicSignal,
 #' this will give the real COCOA results.
 #' @param genomicSignal columns of genomicSignal should be samples/patients, rows should be genomic signal
 #' (each row corresponds to one genomic coordinate/range)
-#' @param signalCoord
-#' @param GRList
+#' @template signalCoord
+#' @template GRList
 #' @param calcCols character. the columns in `sampleLabels` for which to calculate
 #' correlation and then to run COCOA on
 #' @param sampleLabels Matrix or data.frame. Rows should be samples, 
