@@ -90,16 +90,9 @@ if (getRversion() >= "2.15.1") {
 #' One row for each original dimension/variable (should be same order 
 #' as original data/signalCoord). The x$rotation output of prcomp().
 #' @template signalCoord
-#' @param signalCoordType character. Can be "default", "singleBase", or 
-#' "multiBase". This describes whether the coordinates for `signal` 
-#' (`signalCoord`) are each a single base (e.g. as for DNA methylation)
-#' or a region/multiple bases (e.g. as for ATAC-seq). Different scoring
-#' options are available for each type of data. If "default" is given,
-#' the type of coordinates will be detected automatically. If each
-#' coordinate start value equals the coordinate end value, "singleBase"
-#' will be used. Otherwise, "multiBase" will be used. 
-#' @param regionSet A genomic ranges (GRanges) object with regions corresponding
-#' to the same biological annotation. Must be from the same reference genome
+#' @template signalCoordType
+#' @template regionSet 
+#' Must be from the same reference genome
 #' as the coordinates for the actual data/samples (signalCoord).
 #' @param signalCol A character vector with principal components to 
 #' include. eg c("PC1", "PC2") These should be column names of signal.
@@ -516,26 +509,9 @@ aggregateSignal <- function(signal,
 #' the linear combination that defines each PC). One named column for each PC.
 #' One row for each original dimension/variable (should be same order 
 #' as original data/signalCoord). The x$rotation output of prcomp().
-#' @param signalCoord a GRanges object or data.frame with coordinates 
-#' for the genomic signal/original data (eg DNA methylation) 
-#' included in the PCA. Coordinates should be in the 
-#' same order as the original data and the loadings 
-#' (each item/row in signalCoord corresponds to a row in `signal`).
-#' If a data.frame, must have chr and start columns.
-#' If end is not included, start coordinate will be used for calculations.
-#' @param signalCoordType character. Can be "default", "singleBase", or 
-#' "multiBase". This describes whether the coordinates for `signal` 
-#' (`signalCoord`) are each a single base (e.g. as for DNA methylation)
-#' or a region/multiple bases (e.g. as for ATAC-seq). Different scoring
-#' options are available for each type of data. If "default" is given,
-#' the type of coordinates will be detected automatically. If each
-#' coordinate start value equals the coordinate end value, "singleBase"
-#' will be used. Otherwise, "multiBase" will be used. 
-#' @param GRList GRangesList object. Each list item is 
-#' a distinct region set to test (region set: regions that correspond to 
-#' the same biological annotation). The region set database
-#' must be from the same reference genome
-#' as the coordinates for the actual data/samples (signalCoord).
+#' @template signalCoord
+#' @template signalCoordType
+#' @template GRList
 #' @param signalCol A character vector with principal components to  
 #' include. eg c("PC1", "PC2") These should be column names of signal.
 #' @param scoringMetric A character object with the scoring metric.
@@ -859,16 +835,9 @@ createCorFeatureMat <- function(dataMat, featureMat,
 #' the linear combination that defines each PC). One named column for each PC.
 #' One row for each original dimension/variable (should be same order 
 #' as original data/signalCoord). Given by prcomp(x)$rotation.
-#' @param signalCoord a GRanges object or data.frame with coordinates 
-#' for the genomic signal/original data (eg DNA methylation) 
-#' included in the PCA. Coordinates should be in the 
-#' same order as the original data and the loadings 
-#' (each item/row in signalCoord
-#' corresponds to a row in `signal`). If a data.frame, 
-#' must have chr and start columns. If end is included, start 
-#' and end should be the same. Start coordinate will be used for calculations.
-#' @param regionSet A genomic ranges (GRanges) object with regions corresponding
-#' to the same biological annotation. Must be from the same reference genome
+#' @template signalCoord
+#' @template regionSet
+#' Must be from the same reference genome
 #' as the coordinates for the actual data/samples (signalCoord).
 #' @param signalCol A character vector with principal components to  
 #' include. eg c("PC1", "PC2") These should be column names of signal.
@@ -1200,16 +1169,10 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount,
 # the linear combination that defines each PC). One named column for each PC.
 # One row for each original dimension/variable (should be same order 
 # as original data/signalCoord). The x$rotation output of prcomp().
-# @param signalCoord a GRanges object or data.frame with coordinates 
-# for the genomic signal/original data (eg DNA methylation) 
-# included in the PCA. Coordinates should be in the 
-# same order as the original data and the loadings 
-# (each item/row in signalCoord
-# corresponds to a row in `signal`). If a data.frame, 
-# must have chr and start columns. If end is included, start 
-# and end should be the same. Start coordinate will be used for calculations.
-# @param regionSet A GRanges object with regions corresponding
-# to the same biological annotation.
+# @template signalCoord
+# @template regionSet
+# Must be from the same reference genome
+# as the coordinates for the actual data/samples (signalCoord).
 # @param signalCol A character vector with principal components to  
 # include. eg c("PC1", "PC2") These should be column names of signal.
 # @param returnQuantile "logical" object. If FALSE, return region averages. If TRUE,
@@ -1396,16 +1359,8 @@ weightedAvePerRegion <- function(signalDT,
 #' the linear combination that defines each PC). One named column for each PC.
 #' One row for each original dimension/variable (should be same order 
 #' as original data/signalCoord). The x$rotation output of prcomp().
-#' @param signalCoord a GRanges object or data.frame with coordinates 
-#' for the genomic signal/original data (eg DNA methylation) 
-#' included in the PCA. Coordinates should be in the 
-#' same order as the original data and the loadings 
-#' (each item/row in signalCoord
-#' corresponds to a row in `signal`). If a data.frame, 
-#' must have chr and start columns. If end is included, start 
-#' and end should be the same. Start coordinate will be used for calculations.
-#' @param regionSet A GRanges object with regions corresponding
-#' to the same biological annotation.
+#' @template signalCoord
+#' @template regionSet
 #' @param signalCol A character vector with principal components to  
 #' include. eg c("PC1", "PC2") These should be column names of signal.
 #' @param returnQuantile "logical" object. If FALSE, return region averages. If TRUE,
@@ -1952,7 +1907,8 @@ rsRankingIndex <- function(rsScores, signalCol, decreasing=TRUE, newColName = si
 # except chr, start, and end will be considered 
 # columns to get the metrics from so no unnecessary columns should be
 # included.
-# @param regionSet GRanges object. Metrics will be calculated on
+# @template regionSet 
+# Metrics will be calculated on
 # only coordinates within this region set (and optionally separately
 # on those outside this region set with alsoNonOLMet parameter)
 # @param signalCol the columns to calculate the metrics on. The
@@ -2052,7 +2008,7 @@ signalOLMetrics <- function(dataDT,
 # except chr, start, and end will be considered 
 # columns to get the metrics from so no unnecessary columns should be
 # included.
-# @param regionSet Region set, GRanges object
+# @template regionSet
 # @param signalCol the columns of interest. You will do ranksum test separately 
 # on each of these columns (given test only uses info in one column)
 # @param ... Additional parameters of wilcox.test function. See ?wilcox.test.
@@ -2134,7 +2090,8 @@ rsWilcox <- function(dataDT,
 # @param signalDT Data to be aggregated (e.g. raw data: ATAC-seq,
 # region based DNA methylation or loading values)
 # @param signalGR GRanges object with coordinates for signalDT
-# @param regionSet GRanges object. The region set to score.
+# @template regionSet 
+# The region set to score.
 # @param calcCols character object. Column names. A weighted sum will be done 
 # for each of these columns (columns should be numeric).
 # @value Returns data.frame with columns 'calcCols', signalCoverage col has
@@ -2184,7 +2141,8 @@ regionOLWeightedMean <- function(signalDT, signalGR,
 # @param signalDT Data to be aggregated (e.g. raw data: ATAC-seq,
 # region based DNA methylation or loading values)
 # @param signalGR GRanges object with coordinates for signalDT
-# @param regionSet GRanges object. The region set to score.
+# @template regionSet 
+# The region set to score.
 # @param calcCols character object. Column names. A mean will be calculated for 
 # each of these columns (columns should be numeric).
 # @value Returns data.frame with columns 'calcCols', signalCoverage col has
