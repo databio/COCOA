@@ -3,23 +3,7 @@
 
 
 
-# Run COCOA permutations to get null distributions for each region set.
-# For one permutation, there are several steps: 
-# First, we shuffle the sample labels. Second, we calculate the association
-# between the epigenetic data and the shuffled sample labels using the 
-# chosen metric (e.g. correlation). Third, the resulting feature coefficients
-# are used as input to the runCOCOA function to score each region set.
-# This process is repeated `nPerm` times.
-# 
-# @param groupByRS logical
 
-# @return A list where each item is a data.frame with the null 
-# distribution for a single region set. The length of the list
-# is equal to the number of region sets. The number of rows of 
-# each data.frame is equal to the number of permutations.
-getNullDist <- function(groupByRS=TRUE) {
-    
-}
 
 #' Run COCOA permutations to get p-values
 #' 
@@ -49,6 +33,8 @@ getNullDist <- function(groupByRS=TRUE) {
 #' Each column is a sample label.
 #' @param colsToAnnotate character. The column names of `sampleLabels` that
 #' you want to test. These must also be columns in realRSScores.
+#' @template scoringMetric
+#' @template absVal
 #' @param dataID character. A unique identifier for this dataset 
 #' (for saving results with simpleCache)
 #' @param variationMetric character. Either "cor" (Pearson correlation), 
@@ -100,6 +86,7 @@ runCOCOAPerm <- function(genomicSignal,
                          signalCol=c("PC1", "PC2"),
                          signalCoordType = "default",
                          scoringMetric="default",
+                         absVal=TRUE,
                          variationMetric="cor",
                          nPerm=300,
                          useSimpleCache=TRUE,
@@ -134,7 +121,9 @@ runCOCOAPerm <- function(genomicSignal,
                                    GRList=GRList,
                                    calcCols=colsToAnnotate,
                                    sampleLabels=sampleLabels,
-                                   variationMetric = variationMetric)
+                                   variationMetric = variationMetric,
+                                   scoringMetric=scoringMetric,
+                                   absVal=absVal)
                     message(i) # must be ahead of object that is saved as cache, not after
                     tmp
                     
@@ -256,10 +245,10 @@ runCOCOAPerm <- function(genomicSignal,
 #' (whatever you want to get correlation with: eg PC scores),
 #' all columns in featureMat will be used (subset when passing to function
 #' in order to not use all columns)
-#' @param variationMetric
-#' @param scoringMetric
-#' @param verbose
-#' @param absVal
+#' @param variationMetric character. 
+#' @template scoringMetric
+#' @template verbose
+#' @template absVal
 #' @return data.frame. The output of runCOCOA for one permutation
 #' @examples data("brcaMCoord1")
 #' data("brcaLoadings1")
@@ -610,3 +599,25 @@ getPermStatSingle <- function(rsScore, nullDist,
     
     return(thisStat)
 }
+
+
+##############################################################################
+############### old ###################
+
+# Run COCOA permutations to get null distributions for each region set.
+# For one permutation, there are several steps: 
+# First, we shuffle the sample labels. Second, we calculate the association
+# between the epigenetic data and the shuffled sample labels using the 
+# chosen metric (e.g. correlation). Third, the resulting feature coefficients
+# are used as input to the runCOCOA function to score each region set.
+# This process is repeated `nPerm` times.
+# 
+# @param groupByRS logical
+
+# @return A list where each item is a data.frame with the null 
+# distribution for a single region set. The length of the list
+# is equal to the number of region sets. The number of rows of 
+# each data.frame is equal to the number of permutations.
+# getNullDist <- function(groupByRS=TRUE) {
+#     
+# }

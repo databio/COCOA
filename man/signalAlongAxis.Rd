@@ -28,10 +28,9 @@ corresponds to a row in signal). If a data.frame,
 must have chr and start columns. If end is included, start 
 and end should be the same. Start coordinate will be used for calculations.}
 
-\item{regionSet}{A genomic ranges object with regions corresponding
-to the same biological annotation. The regions where you will visualize
-the genomic signal. Must be from the same reference genome
-as the coordinates for the actual data (signalCoord).}
+\item{regionSet}{A genomic ranges (GRanges) object with regions corresponding
+to the same biological annotation.
+as the coordinates for the actual data/samples (signalCoord).}
 
 \item{sampleScores}{A matrix. Must contain a column with name given
 by "orderByCol" that will be used to order samples.  

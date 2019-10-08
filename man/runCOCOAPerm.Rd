@@ -7,10 +7,26 @@
 runCOCOAPerm(genomicSignal, signalCoord, GRList, realRSScores,
   sampleLabels, signalCol = c("PC1", "PC2"),
   signalCoordType = "default", scoringMetric = "default",
-  variationMetric = "cor", nPerm = 300, useSimpleCache = TRUE,
-  cacheDir = getwd(), dataID = "tmp", correctionMethod = "BH", ...)
+  absVal = TRUE, variationMetric = "cor", nPerm = 300,
+  useSimpleCache = TRUE, cacheDir = getwd(), dataID = "tmp",
+  correctionMethod = "BH", ...)
 }
 \arguments{
+\item{signalCoord}{a GRanges object or data frame with coordinates 
+for the genomic signal/original data (eg DNA methylation/ATAC-seq) 
+Coordinates should be in the 
+same order as the original data and the loadings 
+(each item/row in signalCoord
+corresponds to a row in signal). If a data.frame, 
+must have chr and start columns. If end is included, start 
+and end should be the same. Start coordinate will be used for calculations.}
+
+\item{GRList}{GRangesList object. Each list item is 
+a distinct region set to test (region set: regions that correspond to 
+the same biological annotation). The region set database
+must be from the same reference genome
+as the coordinates for the actual data/samples (signalCoord).}
+
 \item{realRSScores}{data.frame. A data.frame with region set
 scores. The output of the 'runCOCOA' function.
 Rows should be in the same order as the region sets in GRList. 
@@ -20,6 +36,52 @@ Must include columns with names given by 'colsToAnnotate'.}
 you are running COCOA to find region sets associated with. These 
 values will be shuffled for the permutation test. Rows are samples.
 Each column is a sample label.}
+
+\item{scoringMetric}{A character object with the scoring metric.
+There are different scoring metrics available for 
+signalCoordType="singleBase" vs  signalCoordType="multiBase".
+For "singleBase", the available scoring methods are "regionMean", 
+"simpleMean", and "rankSum". The default method is "regionMean".
+For "multiBase", the scoring methods are "proportionWeightedMean" and 
+"simpleMean". The default is "proportionWeightedMean".
+"regionMean" is a weighted
+average of the signal, weighted by region (absolute value of signal 
+if absVal=TRUE). First the signal is
+averaged within each regionSet region, 
+then all the regions are averaged. With
+"regionMean" score, be cautious in interpretation for
+region sets with low number of regions that overlap signalCoord. 
+The "simpleMean"
+method is just the unweighted average of all (absolute) signal values that
+overlap the given region set. For multiBase data, this includes
+signal regions that overlap a regionSet region at all (1 base
+overlap or more) and the signal for each overlapping region is
+given the same weight for the average regardless of how much it overlaps. 
+"proportionWeightedMean" is a weighted average of all signalCoord 
+regions that overlap with regionSet regions. For each signalCoord region
+that overlaps with a regionSet region, we calculate what proportion
+of the regionSet region is covered. Then this proportion is used to
+weight the signal value when calculating the mean. 
+The denominator of the mean
+is the sum of all the proportion overlaps. 
+Wilcoxon rank sum test ("rankSum") is also supported but is
+skewed toward ranking large region sets highly and is
+significantly slower than the "regionMean" method. 
+For the ranksum method, the absolute loadings for loadings that
+overlap the given region set are taken as a group and all the
+loadings that do not overlap the region set are taken as
+the other group. Then p value is then given as the score.
+It is a one sided test, with the alternative hypothesis
+that the loadings in the region set will be greater than
+the loadings not in the region set.}
+
+\item{absVal}{logical. If TRUE, take the absolute value of values in
+signal. Choose TRUE if you think there may be some 
+genomic loci in a region set that will increase and others
+will decrease (if there may be anticorrelation between
+regions in a region set). Choose FALSE if you expect regions in a 
+given region set to all change in the same direction (all be positively
+correlated with each other).}
 
 \item{variationMetric}{character. Either "cor" (Pearson correlation), 
 "pcor" (partial correlation), "spearmanCor (Spearman correlation) 
