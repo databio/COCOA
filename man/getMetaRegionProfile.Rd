@@ -14,17 +14,17 @@ the linear combination that defines each PC). One named column for each PC.
 One row for each original dimension/variable (should be same order 
 as original data/signalCoord). Given by prcomp(x)$rotation.}
 
-\item{signalCoord}{a GRanges object or data.frame with coordinates 
-for the genomic signal/original data (eg DNA methylation) 
-included in the PCA. Coordinates should be in the 
+\item{signalCoord}{a GRanges object or data frame with coordinates 
+for the genomic signal/original data (eg DNA methylation/ATAC-seq) 
+Coordinates should be in the 
 same order as the original data and the loadings 
 (each item/row in signalCoord
-corresponds to a row in `signal`). If a data.frame, 
+corresponds to a row in signal). If a data.frame, 
 must have chr and start columns. If end is included, start 
 and end should be the same. Start coordinate will be used for calculations.}
 
 \item{regionSet}{A genomic ranges (GRanges) object with regions corresponding
-to the same biological annotation. Must be from the same reference genome
+to the same biological annotation.
 as the coordinates for the actual data/samples (signalCoord).}
 
 \item{signalCol}{A character vector with principal components to

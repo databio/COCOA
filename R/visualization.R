@@ -29,10 +29,9 @@
 #' Must have sample names/IDs as column names,
 #' These same sample names must be row names of sampleScores.
 #' @template signalCoord
+#' @templateVar refGenomeWarning TRUE
+#' @templateVar rsVisualization TRUE
 #' @template regionSet
-#' The regions where you will visualize
-#' the genomic signal. Must be from the same reference genome
-#' as the coordinates for the actual data (signalCoord).
 #' @param sampleScores A matrix. Must contain a column with name given
 #' by "orderByCol" that will be used to order samples.  
 #' E.g. Could be the principal component scores for the samples 
@@ -340,10 +339,9 @@ rsScoreHeatmap <- function(rsScores, signalCol=paste0("PC", 1:5),
 #' One row for each original dimension/variable (should be same order 
 #' as original data/signalCoord). The x$rotation output of prcomp().
 #' @template signalCoord
+#' @templateVar refGenomeWarning TRUE
+#' @templateVar rsVisualization TRUE
 #' @template regionSet
-#' These are the regions that will be 
-#' visualized. Must be from the same reference genome
-#' as the coordinates for the actual data (signalCoord).
 #' @param rsName character vector. Names of the region sets in the same
 #' order as GRList. For use as a title for each heatmap.
 #' @param signalCol A character vector with principal components to 
@@ -370,13 +368,7 @@ rsScoreHeatmap <- function(rsScores, signalCol=paste0("PC", 1:5),
 #' @param col a vector of colors or a color mapping function which
 #' will be passed to the ComplexHeatmap::Heatmap() function. See ?Heatmap
 #' (the "col" parameter) for more details.
-#' @param absVal logical. If TRUE, take the absolute value of values in
-#' `signal`. Choose TRUE if you think there may be some 
-#' genomic loci in a region set that will increase and others
-#' will decrease (if there may be anticorrelation between
-#' regions in a region set). Choose FALSE if you expect regions in a 
-#' given region set to change in the same direction (to be positively
-#' correlated with each other).
+#' @template absVal
 #' @param ... optional parameters for ComplexHeatmap::Heatmap()
 #' @return a heatmap. Columns are PCs, rows are regions. 
 #' This heatmap allows you to see if some regions are 

@@ -91,62 +91,18 @@ if (getRversion() >= "2.15.1") {
 #' as original data/signalCoord). The x$rotation output of prcomp().
 #' @template signalCoord
 #' @template signalCoordType
+#' @templateVar refGenomeWarning TRUE
 #' @template regionSet 
-#' Must be from the same reference genome
-#' as the coordinates for the actual data/samples (signalCoord).
 #' @param signalCol A character vector with principal components to 
 #' include. eg c("PC1", "PC2") These should be column names of signal.
-#' @param scoringMetric A character object with the scoring metric.
-#' There are different scoring metrics available for 
-#' signalCoordType="singleBase" vs  signalCoordType="multiBase".
-#' For "singleBase", the available scoring methods are "regionMean", 
-#' "simpleMean", and "rankSum". The default method is "regionMean".
-#' For "multiBase", the scoring methods are "proportionWeightedMean" and 
-#' "simpleMean". The default is "proportionWeightedMean".
-#' "regionMean" is a weighted
-#' average of the signal, weighted by region (absolute value of signal 
-#' if absVal=TRUE). First the signal is
-#' averaged within each regionSet region, 
-#' then all the regions are averaged. With
-#' "regionMean" score, be cautious in interpretation for
-#' region sets with low number of regions that overlap signalCoord. 
-#' The "simpleMean"
-#' method is just the unweighted average of all (absolute) signal values that
-#' overlap the given region set. For multiBase data, this includes
-#' signal regions that overlap a regionSet region at all (1 base
-#' overlap or more) and the signal for each overlapping region is
-#' given the same weight for the average regardless of how much it overlaps. 
-#' "proportionWeightedMean" is a weighted average of all signalCoord 
-#' regions that overlap with regionSet regions. For each signalCoord region
-#' that overlaps with a regionSet region, we calculate what proportion
-#' of the regionSet region is covered. Then this proportion is used to
-#' weight the signal value when calculating the mean. 
-#' The denominator of the mean
-#' is the sum of all the proportion overlaps. 
-#' Wilcoxon rank sum test ("rankSum") is also supported but is
-#' skewed toward ranking large region sets highly and is
-#' significantly slower than the "regionMean" method. 
-#' For the ranksum method, the absolute loadings for loadings that
-#' overlap the given region set are taken as a group and all the
-#' loadings that do not overlap the region set are taken as
-#' the other group. Then p value is then given as the score.
-#' It is a one sided test, with the alternative hypothesis
-#' that the loadings in the region set will be greater than
-#' the loadings not in the region set.
-#' @param verbose A "logical" object. Whether progress 
-#' of the function should be shown, one
-#' bar indicates the region set is completed. Useful when using 
-#' aggregateSignal with 'apply' to do many region sets at a time.
+#' @template scoringMetric
+#' @template verbose
+# Useful when using 
+# aggregateSignal with 'apply' to do many region sets at a time.
 #' @param wilcox.conf.int logical. Only applies when using "rankSum" scoring
 #' method. returns a 95% confidence interval from the Wilcoxon rank sum test
 #' instead of p value.
-#' @param absVal logical. If TRUE, take the absolute value of values in
-#' signal. Choose TRUE if you think there may be some 
-#' genomic loci in a region set that will increase and others
-#' will decrease (if there may be anticorrelation between
-#' regions in a region set). Choose FALSE if you expect regions in a 
-#' given region set to all change in the same direction (all be positively
-#' correlated with each other).
+#' @template absVal
 
 #' @return a data.frame with one row and the following 
 #' columns: one column for each item of signalCol with names given
@@ -551,19 +507,11 @@ aggregateSignal <- function(signal,
 #' It is a one sided test, with the alternative hypothesis
 #' that the loadings in the region set will be greater than
 #' the loadings not in the region set.
-#' @param verbose A "logical" object. Whether progress 
-#' of the function should be shown, one
-#' bar indicates the region set is completed.
+#' @template verbose
 #' @param wilcox.conf.int logical. Only applies when using "rankSum" scoring
 #' method. returns a 95% confidence interval from the Wilcoxon rank sum test
 #' instead of p value.
-#' @param absVal logical. If TRUE, take the absolute value of values in
-#' signal. Choose TRUE if you think there may be some 
-#' genomic loci in a region set that will increase and others
-#' will decrease (if there may be anticorrelation between
-#' regions in a region set). Choose FALSE if you expect regions in a 
-#' given region set to all change in the same direction (all be positively
-#' correlated with each other).
+#' @template absVal
 #' @return data.frame of results, one row for each region set. 
 #' It has the following columns:
 #' one column for each item of signalCol with names given
@@ -837,8 +785,6 @@ createCorFeatureMat <- function(dataMat, featureMat,
 #' as original data/signalCoord). Given by prcomp(x)$rotation.
 #' @template signalCoord
 #' @template regionSet
-#' Must be from the same reference genome
-#' as the coordinates for the actual data/samples (signalCoord).
 #' @param signalCol A character vector with principal components to  
 #' include. eg c("PC1", "PC2") These should be column names of signal.
 #' @param signalCoordType character. Can be "default", "singleBase", or 
@@ -886,13 +832,7 @@ createCorFeatureMat <- function(dataMat, featureMat,
 #' weight the signal value when calculating the mean. 
 #' The denominator of the mean
 #' is the sum of all the proportion overlaps. 
-#' @param absVal logical. If TRUE, take the absolute value of values in
-#' signal. Choose TRUE if you think there may be some 
-#' genomic loci in a region set that will increase and others
-#' will decrease (if there may be anticorrelation between
-#' regions in a region set). Choose FALSE if you expect regions in a 
-#' given region set to all change in the same direction (all be positively
-#' correlated with each other).
+#' @template absVal
 #' @return A data.frame with the binned loading profile,
 #' one row per bin. columns: binID and one column for each PC
 #' in signalCol. The function will return NULL if there
@@ -1178,13 +1118,7 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount,
 # @param returnQuantile "logical" object. If FALSE, return region averages. If TRUE,
 # for each region, return the quantile of that region's average value
 # based on the distribution of individual genomic signal/feature values
-# @param absVal logical. If TRUE, take the absolute value of values in
-# signal. Choose TRUE if you think there may be some 
-# genomic loci in a region set that will increase and others
-# will decrease (if there may be anticorrelation between
-# regions in a region set). Choose FALSE if you expect regions in a 
-# given region set to all change in the same direction (all be positively
-# correlated with each other).
+# @template absVal
 # @return a data.table with region coordinates and average loading 
 # values for each region. Has columns chr, start, end, and a column for each
 # PC in signalCol. Regions are not in order along the rows of the data.table.

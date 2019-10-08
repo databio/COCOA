@@ -18,18 +18,17 @@ One row for each original dimension/variable (should be same order
 as original data/signalCoord). The x$rotation output of prcomp().}
 
 \item{signalCoord}{a GRanges object or data frame with coordinates 
-for the genomic signal/original data (eg DNA methylation) 
-included in the PCA. Coordinates should be in the 
+for the genomic signal/original data (eg DNA methylation/ATAC-seq) 
+Coordinates should be in the 
 same order as the original data and the loadings 
 (each item/row in signalCoord
-corresponds to a row in `signal`). If a data.frame, 
+corresponds to a row in signal). If a data.frame, 
 must have chr and start columns. If end is included, start 
 and end should be the same. Start coordinate will be used for calculations.}
 
-\item{regionSet}{A genomic ranges object with regions corresponding
-to the same biological annotation. These are the regions that will be 
-visualized. Must be from the same reference genome
-as the coordinates for the actual data (signalCoord).}
+\item{regionSet}{A genomic ranges (GRanges) object with regions corresponding
+to the same biological annotation.
+as the coordinates for the actual data/samples (signalCoord).}
 
 \item{rsName}{character vector. Names of the region sets in the same
 order as GRList. For use as a title for each heatmap.}
@@ -68,11 +67,11 @@ will be passed to the ComplexHeatmap::Heatmap() function. See ?Heatmap
 (the "col" parameter) for more details.}
 
 \item{absVal}{logical. If TRUE, take the absolute value of values in
-`signal`. Choose TRUE if you think there may be some 
+signal. Choose TRUE if you think there may be some 
 genomic loci in a region set that will increase and others
 will decrease (if there may be anticorrelation between
 regions in a region set). Choose FALSE if you expect regions in a 
-given region set to change in the same direction (to be positively
+given region set to all change in the same direction (all be positively
 correlated with each other).}
 
 \item{...}{optional parameters for ComplexHeatmap::Heatmap()}

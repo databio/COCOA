@@ -14,18 +14,18 @@ the linear combination that defines each PC). One named column for each PC.
 One row for each original dimension/variable (should be same order 
 as original data/signalCoord). The x$rotation output of prcomp().}
 
-\item{signalCoord}{a GRanges object or data.frame with coordinates 
-for the genomic signal/original data (e.g. DNA methylation) 
-included in the PCA. Coordinates should be in the 
+\item{signalCoord}{a GRanges object or data frame with coordinates 
+for the genomic signal/original data (eg DNA methylation/ATAC-seq) 
+Coordinates should be in the 
 same order as the original data and the loadings 
 (each item/row in signalCoord
-corresponds to a row in `signal`). If a data.frame, 
+corresponds to a row in signal). If a data.frame, 
 must have chr and start columns. If end is included, start 
 and end should be the same. Start coordinate will be used for calculations.}
 
 \item{regionSet}{A genomic ranges (GRanges) object with regions corresponding
-to the same biological annotation. Must be from the same reference genome
-as the coordinates for the actual data/samples (signalCoord).}
+to the same biological annotation.
+Must be from the same reference genome}
 
 \item{signalCol}{A character vector with principal components to 
 include. eg c("PC1", "PC2") These should be column names of signal.}
@@ -36,7 +36,8 @@ include. eg c("PC1", "PC2") These should be column names of signal.}
 or a region/multiple bases (e.g. as for ATAC-seq). Different scoring
 options are available for each type of data. If "default" is given,
 the type of coordinates will be detected automatically. If each
-coordinate start value equals the coordinate end value, "singleBase"
+coordinate start value equals the coordinate end value 
+(all(start(signalCoord) == end(signalCoord))), "singleBase"
 will be used. Otherwise, "multiBase" will be used.}
 
 \item{scoringMetric}{A character object with the scoring metric.
@@ -78,9 +79,8 @@ that the loadings in the region set will be greater than
 the loadings not in the region set.}
 
 \item{verbose}{A "logical" object. Whether progress 
-of the function should be shown, one
-bar indicates the region set is completed. Useful when using 
-aggregateSignal with 'apply' to do many region sets at a time.}
+of the function should be shown. One
+bar indicates the region set is completed.}
 
 \item{wilcox.conf.int}{logical. Only applies when using "rankSum" scoring
 method. returns a 95% confidence interval from the Wilcoxon rank sum test
