@@ -93,8 +93,7 @@ if (getRversion() >= "2.15.1") {
 #' @template signalCoordType
 #' @templateVar refGenomeWarning TRUE
 #' @template regionSet 
-#' @param signalCol A character vector with principal components to 
-#' include. eg c("PC1", "PC2") These should be column names of signal.
+#' @template signalCol
 #' @template scoringMetric
 #' @template verbose
 # Useful when using 
@@ -466,8 +465,7 @@ aggregateSignal <- function(signal,
 #' @template signalCoord
 #' @template signalCoordType
 #' @template GRList
-#' @param signalCol A character vector with principal components to  
-#' include. eg c("PC1", "PC2") These should be column names of signal.
+#' @template signalCol
 #' @param scoringMetric A character object with the scoring metric.
 #' There are different scoring metrics available for 
 #' signalCoordType="singleBase" vs  signalCoordType="multiBase".
@@ -783,18 +781,8 @@ createCorFeatureMat <- function(dataMat, featureMat,
 #' as original data/signalCoord). Given by prcomp(x)$rotation.
 #' @template signalCoord
 #' @template regionSet
-#' @param signalCol A character vector with principal components to  
-#' include. eg c("PC1", "PC2") These should be column names of signal.
-#' @param signalCoordType character. Can be "default", "singleBase", or 
-#' "multiBase". This describes whether the coordinates for `signal` 
-#' (`signalCoord`) are each a single base (e.g. as for DNA methylation)
-#' or a region/multiple bases (e.g. as for ATAC-seq). Different aggregation
-#' options are available for each type of data. If "default" is given,
-#' the type of coordinates will be detected automatically. For "default", 
-#' if each
-#' coordinate start value equals the coordinate end value
-#' (all(start(signalCoord) == end(signalCoord))), "singleBase"
-#' will be used. Otherwise, "multiBase" will be used. 
+#' @template signalCol
+#' @template signalCoordType
 #' @param binNum Number of bins to split each region into when
 #' making the aggregate loading profile. More bins will
 #' give a higher resolution but perhaps more noisy profile.
@@ -1111,8 +1099,7 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount,
 # @template regionSet
 # Must be from the same reference genome
 # as the coordinates for the actual data/samples (signalCoord).
-# @param signalCol A character vector with principal components to  
-# include. eg c("PC1", "PC2") These should be column names of signal.
+# @template signalCol
 # @param returnQuantile "logical" object. If FALSE, return region averages. If TRUE,
 # for each region, return the quantile of that region's average value
 # based on the distribution of individual genomic signal/feature values
@@ -1293,8 +1280,7 @@ weightedAvePerRegion <- function(signalDT,
 #' as original data/signalCoord). The x$rotation output of prcomp().
 #' @template signalCoord
 #' @template regionSet
-#' @param signalCol A character vector with principal components to  
-#' include. eg c("PC1", "PC2") These should be column names of signal.
+#' @template signalCol
 #' @param returnQuantile "logical" object. If FALSE, return region averages. If TRUE,
 #' for each region, return the quantile of that region's average value
 #' based on the distribution of individual genomic signal/feature values

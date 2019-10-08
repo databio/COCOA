@@ -344,8 +344,7 @@ rsScoreHeatmap <- function(rsScores, signalCol=paste0("PC", 1:5),
 #' @template regionSet
 #' @param rsName character vector. Names of the region sets in the same
 #' order as GRList. For use as a title for each heatmap.
-#' @param signalCol A character vector with principal components to 
-#' include. eg c("PC1", "PC2") These should be column names of `signal`.
+#' @template signalCol
 #' @param maxRegionsToPlot how many top regions from region set to include
 #' in heatmap. Including too many may slow down computation and increase memory
 #' use. If regionSet has more regions than maxRegionsToPlot, a number of regions 
