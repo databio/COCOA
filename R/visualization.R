@@ -22,12 +22,9 @@
 #' The ComplexHeatmap package
 #' is used and additional parameters for the ComplexHeatmap::Heatmap function
 #' may be passed to this function to modify the heatmap.   
-#'
-#' @param genomicSignal The genomic signal (eg DNA methylation levels) 
-#' in matrix or data.frame. 
-#' Rows are individual signal/feature values. Columns are samples.
-#' Must have sample names/IDs as column names,
-#' These same sample names must be row names of sampleScores.
+#' 
+#' @templateVar requireSampleNames TRUE
+#' @template genomicSignal
 #' @template signalCoord
 #' @templateVar refGenomeWarning TRUE
 #' @templateVar rsVisualization TRUE
@@ -50,6 +47,8 @@
 #' each variable in genomicSignal (length(variableScores) should equal
 #' nrow(genomicSignal)). Only used if topXVariables is given. The highest
 #' `topXVariables` will be plotted.
+#' @param decreasing logical. Whether samples should be sorted in 
+#' decreasing order of `orderByCol` or not (FALSE is increasing order).
 #' @param cluster_rows "logical" object, whether rows should be clustered. 
 #' This should be kept as FALSE to keep the correct ranking of 
 #' samples/observations according to their PC score.
@@ -86,6 +85,7 @@
 signalAlongAxis <- function(genomicSignal, signalCoord, regionSet, 
                           sampleScores, orderByCol="PC1", topXVariables=NULL, 
                           variableScores=NULL,
+                          decreasing=TRUE,
                           cluster_columns = FALSE, 
                           cluster_rows = FALSE, 
                           row_title = "Sample",
@@ -159,7 +159,7 @@ signalAlongAxis <- function(genomicSignal, signalCoord, regionSet,
     # reducedValsPCA <- pcaData$x
     # pcaData must have subject_ID as row name
     thisRSMData <- thisRSMData[names(sort(sampleScores[, orderByCol], 
-                                          decreasing = TRUE)), ]
+                                          decreasing = decreasing)), ]
     
     message(paste0("Number of cytosines: ", length(cytosineHitInd)))
     message(paste0("Number of regions: ", nRegion))
@@ -188,14 +188,9 @@ signalAlongAxis <- function(genomicSignal, signalCoord, regionSet,
 #' is used and additional parameters for the ComplexHeatmap::Heatmap function
 #' may be passed to this function to modify the heatmap.  
 #' 
-#' @param rsScores a data.frame with scores for each 
-#' region set from main COCOA function `runCOCOA`. 
-#' Each row is a region set. Columns are scores, one column for each PCs 
-#' Also can have columns with info on region set overlap
-#' with the original data. Should be in the same order as GRList (the list of 
-#' region sets used to create it.)
-#' @param signalCol A character vector with principal components to 
-#' include. eg c("PC1", "PC2"). Must be column names of rsScores.
+#' @template rsScores
+#' @templateVar usesRSScores TRUE
+#' @template signalCol
 #' @param orderByCol a character object. PC to order by in heatmap 
 #' (arranged in decreasing order for scores so p values should 
 #' be -log transformed). Must be the name of a column in rsScores.
@@ -325,17 +320,18 @@ rsScoreHeatmap <- function(rsScores, signalCol=paste0("PC", 1:5),
 }
 
 
-#' Visualize how individual regions are associated with principal components
+#' Visualize how individual regions are associated with variable of interest 
+#' (VOI)
 #' 
-#' Visualize how much each region in a region set is associated with each PC.
-#' For each PC, the average absolute loading is calculated for 
-#' each region in the region set. Then for a given PC, 
+#' Visualize how much each region in a region set is associated with each VOI.
+#' For each VOI, the average absolute loading is calculated for 
+#' each region in the region set. Then for a given VOI, 
 #' the average loading is converted to a percentile/quantile based 
-#' on the distribution of all loadings for that PC. These values are
+#' on the distribution of all loadings for that VOI. These values are
 #' plotted in a heatmap.
 #' 
 #' @param signal matrix of loadings (the coefficients of 
-#' the linear combination that defines each PC). One named column for each PC.
+#' the linear combination that defines each PC). One named column for each VOI.
 #' One row for each original dimension/variable (should be same order 
 #' as original data/signalCoord). The x$rotation output of prcomp().
 #' @template signalCoord
@@ -369,11 +365,11 @@ rsScoreHeatmap <- function(rsScores, signalCol=paste0("PC", 1:5),
 #' (the "col" parameter) for more details.
 #' @template absVal
 #' @param ... optional parameters for ComplexHeatmap::Heatmap()
-#' @return a heatmap. Columns are PCs, rows are regions. 
+#' @return a heatmap. Columns are signalCol's, rows are regions. 
 #' This heatmap allows you to see if some regions are 
-#' associated with certain PCs but not others. Also, you can see if a subset of 
-#' regions in the region set are associated with PCs while another subset
-#' are not associated with any PCs 
+#' associated with certain VOIs but not others. Also, you can see if a subset of 
+#' regions in the region set are associated with VOIs while another subset
+#' are not associated with any VOIs 
 #' To color each region, first the absolute loading 
 #' values within that region are
 #' averaged. Then this average is compared to the distribution of absolute
@@ -386,7 +382,7 @@ rsScoreHeatmap <- function(rsScores, signalCol=paste0("PC", 1:5),
 #' data("brcaMCoord1")
 #' data("esr1_chr1")
 #' data("brcaPCScores")
-#' regionByPCHM <- regionQuantileByPC(signal = brcaLoadings1, 
+#' regionByPCHM <- regionQuantileByVOI(signal = brcaLoadings1, 
 #'                                    signalCoord = brcaMCoord1, 
 #'                                    regionSet = esr1_chr1, 
 #'                                    rsName = "Estrogen Receptor Chr1", 
@@ -399,7 +395,7 @@ rsScoreHeatmap <- function(rsScores, signalCol=paste0("PC", 1:5),
 #'                                    
 #' 
 #' @export
-regionQuantileByPC <- function(signal, signalCoord, regionSet, 
+regionQuantileByVOI <- function(signal, signalCoord, regionSet, 
                                rsName = "", signalCol=paste0("PC", 1:5),
                                maxRegionsToPlot = 8000, cluster_rows = TRUE, 
                                row_title = "Region", column_title = rsName,

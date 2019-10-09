@@ -20,19 +20,13 @@
 #' 
 #' For reproducibility, set seed with 'set.seed()' function before running.
 #' @param nPerm numeric. The number of permutations to do.
-#' @param genomicSignal
+#' @template genomicSignal
 #' @template signalCoord
 #' @template GRList
-#' @param realRSScores data.frame. A data.frame with region set
-#' scores. The output of the 'runCOCOA' function.
-#' Rows should be in the same order as the region sets in GRList. 
-#' Must include columns with names given by 'colsToAnnotate'.
-#' @param sampleLabels data.frame/matrix. Sample labels/values that 
-#' you are running COCOA to find region sets associated with. These 
-#' values will be shuffled for the permutation test. Rows are samples.
-#' Each column is a sample label.
+#' @template rsScores
+#' @template sampleLabels
 #' @param colsToAnnotate character. The column names of `sampleLabels` that
-#' you want to test. These must also be columns in realRSScores.
+#' you want to test. These must also be columns in rsScores.
 #' @template scoringMetric
 #' @template absVal
 #' @param dataID character. A unique identifier for this dataset 
@@ -48,7 +42,6 @@
 #' @param correctionMethod character. P value correction method. Default
 #' is "BH" for Benjamini and Hochberg false discovery rate. For acceptable 
 #' arguments and more info see ?stats::p.adjust() (method parameter) 
-#' @param resultType character. "pval" or "zscore"
 #' @param ... character. Optional additional arguments for simpleCache
 #'
 #' 
@@ -72,7 +65,7 @@
 #' 
 #' a=runCOCOAPerm(genomicSignal=brcaMethylData1, 
 #'         signalCoord=brcaMCoord1, GRList=GRangesList(esr1_chr1, nrf1_chr1),
-#'         realRSScores=realRSScores, 
+#'         rsScores=realRSScores, 
 #'         sampleLabels=sampleLabels, signalCol=c("PC1", "PC2"),
 #'         variationMetric="cor", nPerm = 10, useSimpleCache=FALSE)
 #' 
@@ -81,7 +74,7 @@
 runCOCOAPerm <- function(genomicSignal,
                          signalCoord,
                          GRList,
-                         realRSScores,
+                         rsScores,
                          sampleLabels,
                          signalCol=c("PC1", "PC2"),
                          signalCoordType = "default",
@@ -164,19 +157,19 @@ runCOCOAPerm <- function(genomicSignal,
     # 
     # # screen out region sets with no overlap
     # nullDistList = nullDistList[keepInd]
-    # realRSScores = realRSScores[keepInd, ]
+    # rsScores = rsScores[keepInd, ]
     
     nullDistList = convertToFromNullDist(resultsList=rsPermScores)
     if (useSimpleCache) {
 
         simpleCache(paste0("permPValsUncorrected", .analysisID), {
-            rsPVals = getPermStat(rsScores=realRSScores, nullDistList=nullDistList,
+            rsPVals = getPermStat(rsScores=rsScores, nullDistList=nullDistList,
                                   calcCols=colsToAnnotate, whichMetric = "pval")
             rsPVals
         }, assignToVariable=rsPVals, cacheDir=cacheDir, ...)
         
         simpleCache(paste0("permZScores", .analysisID), {
-            rsZScores = getPermStat(rsScores=realRSScores, nullDistList=nullDistList,
+            rsZScores = getPermStat(rsScores=rsScores, nullDistList=nullDistList,
                                     calcCols=colsToAnnotate, whichMetric = "zscore")
             rsZScores
             
@@ -184,32 +177,32 @@ runCOCOAPerm <- function(genomicSignal,
     
         simpleCache(paste0("permPValsCorrected", .analysisID), {
             # p-values based on fitted gamma distributions
-            gPValDF = getGammaPVal(scores = realRSScores, 
+            gPValDF = getGammaPVal(scores = rsScores, 
                                    nullDistList = nullDistList, 
                                    calcCols = colsToAnnotate, 
                                    method = "mme", realScoreInDist = TRUE)
             gPValDF = apply(X = gPValDF, MARGIN = 2, 
                             FUN = function(x) p.adjust(p = x, method = correctionMethod))
             gPValDF = cbind(gPValDF, 
-                            realRSScores[, colnames(realRSScores)[!(colnames(realRSScores) 
+                            rsScores[, colnames(rsScores)[!(colnames(rsScores) 
                                                                     %in% colsToAnnotate)]])
             gPValDF
         }, assignToVariable="gPValDF", cacheDir=cacheDir, ...)    
         
     } else {
-        rsPVals = getPermStat(rsScores=realRSScores, nullDistList=nullDistList,
+        rsPVals = getPermStat(rsScores=rsScores, nullDistList=nullDistList,
                               calcCols=colsToAnnotate, whichMetric = "pval")
         
-        rsZScores = getPermStat(rsScores=realRSScores, nullDistList=nullDistList,
+        rsZScores = getPermStat(rsScores=rsScores, nullDistList=nullDistList,
                                 calcCols=colsToAnnotate, whichMetric = "zscore")
         
         # p-values based on fitted gamma distributions
-        gPValDF = getGammaPVal(scores = realRSScores, 
+        gPValDF = getGammaPVal(scores = rsScores, 
                                nullDistList = nullDistList, 
                                calcCols = colsToAnnotate, 
                                method = "mme", realScoreInDist = TRUE)
         gPValDF = cbind(gPValDF, 
-                        realRSScores[, colnames(realRSScores)[!(colnames(realRSScores) 
+                        rsScores[, colnames(rsScores)[!(colnames(rsScores) 
                                                                 %in% colsToAnnotate)]])
         
     }
@@ -234,17 +227,12 @@ runCOCOAPerm <- function(genomicSignal,
 #' Set the seed with set.seed() before making randomInd to ensure reproducibility.
 #' If the vector is unshuffled,
 #' this will give the real COCOA results.
-#' @param genomicSignal columns of genomicSignal should be samples/patients, rows should be genomic signal
-#' (each row corresponds to one genomic coordinate/range)
+#' @template genomicSignal
 #' @template signalCoord
 #' @template GRList
 #' @param calcCols character. the columns in `sampleLabels` for which to calculate
 #' correlation and then to run COCOA on
-#' @param sampleLabels Matrix or data.frame. Rows should be samples, 
-#' columns should be "features" 
-#' (whatever you want to get correlation with: eg PC scores),
-#' all columns in featureMat will be used (subset when passing to function
-#' in order to not use all columns)
+#' @template sampleLabels
 #' @param variationMetric character. 
 #' @template scoringMetric
 #' @template verbose
@@ -369,15 +357,19 @@ permListToOneNullDist <- function(resultsList, rsInd) {
 # p value functions 
 
 
-#' Get p value after fitting a gamma distribution to the null distribution
+#' Get a p-value for region set scores based on a gamma distribution. 
 #' 
-#' @param scores a data.frame. Has same columns as nullDistDF. One row per
-#' region set (should be in same order as nullDistDF) The scores
-#' that will be used to get p values.
+#' First fit a gamma distribution to each region set's null distribution/s
+#' (nullDistList). Then use this gamma distribution to convert scores in
+#' rsScores to p-values.
+#' 
+#' @template rsScores 
 #' @param nullDistList list of data.frames. Each list item 
 #' has null distributions for a single 
-#' region set. Each column corresponds to a null distribution for that 
-#' region set for a given variable/sample attribute.  
+#' region set (list items should be in the same order as rows of rsScores). 
+#' Has same score columns as rsScores. 
+#' Each column corresponds to a null distribution for that 
+#' region set for a given sample variable of interest (e.g. PC or sample phenotype).  
 #' @param calcCols character.
 #' @param method character. Has the method to use to fit the gamma 
 #' distribution to the null distribution. See ?fitdistrplus::fitdist() for
@@ -389,7 +381,7 @@ permListToOneNullDist <- function(resultsList, rsInd) {
 #' @param force logical.
 # 
 #' @return Returns a data.frame with p values, one column for each col in
-#' scores and nullDistDF 
+#' rsScores 
 #' 
 #' @examples 
 #' fakeOriginalScores = data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
@@ -398,26 +390,26 @@ permListToOneNullDist <- function(resultsList, rsInd) {
 #' fakePermScores3 = data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
 #' permRSScores = list(fakePermScores, fakePermScores2, fakePermScores3)
 #' nullDistList = convertToFromNullDist(permRSScores)
-#' getGammaPVal(scores=fakeOriginalScores, nullDistList=nullDistList, calcCols=c("PC1", "PC2")) 
+#' getGammaPVal(rsScores=fakeOriginalScores, nullDistList=nullDistList, calcCols=c("PC1", "PC2")) 
 #' 
 #' @export
 
-getGammaPVal <- function(scores, nullDistList, calcCols, method="mme", realScoreInDist=TRUE, force=FALSE) {
+getGammaPVal <- function(rsScores, nullDistList, calcCols, method="mme", realScoreInDist=TRUE, force=FALSE) {
     
     # make sure the same columns are present/in the same order
     
     
-    colsToAnnotate = calcCols[calcCols %in% colnames(scores)]
+    colsToAnnotate = calcCols[calcCols %in% colnames(rsScores)]
     
     if (realScoreInDist) {
         # to get a more accurate gamma distribution, include the score from unpermuted test.
         # add to each null distribution
-        for (i in 1:nrow(scores)) {
-            nullDistList[[i]] = rbind(nullDistList[[i]], as.numeric(scores[i, ]))
+        for (i in 1:nrow(rsScores)) {
+            nullDistList[[i]] = rbind(nullDistList[[i]], as.numeric(rsScores[i, ]))
         }
     }
     
-    scores = scores[, colsToAnnotate, drop=FALSE]  
+    rsScores = rsScores[, colsToAnnotate, drop=FALSE]  
     
     # returns list, each item in list is also a list.
     # in sub list: each col in nullDistDF has one list item
@@ -429,7 +421,7 @@ getGammaPVal <- function(scores, nullDistList, calcCols, method="mme", realScore
     # once for each region set
     for (i in seq_along(nullDistList)) {
         
-        pValList[[i]] = as.data.frame(t(pGammaList(scoreVec = as.numeric(scores[i, ]), 
+        pValList[[i]] = as.data.frame(t(pGammaList(scoreVec = as.numeric(rsScores[i, ]), 
                                                    fitDistrList = fittedDistList[[i]])))
     }
     pValDF = as.data.frame(rbindlist(pValList))
@@ -500,7 +492,7 @@ pGammaList <- function(scoreVec, fitDistrList) {
 }
 
 
-#' @param rsScores is a data.frame of 
+#' @template rsScores 
 #' @param nullDistList list. one item per region set. Each item is a 
 #' data.frame with the 
 #' null distribution for a single region set. Each column in the data.frame

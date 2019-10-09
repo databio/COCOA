@@ -4,14 +4,19 @@
 \alias{runCOCOAPerm}
 \title{Run COCOA permutations to get p-values}
 \usage{
-runCOCOAPerm(genomicSignal, signalCoord, GRList, realRSScores,
-  sampleLabels, signalCol = c("PC1", "PC2"),
-  signalCoordType = "default", scoringMetric = "default",
-  absVal = TRUE, variationMetric = "cor", nPerm = 300,
-  useSimpleCache = TRUE, cacheDir = getwd(), dataID = "tmp",
-  correctionMethod = "BH", ...)
+runCOCOAPerm(genomicSignal, signalCoord, GRList, rsScores, sampleLabels,
+  signalCol = c("PC1", "PC2"), signalCoordType = "default",
+  scoringMetric = "default", absVal = TRUE, variationMetric = "cor",
+  nPerm = 300, useSimpleCache = TRUE, cacheDir = getwd(),
+  dataID = "tmp", correctionMethod = "BH", ...)
 }
 \arguments{
+\item{genomicSignal}{matrix/data.frame. 
+The genomic signal (e.g. DNA methylation levels)
+Columns of genomicSignal should be samples/patients. 
+Rows should be individual signal/features
+(each row corresponds to one genomic coordinate/range)}
+
 \item{signalCoord}{a GRanges object or data frame with coordinates 
 for the genomic signal/original data (eg DNA methylation/ATAC-seq) 
 Coordinates should be in the 
@@ -27,15 +32,20 @@ the same biological annotation). The region set database
 must be from the same reference genome
 as the coordinates for the actual data/samples (signalCoord).}
 
-\item{realRSScores}{data.frame. A data.frame with region set
+\item{rsScores}{data.frame. A data.frame with region set
 scores. The output of the 'runCOCOA' function.
-Rows should be in the same order as the region sets in GRList. 
-Must include columns with names given by 'colsToAnnotate'.}
+Each row is a region set. One column for each sample
+variable of interest (e.g. PC or sample phenotype).
+Also can have columns with info on the overlap between the 
+region set and the epigenetic data. 
+Rows should be in the same order as the region sets in GRList
+(the list of region sets used to create rsScores.)}
 
-\item{sampleLabels}{data.frame/matrix. Sample labels/values that 
-you are running COCOA to find region sets associated with. These 
-values will be shuffled for the permutation test. Rows are samples.
-Each column is a sample label.}
+\item{sampleLabels}{Matrix or data.frame. Rows should be samples, 
+columns should be "features" 
+(whatever you want to get correlation with: eg PC scores),
+all columns in featureMat will be used (subset when passing to function
+in order to not use all columns)}
 
 \item{scoringMetric}{A character object with the scoring metric.
 There are different scoring metrics available for 
@@ -105,10 +115,13 @@ arguments and more info see ?stats::p.adjust() (method parameter)}
 
 \item{...}{character. Optional additional arguments for simpleCache}
 
-\item{colsToAnnotate}{character. The column names of `sampleLabels` that
-you want to test. These must also be columns in realRSScores.}
+\item{sampleLabels}{data.frame/matrix. Sample labels/values that 
+you are running COCOA to find region sets associated with. These 
+values will be shuffled for the permutation test. Rows are samples.
+Each column is a sample label.}
 
-\item{resultType}{character. "pval" or "zscore"}
+\item{colsToAnnotate}{character. The column names of `sampleLabels` that
+you want to test. These must also be columns in rsScores.}
 }
 \value{
 Returns a list where each item is a data.frame of COCOA results 
@@ -147,7 +160,7 @@ realRSScores <- corPerm(randomInd=1:4, genomicSignal=brcaMethylData1,
 
 a=runCOCOAPerm(genomicSignal=brcaMethylData1, 
         signalCoord=brcaMCoord1, GRList=GRangesList(esr1_chr1, nrf1_chr1),
-        realRSScores=realRSScores, 
+        rsScores=realRSScores, 
         sampleLabels=sampleLabels, signalCol=c("PC1", "PC2"),
         variationMetric="cor", nPerm = 10, useSimpleCache=FALSE)
 

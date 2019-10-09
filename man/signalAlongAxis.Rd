@@ -7,15 +7,17 @@ along a given axis}
 \usage{
 signalAlongAxis(genomicSignal, signalCoord, regionSet, sampleScores,
   orderByCol = "PC1", topXVariables = NULL, variableScores = NULL,
-  cluster_columns = FALSE, cluster_rows = FALSE,
+  decreasing = TRUE, cluster_columns = FALSE, cluster_rows = FALSE,
   row_title = "Sample", column_title = "Genomic Signal",
   column_title_side = "bottom", name = "Genomic Signal Value",
   col = c("blue", "#EEEEEE", "red"), ...)
 }
 \arguments{
-\item{genomicSignal}{The genomic signal (eg DNA methylation levels) 
-in matrix or data.frame. 
-Rows are individual signal/feature values. Columns are samples.
+\item{genomicSignal}{matrix/data.frame. 
+The genomic signal (e.g. DNA methylation levels)
+Columns of genomicSignal should be samples/patients. 
+Rows should be individual signal/features
+(each row corresponds to one genomic coordinate/range)
 Must have sample names/IDs as column names,
 These same sample names must be row names of sampleScores.}
 
@@ -30,7 +32,8 @@ and end should be the same. Start coordinate will be used for calculations.}
 
 \item{regionSet}{A genomic ranges (GRanges) object with regions corresponding
 to the same biological annotation.
-as the coordinates for the actual data/samples (signalCoord).}
+Must be from the same reference genome as the coordinates for the actual data/samples (signalCoord).
+The regions that will be visualized.}
 
 \item{sampleScores}{A matrix. Must contain a column with name given
 by "orderByCol" that will be used to order samples.  
@@ -53,6 +56,9 @@ variableScores will be plotted. Can help to reduce the size of the plot.}
 each variable in genomicSignal (length(variableScores) should equal
 nrow(genomicSignal)). Only used if topXVariables is given. The highest
 `topXVariables` will be plotted.}
+
+\item{decreasing}{logical. Whether samples should be sorted in 
+decreasing order of `orderByCol` or not (FALSE is increasing order).}
 
 \item{cluster_columns}{"logical" object, whether to cluster columns 
 (the genomic signal, eg DNA methylation values for each CpG).}

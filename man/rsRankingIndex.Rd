@@ -8,15 +8,21 @@ rsRankingIndex(rsScores, signalCol, decreasing = TRUE,
   newColName = signalCol)
 }
 \arguments{
-\item{rsScores}{a data.frame with scores for each 
-region set from the main COCOA function. 
-Each row is a region set. Columns are PCs and info on region set overlap
-with DNA methylation data. Should be in the same order as GRList (the list of 
-region sets used to create it.)}
+\item{rsScores}{data.frame. A data.frame with region set
+scores. The output of the 'runCOCOA' function.
+Each row is a region set. One column for each sample
+variable of interest (e.g. PC or sample phenotype).
+Also can have columns with info on the overlap between the 
+region set and the epigenetic data. 
+Rows should be in the same order as the region sets in GRList
+(the list of region sets used to create rsScores.)}
 
-\item{signalCol}{a character vector. columns in rsScores for which you want
-the indices of the original region sets (must be column names of rsScores)
-eg c("PC1", "PC2")}
+\item{signalCol}{A character vector with the sample variables
+of interest (e.g. PCs or sample phenotypes). 
+The columns in rsScores for which you want
+the indices of the original region sets.
+
+e.g. c("PC1", "PC2")}
 
 \item{decreasing}{logical. Whether to sort rsScores in decreasing 
 or increasing order.}
