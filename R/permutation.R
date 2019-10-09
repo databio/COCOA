@@ -25,7 +25,7 @@
 #' @template GRList
 #' @template rsScores
 #' @template sampleLabels
-#' @param colsToAnnotate character. The column names of `sampleLabels` that
+#' @param signalCol character. The column names of `sampleLabels` that
 #' you want to test. These must also be columns in rsScores.
 #' @template scoringMetric
 #' @template absVal
@@ -42,6 +42,17 @@
 #' @param correctionMethod character. P value correction method. Default
 #' is "BH" for Benjamini and Hochberg false discovery rate. For acceptable 
 #' arguments and more info see ?stats::p.adjust() (method parameter) 
+#' @param gammaFitMethod character. method to use for fitting the gamma
+#' distribution to null distribution. Options are 
+#' "mme" (moment matching estimation), "mle" (maximum likelihood estimation), 
+#' "qme" (quantile matching estimation), and "mge" (maximum goodness-of-fit 
+#' estimation). See ?COCOA::getGammaPVal and 
+#' ?fitdistrplus::fitdist() for more info.
+#' @param realScoreInDist logical. Should the actual score (from 
+#' test with no permutations) be included in the null distribution 
+#' when fitting the gamma distribution. realScoreInDist=TRUE is 
+#' recommended.
+#' @template verbose
 #' @param ... character. Optional additional arguments for simpleCache
 #'
 #' 
@@ -85,7 +96,9 @@ runCOCOAPerm <- function(genomicSignal,
                          useSimpleCache=TRUE,
                          cacheDir=getwd(),
                          dataID="tmp",
-                         correctionMethod="BH", ...) {
+                         correctionMethod="BH",
+                         gammaFitMethod="mme"
+                         verbose=TRUE, ...) {
     
     colsToAnnotate = signalCol
     allResultsList = list()
@@ -143,7 +156,8 @@ runCOCOAPerm <- function(genomicSignal,
                                          GRList=GRList,
                                          calcCols=colsToAnnotate,
                                          sampleLabels=sampleLabels,
-                                         variationMetric = variationMetric)
+                                         variationMetric = variationMetric,
+                                         verbose=verbose)
             message(i) # must be ahead of object that is saved as cache, not after
             
         }
@@ -372,12 +386,16 @@ permListToOneNullDist <- function(resultsList, rsInd) {
 #' region set for a given sample variable of interest (e.g. PC or sample phenotype).  
 #' @param calcCols character.
 #' @param method character. Has the method to use to fit the gamma 
-#' distribution to the null distribution. See ?fitdistrplus::fitdist() for
-#' available options and meaning. The default method "mme" is the 
-#' "moment matching estimation"
+#' distribution to the null distribution.
+#' Options are 
+#' "mme" (moment matching estimation), "mle" (maximum likelihood estimation), 
+#' "qme" (quantile matching estimation), and "mge" (maximum goodness-of-fit 
+#' estimation). See ?fitdistrplus::fitdist() for
+#' available options and meaning.
 #' @param realScoreInDist logical. Should the actual score (from 
 #' test with no permutations) be included in the null distribution 
-#' when fitting the gamma distribution
+#' when fitting the gamma distribution. realScoreInDist=TRUE is 
+#' recommended.
 #' @param force logical.
 # 
 #' @return Returns a data.frame with p values, one column for each col in
