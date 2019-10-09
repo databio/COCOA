@@ -84,7 +84,6 @@ if (getRversion() >= "2.15.1") {
 #' Then the loadings are used to score the region set 
 #' according to the `scoringMetric` parameter.  
 #' 
-#' @eval print("@param testP my test param ")
 #' @param signal matrix of loadings (the coefficients of 
 #' the linear combination that defines each PC). One named column for each PC.
 #' One row for each original dimension/variable (should be same order 
@@ -981,8 +980,7 @@ makeSymmetric <- function(prof) {
 # with columns named start, end
 # @param binCount Number of bins across the region
 # @param byRegionGroup Pass along to binCount (see ?binCount)
-# @param signalCol A character vector with principal components to 
-# analyze. eg c("PC1", "PC2")
+# @template signalCol
 # @param verbose A "logical" object. Whether progress 
 # of the function should be shown, one
 # bar indicates the region set is completed.
@@ -1687,14 +1685,9 @@ BSFilter <- function(BSDT, minReads = 10, excludeGR = NULL) {
 #' just for sorting the results. Region set scores are sorted in decreasing
 #' or increasing order according to the `decreasing` parameter.
 #' 
-#' @param rsScores a data.frame with scores for each 
-#' region set from the main COCOA function. 
-#' Each row is a region set. Columns are PCs and info on region set overlap
-#' with DNA methylation data. Should be in the same order as GRList (the list of 
-#' region sets used to create it.)
-#' @param signalCol a character vector. columns in rsScores for which you want
-#' the indices of the original region sets (must be column names of rsScores)
-#' eg c("PC1", "PC2")
+#' @template rsScores
+#' @templateVar isRSRankingIndex TRUE
+#' @template signalCol
 #' @param decreasing logical. Whether to sort rsScores in decreasing 
 #' or increasing order. 
 #' @param newColName character. The names of the columns of the output data.frame.

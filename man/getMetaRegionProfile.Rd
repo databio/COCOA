@@ -24,20 +24,22 @@ must have chr and start columns. If end is included, start
 and end should be the same. Start coordinate will be used for calculations.}
 
 \item{regionSet}{A genomic ranges (GRanges) object with regions corresponding
-to the same biological annotation.
-as the coordinates for the actual data/samples (signalCoord).}
+to the same biological annotation.}
 
-\item{signalCol}{A character vector with principal components to
-include. eg c("PC1", "PC2") These should be column names of signal.}
+\item{signalCol}{A character vector with the sample variables
+of interest (e.g. PCs or sample phenotypes). 
+
+
+
+e.g. c("PC1", "PC2")}
 
 \item{signalCoordType}{character. Can be "default", "singleBase", or 
 "multiBase". This describes whether the coordinates for `signal` 
 (`signalCoord`) are each a single base (e.g. as for DNA methylation)
-or a region/multiple bases (e.g. as for ATAC-seq). Different aggregation
+or a region/multiple bases (e.g. as for ATAC-seq). Different scoring
 options are available for each type of data. If "default" is given,
-the type of coordinates will be detected automatically. For "default", 
-if each
-coordinate start value equals the coordinate end value
+the type of coordinates will be detected automatically. For "default", if each
+coordinate start value equals the coordinate end value 
 (all(start(signalCoord) == end(signalCoord))), "singleBase"
 will be used. Otherwise, "multiBase" will be used.}
 

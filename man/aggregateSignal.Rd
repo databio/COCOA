@@ -25,17 +25,21 @@ and end should be the same. Start coordinate will be used for calculations.}
 
 \item{regionSet}{A genomic ranges (GRanges) object with regions corresponding
 to the same biological annotation.
-Must be from the same reference genome}
+Must be from the same reference genome as the coordinates for the actual data/samples (signalCoord).}
 
-\item{signalCol}{A character vector with principal components to 
-include. eg c("PC1", "PC2") These should be column names of signal.}
+\item{signalCol}{A character vector with the sample variables
+of interest (e.g. PCs or sample phenotypes). 
+
+
+
+e.g. c("PC1", "PC2")}
 
 \item{signalCoordType}{character. Can be "default", "singleBase", or 
 "multiBase". This describes whether the coordinates for `signal` 
 (`signalCoord`) are each a single base (e.g. as for DNA methylation)
 or a region/multiple bases (e.g. as for ATAC-seq). Different scoring
 options are available for each type of data. If "default" is given,
-the type of coordinates will be detected automatically. If each
+the type of coordinates will be detected automatically. For "default", if each
 coordinate start value equals the coordinate end value 
 (all(start(signalCoord) == end(signalCoord))), "singleBase"
 will be used. Otherwise, "multiBase" will be used.}
@@ -93,8 +97,6 @@ will decrease (if there may be anticorrelation between
 regions in a region set). Choose FALSE if you expect regions in a 
 given region set to all change in the same direction (all be positively
 correlated with each other).}
-
-\item{testP}{my test param}
 }
 \value{
 a data.frame with one row and the following 

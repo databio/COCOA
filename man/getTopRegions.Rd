@@ -23,11 +23,14 @@ must have chr and start columns. If end is included, start
 and end should be the same. Start coordinate will be used for calculations.}
 
 \item{regionSet}{A genomic ranges (GRanges) object with regions corresponding
-to the same biological annotation.
-as the coordinates for the actual data/samples (signalCoord).}
+to the same biological annotation.}
 
-\item{signalCol}{A character vector with principal components to
-include. eg c("PC1", "PC2") These should be column names of signal.}
+\item{signalCol}{A character vector with the sample variables
+of interest (e.g. PCs or sample phenotypes). 
+
+
+
+e.g. c("PC1", "PC2")}
 
 \item{returnQuantile}{"logical" object. If FALSE, return region averages. If TRUE,
 for each region, return the quantile of that region's average value

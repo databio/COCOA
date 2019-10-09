@@ -2,20 +2,27 @@
 % Please edit documentation in R/permutation.R
 \name{getGammaPVal}
 \alias{getGammaPVal}
-\title{Get p value after fitting a gamma distribution to the null distribution}
+\title{Get a p-value for region set scores based on a gamma distribution.}
 \usage{
-getGammaPVal(scores, nullDistList, calcCols, method = "mme",
+getGammaPVal(rsScores, nullDistList, calcCols, method = "mme",
   realScoreInDist = TRUE, force = FALSE)
 }
 \arguments{
-\item{scores}{a data.frame. Has same columns as nullDistDF. One row per
-region set (should be in same order as nullDistDF) The scores
-that will be used to get p values.}
+\item{rsScores}{data.frame. A data.frame with region set
+scores. The output of the 'runCOCOA' function.
+Each row is a region set. One column for each sample
+variable of interest (e.g. PC or sample phenotype).
+Also can have columns with info on the overlap between the 
+region set and the epigenetic data. 
+Rows should be in the same order as the region sets in GRList
+(the list of region sets used to create rsScores.)}
 
 \item{nullDistList}{list of data.frames. Each list item 
 has null distributions for a single 
-region set. Each column corresponds to a null distribution for that 
-region set for a given variable/sample attribute.}
+region set (list items should be in the same order as rows of rsScores). 
+Has same score columns as rsScores. 
+Each column corresponds to a null distribution for that 
+region set for a given sample variable of interest (e.g. PC or sample phenotype).}
 
 \item{calcCols}{character.}
 
@@ -32,10 +39,12 @@ when fitting the gamma distribution}
 }
 \value{
 Returns a data.frame with p values, one column for each col in
-scores and nullDistDF
+rsScores
 }
 \description{
-Get p value after fitting a gamma distribution to the null distribution
+First fit a gamma distribution to each region set's null distribution/s
+(nullDistList). Then use this gamma distribution to convert scores in
+rsScores to p-values.
 }
 \examples{
 fakeOriginalScores = data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
@@ -44,6 +53,6 @@ fakePermScores2 = data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
 fakePermScores3 = data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
 permRSScores = list(fakePermScores, fakePermScores2, fakePermScores3)
 nullDistList = convertToFromNullDist(permRSScores)
-getGammaPVal(scores=fakeOriginalScores, nullDistList=nullDistList, calcCols=c("PC1", "PC2")) 
+getGammaPVal(rsScores=fakeOriginalScores, nullDistList=nullDistList, calcCols=c("PC1", "PC2")) 
 
 }

@@ -13,15 +13,21 @@ rsScoreHeatmap(rsScores, signalCol = paste0("PC", 1:5),
   name = "Rank within PC", ...)
 }
 \arguments{
-\item{rsScores}{a data.frame with scores for each 
-region set from main COCOA function `runCOCOA`. 
-Each row is a region set. Columns are scores, one column for each PCs 
-Also can have columns with info on region set overlap
-with the original data. Should be in the same order as GRList (the list of 
-region sets used to create it.)}
+\item{rsScores}{data.frame. A data.frame with region set
+scores. The output of the 'runCOCOA' function.
+Each row is a region set. One column for each sample
+variable of interest (e.g. PC or sample phenotype).
+Also can have columns with info on the overlap between the 
+region set and the epigenetic data. 
+Rows should be in the same order as the region sets in GRList
+(the list of region sets used to create rsScores.)}
 
-\item{signalCol}{A character vector with principal components to 
-include. eg c("PC1", "PC2"). Must be column names of rsScores.}
+\item{signalCol}{A character vector with the sample variables
+of interest (e.g. PCs or sample phenotypes). 
+
+
+Must be column names of rsScores.
+e.g. c("PC1", "PC2")}
 
 \item{orderByCol}{a character object. PC to order by in heatmap 
 (arranged in decreasing order for scores so p values should 
