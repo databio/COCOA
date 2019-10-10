@@ -50,10 +50,6 @@
 #' @importFrom fitdistrplus fitdist
 #' @importFrom simpleCache simpleCache
 #' @importFrom ppcor pcor
-#' @eval addParamDocs <- function(signal=FALSE, signalCoord=FALSE, 
-#' signalCoordType=FALSE, GRList=FALSE, 
-#' regionSet=FALSE, signalCol=FALSE, 
-#' scoringMetric=FALSE, verbose=FALSE, absVal=FALSE ) { x +100}
 NULL
 
 # now package lists GenomicRanges in "Depends" instead of "Imports" in 
@@ -97,9 +93,9 @@ if (getRversion() >= "2.15.1") {
 #' @template verbose
 # Useful when using 
 # aggregateSignal with 'apply' to do many region sets at a time.
-#' @param wilcox.conf.int logical. Only applies when using "rankSum" scoring
-#' method. returns a 95% confidence interval from the Wilcoxon rank sum test
-#' instead of p value.
+# @param wilcox.conf.int logical. Only applies when using "rankSum" scoring
+# method. returns a 95% confidence interval from the Wilcoxon rank sum test
+# instead of p value.
 #' @template absVal
 
 #' @return a data.frame with one row and the following 
@@ -140,7 +136,6 @@ aggregateSignal <- function(signal,
                               signalCoordType = "default",
                               scoringMetric = "default",
                               verbose = FALSE,
-                              wilcox.conf.int=FALSE, 
                               absVal=TRUE) {
     
     ################### checking inputs  #################################
@@ -171,7 +166,8 @@ aggregateSignal <- function(signal,
     ######## check that scoringMetric is appropriate
     
     if (!(scoringMetric %in% c("default", "regionMean", "simpleMean", 
-                               "meanDiff", "rankSum", "proportionWeightedMean"))) {
+                               # "meanDiff", "rankSum", 
+                               "proportionWeightedMean"))) {
         stop(cleanws("scoringMetric was not recognized. 
                       Check spelling and available options."))
     }
@@ -224,7 +220,8 @@ aggregateSignal <- function(signal,
     # make sure that scoringMetric is consistent with signalCoordType
     if (signalCoordType == "singleBase") {
         if (!(scoringMetric %in% c("regionMean", "simpleMean", 
-                                   "rankSum", "meanDiff"))) {
+                                   # "rankSum", "meanDiff"
+                                   ))) {
             stop("The scoringMetric you selected is not available for
                  this data's signalCoordType")
         }
@@ -318,77 +315,76 @@ aggregateSignal <- function(signal,
                                                          "totalRegionNumber", 
                                                          "meanRegionSize")]) 
             }
-        } else if (scoringMetric == "meanDiff") {
-            # if (is.null(pcLoadAv)) {
-            #     # calculate (should already be absolute)
-            #     pcLoadAv <- apply(X = loadingDT[, signalCol, with=FALSE], 
-            #                       MARGIN = 2, FUN = mean)
-            # }
-            loadMetrics <- signalOLMetrics(dataDT=loadingDT, regionSet=regionSet,
-                                           signalCol = signalCol,
-                                           metrics=c("mean", "sd"), 
-                                           alsoNonOLMet=TRUE)
-            if (is.null(loadMetrics)) {
-                results <- as.data.table(t(rep(NA, length(signalCol))))
-                setnames(results, signalCol)
-                results[, signalCoverage := 0]
-                results[, regionSetCoverage := 0]
-                results[, totalRegionNumber := numOfRegions]
-                results[, meanRegionSize := round(mean(width(regionSet)), 1)]
-            } else {
-                # calculate mean difference
-                # pooled standard deviation
-                sdPool <- sqrt((loadMetrics$sd_OL^2 + loadMetrics$sd_nonOL^2) / 2)
-                
-                # mean difference
-                # error if signalCoverage > (1/2) * totalCpGs
-                meanDiff <- (loadMetrics$mean_OL - loadMetrics$mean_nonOL) / 
-                    (sdPool * sqrt((1 / loadMetrics$signalCoverage) - (1 / (totalCpGs - loadMetrics$signalCoverage))))
-                results <- as.data.table(t(meanDiff))
-                colnames(results) <- loadMetrics$testCol
-                
-                # add information about degree of overlap
-                results <- cbind(results, loadMetrics[1, .SD, .SDcols = c("signalCoverage", "regionSetCoverage", "totalRegionNumber", "meanRegionSize")]) 
-            }
-            
-            
-        } else if (scoringMetric == "rankSum") {
-            
-            if (wilcox.conf.int) {
-                # returns confidence interval
-                wRes <- rsWilcox(dataDT = loadingDT, regionSet=regionSet, 
-                                 signalCol = signalCol, 
-                                 conf.int = wilcox.conf.int)
-                
-                if (is.null(wRes)) {
-                    results <- as.data.table(t(rep(NA, length(signalCol) * 2)))
-                    setnames(results, paste0(rep(signalCol, each=2), 
-                                             c("_low", "_high")))
-                    results[, signalCoverage := 0]
-                    results[, regionSetCoverage := 0]
-                    results[, totalRegionNumber := numOfRegions]
-                    results[, meanRegionSize := round(mean(width(regionSet)), 1)]
-                } else {
-                    results <- as.data.table(wRes)
-                }    
-                
-            } else {
-                # returns p value
-                # one sided test since I took the absolute value of the loadings 
-                wRes <- rsWilcox(dataDT = loadingDT, regionSet=regionSet, 
-                                 signalCol = signalCol, alternative="greater")
-                
-                if (is.null(wRes)) {
-                    results <- as.data.table(t(rep(NA, length(signalCol))))
-                    setnames(results, signalCol)
-                    results[, signalCoverage := 0]
-                    results[, regionSetCoverage := 0]
-                    results[, totalRegionNumber := numOfRegions]
-                    results[, meanRegionSize := round(mean(width(regionSet)), 1)]
-                } else {
-                    results <- as.data.table(wRes)
-                }    
-            }
+        # } else if (scoringMetric == "meanDiff") {
+        #     # if (is.null(pcLoadAv)) {
+        #     #     # calculate (should already be absolute)
+        #     #     pcLoadAv <- apply(X = loadingDT[, signalCol, with=FALSE], 
+        #     #                       MARGIN = 2, FUN = mean)
+        #     # }
+        #     loadMetrics <- signalOLMetrics(dataDT=loadingDT, regionSet=regionSet,
+        #                                    signalCol = signalCol,
+        #                                    metrics=c("mean", "sd"), 
+        #                                    alsoNonOLMet=TRUE)
+        #     if (is.null(loadMetrics)) {
+        #         results <- as.data.table(t(rep(NA, length(signalCol))))
+        #         setnames(results, signalCol)
+        #         results[, signalCoverage := 0]
+        #         results[, regionSetCoverage := 0]
+        #         results[, totalRegionNumber := numOfRegions]
+        #         results[, meanRegionSize := round(mean(width(regionSet)), 1)]
+        #     } else {
+        #         # calculate mean difference
+        #         # pooled standard deviation
+        #         sdPool <- sqrt((loadMetrics$sd_OL^2 + loadMetrics$sd_nonOL^2) / 2)
+        #         
+        #         # mean difference
+        #         # error if signalCoverage > (1/2) * totalCpGs
+        #         meanDiff <- (loadMetrics$mean_OL - loadMetrics$mean_nonOL) / 
+        #             (sdPool * sqrt((1 / loadMetrics$signalCoverage) - (1 / (totalCpGs - loadMetrics$signalCoverage))))
+        #         results <- as.data.table(t(meanDiff))
+        #         colnames(results) <- loadMetrics$testCol
+        #         
+        #         # add information about degree of overlap
+        #         results <- cbind(results, loadMetrics[1, .SD, .SDcols = c("signalCoverage", "regionSetCoverage", "totalRegionNumber", "meanRegionSize")]) 
+        #     }
+        #     
+        # } else if (scoringMetric == "rankSum") {
+        #     
+        #     # if (wilcox.conf.int) {
+        #     #     # returns confidence interval
+        #     #     wRes <- rsWilcox(dataDT = loadingDT, regionSet=regionSet, 
+        #     #                      signalCol = signalCol, 
+        #     #                      conf.int = wilcox.conf.int)
+        #     #     
+        #     #     if (is.null(wRes)) {
+        #     #         results <- as.data.table(t(rep(NA, length(signalCol) * 2)))
+        #     #         setnames(results, paste0(rep(signalCol, each=2), 
+        #     #                                  c("_low", "_high")))
+        #     #         results[, signalCoverage := 0]
+        #     #         results[, regionSetCoverage := 0]
+        #     #         results[, totalRegionNumber := numOfRegions]
+        #     #         results[, meanRegionSize := round(mean(width(regionSet)), 1)]
+        #     #     } else {
+        #     #         results <- as.data.table(wRes)
+        #     #     }    
+        #     #     
+        #     # } else {
+        #         # returns p value
+        #         # one sided test since I took the absolute value of the loadings 
+        #         wRes <- rsWilcox(dataDT = loadingDT, regionSet=regionSet, 
+        #                          signalCol = signalCol, alternative="greater")
+        #         
+        #         if (is.null(wRes)) {
+        #             results <- as.data.table(t(rep(NA, length(signalCol))))
+        #             setnames(results, signalCol)
+        #             results[, signalCoverage := 0]
+        #             results[, regionSetCoverage := 0]
+        #             results[, totalRegionNumber := numOfRegions]
+        #             results[, meanRegionSize := round(mean(width(regionSet)), 1)]
+        #         } else {
+        #             results <- as.data.table(wRes)
+        #         }    
+        #     #}
         }  
     } else {
         
@@ -503,9 +499,9 @@ aggregateSignal <- function(signal,
 #' that the loadings in the region set will be greater than
 #' the loadings not in the region set.
 #' @template verbose
-#' @param wilcox.conf.int logical. Only applies when using "rankSum" scoring
-#' method. returns a 95% confidence interval from the Wilcoxon rank sum test
-#' instead of p value.
+# @param wilcox.conf.int logical. Only applies when using "rankSum" scoring
+# method. returns a 95% confidence interval from the Wilcoxon rank sum test
+# instead of p value.
 #' @template absVal
 #' @return data.frame of results, one row for each region set. 
 #' It has the following columns:
@@ -548,7 +544,6 @@ runCOCOA <- function(signal,
                      signalCoordType = "default",
                      scoringMetric = "default",
                      verbose = TRUE,
-                     wilcox.conf.int=FALSE,
                      absVal=TRUE) {
 
     ################### checking inputs  #################################
@@ -641,8 +636,8 @@ runCOCOA <- function(signal,
                                 signalCol = signalCol,
                                 scoringMetric = scoringMetric,
                                 verbose = verbose,
-                                wilcox.conf.int = wilcox.conf.int,
                                 absVal = absVal))
+                                #wilcox.conf.int = wilcox.conf.int,
     resultsDT <- do.call(rbind, resultsList) 
 
     # # add names if they are present

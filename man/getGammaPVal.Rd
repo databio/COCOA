@@ -27,15 +27,24 @@ region set for a given sample variable of interest (e.g. PC or sample phenotype)
 \item{calcCols}{character.}
 
 \item{method}{character. Has the method to use to fit the gamma 
-distribution to the null distribution. See ?fitdistrplus::fitdist() for
-available options and meaning. The default method "mme" is the 
-"moment matching estimation"}
+distribution to the null distribution.
+Options are 
+"mme" (moment matching estimation), "mle" (maximum likelihood estimation), 
+"qme" (quantile matching estimation), and "mge" (maximum goodness-of-fit 
+estimation). See ?fitdistrplus::fitdist() for
+available options and meaning.}
 
 \item{realScoreInDist}{logical. Should the actual score (from 
 test with no permutations) be included in the null distribution 
-when fitting the gamma distribution}
+when fitting the gamma distribution. realScoreInDist=TRUE is 
+recommended.}
 
-\item{force}{logical.}
+\item{force}{logical. If force=TRUE, when fitting the gamma distribution
+returns an error (as may happen when a method other than "mme"
+is used) then allow the error. If force=FALSE, when fitting the 
+gamma distribution returns an error then don't return an error but 
+instead use the "mme" method
+for fitting that specific gamma distribution.}
 }
 \value{
 Returns a data.frame with p values, one column for each col in
@@ -47,12 +56,14 @@ First fit a gamma distribution to each region set's null distribution/s
 rsScores to p-values.
 }
 \examples{
-fakeOriginalScores = data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
-fakePermScores = data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
-fakePermScores2 = data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
-fakePermScores3 = data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
-permRSScores = list(fakePermScores, fakePermScores2, fakePermScores3)
-nullDistList = convertToFromNullDist(permRSScores)
-getGammaPVal(rsScores=fakeOriginalScores, nullDistList=nullDistList, calcCols=c("PC1", "PC2")) 
+fakeOriginalScores <- data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
+fakePermScores <- data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
+fakePermScores2 <- data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
+fakePermScores3 <- data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
+permRSScores <- list(fakePermScores, fakePermScores2, fakePermScores3)
+nullDistList <- convertToFromNullDist(permRSScores)
+getGammaPVal(rsScores=fakeOriginalScores,
+             nullDistList=nullDistList,
+             calcCols=c("PC1", "PC2"))
 
 }

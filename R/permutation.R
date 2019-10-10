@@ -52,6 +52,12 @@
 #' test with no permutations) be included in the null distribution 
 #' when fitting the gamma distribution. realScoreInDist=TRUE is 
 #' recommended.
+#' @param force logical. If force=TRUE, when fitting the gamma distribution
+#' returns an error (as may happen when a method other than "mme"
+#' is used) then allow the error. If force=FALSE, when fitting the 
+#' gamma distribution returns an error then don't return an error but 
+#' instead use the "mme" method
+#' for fitting that specific gamma distribution.
 #' @template verbose
 #' @param ... character. Optional additional arguments for simpleCache
 #'
@@ -64,7 +70,7 @@
 #' data("nrf1_chr1")
 #' data("brcaMethylData1")
 #' data("brcaPCScores657")
-#' pcCor = corFeature
+#' pcCor <- corFeature
 #' sampleLabels <- brcaPCScores657[colnames(brcaMethylData1), ]
 #' sampleLabels$ER_Status <- scale(as.numeric(sampleLabels$ER_Status), 
 #'                                center=TRUE, scale=FALSE)
@@ -74,11 +80,17 @@
 #'         calcCols=c("PC1", "PC2"), sampleLabels=sampleLabels, 
 #'         variationMetric="cor")
 #' 
-#' a=runCOCOAPerm(genomicSignal=brcaMethylData1, 
-#'         signalCoord=brcaMCoord1, GRList=GRangesList(esr1_chr1, nrf1_chr1),
-#'         rsScores=realRSScores, 
-#'         sampleLabels=sampleLabels, signalCol=c("PC1", "PC2"),
-#'         variationMetric="cor", nPerm = 10, useSimpleCache=FALSE)
+#' permResults <- runCOCOAPerm(genomicSignal=brcaMethylData1,
+#'                            signalCoord=brcaMCoord1,
+#'                            GRList=GRangesList(esr1_chr1, nrf1_chr1),
+#'                            rsScores=realRSScores,
+#'                            sampleLabels=sampleLabels,
+#'                            signalCol=c("PC1", "PC2"),
+#'                            variationMetric="cor",
+#'                            nPerm = 10,
+#'                            useSimpleCache=FALSE)
+#' permResults
+#'   
 #' 
 #' @export
 
@@ -97,11 +109,13 @@ runCOCOAPerm <- function(genomicSignal,
                          cacheDir=getwd(),
                          dataID="tmp",
                          correctionMethod="BH",
-                         gammaFitMethod="mme"
+                         gammaFitMethod="mme",
+                         realScoreInDist=TRUE,
+                         force=FALSE,
                          verbose=TRUE, ...) {
     
-    colsToAnnotate = signalCol
-    allResultsList = list()
+    colsToAnnotate <- signalCol
+    allResultsList <- list()
     
     
     indList <- list()
@@ -129,7 +143,8 @@ runCOCOAPerm <- function(genomicSignal,
                                    sampleLabels=sampleLabels,
                                    variationMetric = variationMetric,
                                    scoringMetric=scoringMetric,
-                                   absVal=absVal)
+                                   absVal=absVal,
+                                   verbose=verbose)
                     message(i) # must be ahead of object that is saved as cache, not after
                     tmp
                     
@@ -157,6 +172,8 @@ runCOCOAPerm <- function(genomicSignal,
                                          calcCols=colsToAnnotate,
                                          sampleLabels=sampleLabels,
                                          variationMetric = variationMetric,
+                                         scoringMetric=scoringMetric,
+                                         absVal=absVal,
                                          verbose=verbose)
             message(i) # must be ahead of object that is saved as cache, not after
             
@@ -164,67 +181,71 @@ runCOCOAPerm <- function(genomicSignal,
     }
     
     
-    .analysisID = paste0("_", nPerm, "Perm_", variationMetric, "_", dataID)
+    .analysisID <- paste0("_", nPerm, "Perm_", variationMetric, "_", dataID)
     
     # # remove region sets that had no overlap
-    # keepInd = apply(rsPermScores[[1]], MARGIN = 1, FUN = function(x) !any(is.na(x)))
+    # keepInd <- apply(rsPermScores[[1]], MARGIN = 1, FUN = function(x) !any(is.na(x)))
     # 
     # # screen out region sets with no overlap
-    # nullDistList = nullDistList[keepInd]
-    # rsScores = rsScores[keepInd, ]
+    # nullDistList <- nullDistList[keepInd]
+    # rsScores <- rsScores[keepInd, ]
     
-    nullDistList = convertToFromNullDist(resultsList=rsPermScores)
+    nullDistList <- convertToFromNullDist(resultsList=rsPermScores)
     if (useSimpleCache) {
 
-        simpleCache(paste0("permPValsUncorrected", .analysisID), {
-            rsPVals = getPermStat(rsScores=rsScores, nullDistList=nullDistList,
+        simpleCache(paste0("empiricalPValsUncorrected", .analysisID), {
+            rsPVals <- getPermStat(rsScores=rsScores, nullDistList=nullDistList,
                                   calcCols=colsToAnnotate, whichMetric = "pval")
             rsPVals
         }, assignToVariable=rsPVals, cacheDir=cacheDir, ...)
         
         simpleCache(paste0("permZScores", .analysisID), {
-            rsZScores = getPermStat(rsScores=rsScores, nullDistList=nullDistList,
+            rsZScores <- getPermStat(rsScores=rsScores, nullDistList=nullDistList,
                                     calcCols=colsToAnnotate, whichMetric = "zscore")
             rsZScores
             
         }, assignToVariable="rsZScores", cacheDir=cacheDir, ...)
     
-        simpleCache(paste0("permPValsCorrected", .analysisID), {
+        simpleCache(paste0("gammaPValsUncorrected", .analysisID), {
             # p-values based on fitted gamma distributions
-            gPValDF = getGammaPVal(scores = rsScores, 
+            gPValDF <- getGammaPVal(scores = rsScores, 
                                    nullDistList = nullDistList, 
                                    calcCols = colsToAnnotate, 
-                                   method = "mme", realScoreInDist = TRUE)
-            gPValDF = apply(X = gPValDF, MARGIN = 2, 
-                            FUN = function(x) p.adjust(p = x, method = correctionMethod))
-            gPValDF = cbind(gPValDF, 
+                                   method = gammaFitMethod, 
+                                   realScoreInDist = realScoreInDist,
+                                   force=force)
+            # gPValDF <- apply(X = gPValDF, MARGIN = 2, 
+            #                 FUN = function(x) p.adjust(p = x, method = correctionMethod))
+            gPValDF <- cbind(gPValDF, 
                             rsScores[, colnames(rsScores)[!(colnames(rsScores) 
                                                                     %in% colsToAnnotate)]])
             gPValDF
         }, assignToVariable="gPValDF", cacheDir=cacheDir, ...)    
         
     } else {
-        rsPVals = getPermStat(rsScores=rsScores, nullDistList=nullDistList,
+        rsPVals <- getPermStat(rsScores=rsScores, nullDistList=nullDistList,
                               calcCols=colsToAnnotate, whichMetric = "pval")
         
-        rsZScores = getPermStat(rsScores=rsScores, nullDistList=nullDistList,
+        rsZScores <- getPermStat(rsScores=rsScores, nullDistList=nullDistList,
                                 calcCols=colsToAnnotate, whichMetric = "zscore")
         
         # p-values based on fitted gamma distributions
-        gPValDF = getGammaPVal(scores = rsScores, 
+        gPValDF <- getGammaPVal(scores = rsScores, 
                                nullDistList = nullDistList, 
                                calcCols = colsToAnnotate, 
-                               method = "mme", realScoreInDist = TRUE)
-        gPValDF = cbind(gPValDF, 
+                               method = gammaFitMethod, 
+                               realScoreInDist = realScoreInDist,
+                               force=force)
+        gPValDF <- cbind(gPValDF, 
                         rsScores[, colnames(rsScores)[!(colnames(rsScores) 
                                                                 %in% colsToAnnotate)]])
         
     }
     
-    allResultsList$permRSScores = rsPermScores
-    allResultsList$empiricalPVals = rsPVals
-    allResultsList$zScores = rsZScores
-    allResultsList$gammaPVal = gPValDF
+    allResultsList$permRSScores <- rsPermScores
+    allResultsList$empiricalPVals <- rsPVals
+    allResultsList$zScores <- rsZScores
+    allResultsList$gammaPVal <- gPValDF
     return(allResultsList)
 
     # return(named list)
@@ -258,15 +279,19 @@ runCOCOAPerm <- function(genomicSignal,
 #' data("nrf1_chr1")
 #' data("brcaMethylData1")
 #' data("brcaPCScores657")
-#' sampleLabels = brcaPCScores657[colnames(brcaMethylData1), ]
-#' sampleLabels$ER_Status = scale(as.numeric(sampleLabels$ER_Status), 
+#' sampleLabels <- brcaPCScores657[colnames(brcaMethylData1), ]
+#' sampleLabels$ER_Status <- scale(as.numeric(sampleLabels$ER_Status), 
 #'                                center=TRUE, scale=FALSE)
 #' # shuffling sample labels
-#' randomInd = sample(1:nrow(sampleLabels), nrow(sampleLabels))
-#' corPerm(randomInd=randomInd, genomicSignal=brcaMethylData1, 
-#'         signalCoord=brcaMCoord1, GRList=GRangesList(esr1_chr1, nrf1_chr1),
-#'         calcCols="ER_Status", sampleLabels=sampleLabels, 
-#'         variationMetric="cor")
+#' randomInd <- sample(1:nrow(sampleLabels), nrow(sampleLabels))
+#' onePermResult <- corPerm(randomInd=randomInd, 
+#'                          genomicSignal=brcaMethylData1,
+#'                          signalCoord=brcaMCoord1,
+#'                          GRList=GRangesList(esr1_chr1, nrf1_chr1),
+#'                          calcCols="ER_Status",
+#'                          sampleLabels=sampleLabels,
+#'                          variationMetric="cor")
+#' onePermResult
 #' 
 corPerm <- function(randomInd, genomicSignal, 
                     signalCoord, GRList, calcCols,
@@ -284,24 +309,24 @@ corPerm <- function(randomInd, genomicSignal,
     }
     
     # subset to only calcCols
-    sampleLabels = sampleLabels[, calcCols, drop=FALSE]
+    sampleLabels <- sampleLabels[, calcCols, drop=FALSE]
     
     # because names are dropped for a single column data.frame when indexing
     # single col data.frame is automatically converted to numeric
-    featureNames = colnames(sampleLabels)
+    featureNames <- colnames(sampleLabels)
     # reorder the sample labels
-    sampleLabels = data.frame(sampleLabels[randomInd, ])
-    colnames(sampleLabels) = featureNames
+    sampleLabels <- data.frame(sampleLabels[randomInd, ])
+    colnames(sampleLabels) <- featureNames
     
     # calculate correlation
-    featureLabelCor = createCorFeatureMat(dataMat = genomicSignal, 
+    featureLabelCor <- createCorFeatureMat(dataMat = genomicSignal, 
                                           featureMat = sampleLabels, 
                                           centerDataMat = TRUE, 
                                           centerFeatureMat = TRUE,
                                           testType = variationMetric)
     
     # run COCOA
-    thisPermRes = runCOCOA(signal=featureLabelCor, 
+    thisPermRes <- runCOCOA(signal=featureLabelCor, 
                            signalCoord=signalCoord, GRList=GRList, 
                            signalCol = calcCols, 
                            scoringMetric = scoringMetric, verbose = verbose,
@@ -337,17 +362,17 @@ corPerm <- function(randomInd, genomicSignal,
 #' 
 #' @examples
 #' # six region sets (rows), 2 signals (columns)
-#' fakePermScores = data.frame(abs(rnorm(6)), abs(rnorm(6)))
-#' fakePermScores2 = data.frame(abs(rnorm(6)), abs(rnorm(6)))
+#' fakePermScores <- data.frame(abs(rnorm(6)), abs(rnorm(6)))
+#' fakePermScores2 <- data.frame(abs(rnorm(6)), abs(rnorm(6)))
 #' # 2 fake COCOA results (i.e. nPerm=2)
-#' permRSScores = list(fakePermScores, fakePermScores2)
+#' permRSScores <- list(fakePermScores, fakePermScores2)
 #' convertToFromNullDist(permRSScores)
 #' 
 #' @export
 
 convertToFromNullDist <- function(resultsList) {
 
-    nullDistList = lapply(X = 1:nrow(resultsList[[1]]),
+    nullDistList <- lapply(X = 1:nrow(resultsList[[1]]),
                           FUN = function(x) permListToOneNullDist(resultsList=resultsList, 
                                                                   rsInd = x))
     return(nullDistList)
@@ -358,8 +383,8 @@ convertToFromNullDist <- function(resultsList) {
 # do for only one region set
 permListToOneNullDist <- function(resultsList, rsInd) {
     
-    rowList = lapply(resultsList, FUN = function(x) x[rsInd, ])
-    rsNullDist = as.data.frame(rbindlist(rowList))
+    rowList <- lapply(resultsList, FUN = function(x) x[rsInd, ])
+    rsNullDist <- as.data.frame(rbindlist(rowList))
     return(rsNullDist)
 }
 
@@ -396,53 +421,64 @@ permListToOneNullDist <- function(resultsList, rsInd) {
 #' test with no permutations) be included in the null distribution 
 #' when fitting the gamma distribution. realScoreInDist=TRUE is 
 #' recommended.
-#' @param force logical.
+#' @param force logical. If force=TRUE, when fitting the gamma distribution
+#' returns an error (as may happen when a method other than "mme"
+#' is used) then allow the error. If force=FALSE, when fitting the 
+#' gamma distribution returns an error then don't return an error but 
+#' instead use the "mme" method
+#' for fitting that specific gamma distribution.
 # 
 #' @return Returns a data.frame with p values, one column for each col in
 #' rsScores 
 #' 
 #' @examples 
-#' fakeOriginalScores = data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
-#' fakePermScores = data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
-#' fakePermScores2 = data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
-#' fakePermScores3 = data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
-#' permRSScores = list(fakePermScores, fakePermScores2, fakePermScores3)
-#' nullDistList = convertToFromNullDist(permRSScores)
-#' getGammaPVal(rsScores=fakeOriginalScores, nullDistList=nullDistList, calcCols=c("PC1", "PC2")) 
+#' fakeOriginalScores <- data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
+#' fakePermScores <- data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
+#' fakePermScores2 <- data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
+#' fakePermScores3 <- data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
+#' permRSScores <- list(fakePermScores, fakePermScores2, fakePermScores3)
+#' nullDistList <- convertToFromNullDist(permRSScores)
+#' getGammaPVal(rsScores=fakeOriginalScores,
+#'              nullDistList=nullDistList,
+#'              calcCols=c("PC1", "PC2"))
 #' 
 #' @export
 
-getGammaPVal <- function(rsScores, nullDistList, calcCols, method="mme", realScoreInDist=TRUE, force=FALSE) {
+getGammaPVal <- function(rsScores, nullDistList, calcCols, method="mme", 
+                         realScoreInDist=TRUE, force=FALSE) {
     
     # make sure the same columns are present/in the same order
     
     
-    colsToAnnotate = calcCols[calcCols %in% colnames(rsScores)]
+    colsToAnnotate <- calcCols[calcCols %in% colnames(rsScores)]
     
     if (realScoreInDist) {
         # to get a more accurate gamma distribution, include the score from unpermuted test.
         # add to each null distribution
         for (i in 1:nrow(rsScores)) {
-            nullDistList[[i]] = rbind(nullDistList[[i]], as.numeric(rsScores[i, ]))
+            nullDistList[[i]] <- rbind(nullDistList[[i]], as.numeric(rsScores[i, ]))
         }
     }
     
-    rsScores = rsScores[, colsToAnnotate, drop=FALSE]  
+    rsScores <- rsScores[, colsToAnnotate, drop=FALSE]  
     
     # returns list, each item in list is also a list.
     # in sub list: each col in nullDistDF has one list item
-    fittedDistList = lapply(X = nullDistList, function(x) fitGammaNullDist(nullDistDF = x[, colsToAnnotate, drop=FALSE], 
-                                                                            method=method, 
-                                                                            force=force))
+    fittedDistList <- lapply(X = nullDistList, 
+                             function(x) fitGammaNullDist(nullDistDF = 
+                                                              x[, colsToAnnotate, 
+                                                                drop=FALSE], 
+                                                          method=method, 
+                                                          force=force))
     
-    pValList = list()
+    pValList <- list()
     # once for each region set
     for (i in seq_along(nullDistList)) {
         
-        pValList[[i]] = as.data.frame(t(pGammaList(scoreVec = as.numeric(rsScores[i, ]), 
+        pValList[[i]] <- as.data.frame(t(pGammaList(scoreVec = as.numeric(rsScores[i, ]), 
                                                    fitDistrList = fittedDistList[[i]])))
     }
-    pValDF = as.data.frame(rbindlist(pValList))
+    pValDF <- as.data.frame(rbindlist(pValList))
     
     
     return(pValDF)
@@ -472,14 +508,14 @@ fitGammaNullDist <- function(nullDistDF, method="mme", force=FALSE) {
     
     if (force) {
         # apply returns a list of "fitdist" objects, one list item for each column
-        modelList = apply(X = nullDistDF, 
+        modelList <- apply(X = nullDistDF, 
                           MARGIN = 2, 
                           FUN = function(x) fitdistrplus::fitdist(data=x, 
                                                                   distr = "gamma", 
                                                                   method=method))
     } else {
         # try "method". if it fails, do method = "mme"
-        modelList = apply(X = nullDistDF, 
+        modelList <- apply(X = nullDistDF, 
                           MARGIN = 2, 
                           FUN = function(x) tryCatch({fitdistrplus::fitdist(data=x, 
                                                                             distr = "gamma", 
@@ -502,7 +538,7 @@ pGammaList <- function(scoreVec, fitDistrList) {
         return(rep(NA, length(scoreVec)))
     }
     
-    pValVec = mapply(FUN = function(x, y) pgamma(q = y, 
+    pValVec <- mapply(FUN = function(x, y) pgamma(q = y, 
                                                  shape = x$estimate["shape"], 
                                                  rate = x$estimate["rate"], 
                                                  lower.tail = FALSE), x = fitDistrList, y = scoreVec)
@@ -520,12 +556,12 @@ pGammaList <- function(scoreVec, fitDistrList) {
 #' create p values based on one sided test or not.
 #' @param whichMetric character. Can be "pval" or "zscore"
 #' @examples 
-#' fakeOriginalScores = data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
-#' fakePermScores = data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
-#' fakePermScores2 = data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
-#' fakePermScores3 = data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
-#' permRSScores = list(fakePermScores, fakePermScores2, fakePermScores3)
-#' nullDistList = convertToFromNullDist(permRSScores)
+#' fakeOriginalScores <- data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
+#' fakePermScores <- data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
+#' fakePermScores2 <- data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
+#' fakePermScores3 <- data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
+#' permRSScores <- list(fakePermScores, fakePermScores2, fakePermScores3)
+#' nullDistList <- convertToFromNullDist(permRSScores)
 #' getPermStat(rsScores=fakeOriginalScores, nullDistList=nullDistList, 
 #'             calcCols=c("PC1", "PC2"), whichMetric="pval") 
 #' getPermStat(rsScores=fakeOriginalScores, nullDistList=nullDistList, 
@@ -533,26 +569,27 @@ pGammaList <- function(scoreVec, fitDistrList) {
 #' 
 #' @export
 
-getPermStat <- function(rsScores, nullDistList, calcCols, testType="greater", whichMetric = "pval") {
+getPermStat <- function(rsScores, nullDistList, calcCols, 
+                        testType="greater", whichMetric = "pval") {
     
     if (is(rsScores, "data.table")) {
-        rsScores = as.data.frame(rsScores)
+        rsScores <- as.data.frame(rsScores)
     }
     
     # do once for each region set
-    thisStatList = list()
+    thisStatList <- list()
     for (i in 1:nrow(rsScores)) {
-        thisStatList[[i]] = as.data.frame(t(getPermStatSingle(rsScore=rsScores[i, calcCols], 
+        thisStatList[[i]] <- as.data.frame(t(getPermStatSingle(rsScore=rsScores[i, calcCols], 
                                                               nullDist = nullDistList[[i]],
                                                               calcCols = calcCols,
                                                               whichMetric=whichMetric)))
         colnames(thisStatList[[i]]) <- calcCols
     }
-    thisStat = rbindlist(thisStatList)
+    thisStat <- rbindlist(thisStatList)
     # add back on annotation info
-    thisStat = cbind(thisStat, rsScores[, colnames(rsScores)[!(colnames(rsScores) %in% calcCols)]])
+    thisStat <- cbind(thisStat, rsScores[, colnames(rsScores)[!(colnames(rsScores) %in% calcCols)]])
     
-    # pVals = mapply(FUN = function(x, y) getPermPvalSingle(rsScore=x, 
+    # pVals <- mapply(FUN = function(x, y) getPermPvalSingle(rsScore=x, 
     #                                            nullDist = y,
     #                                            calcCols = calcCols), 
     #        x = rsScores[, calcCols], y=nullDistList)
@@ -569,7 +606,7 @@ getPermStatSingle <- function(rsScore, nullDist,
                               calcCols, testType="greater", whichMetric = "pval") {
     
     if (is(nullDist, "data.table")) {
-        nullDist = as.data.frame(nullDist)
+        nullDist <- as.data.frame(nullDist)
     }
     
     # if score was NA, return NA
@@ -580,30 +617,30 @@ getPermStatSingle <- function(rsScore, nullDist,
     
     if (whichMetric == "pval") {
         
-        pVal = rep(-1, length(rsScore))
+        pVal <- rep(-1, length(rsScore))
         if (testType == "greater") {
             
             for (i in seq_along(pVal)) {
                 # only for one sided test (greater than)
-                pVal[i] = 1 - ecdf(x = nullDist[, calcCols[i]])(rsScore[i])
+                pVal[i] <- 1 - ecdf(x = nullDist[, calcCols[i]])(rsScore[i])
             }
         }
         
         # (-abs(x-0.5) + 0.5) * 2
         
-        thisStat = pVal
+        thisStat <- pVal
     }
     
     if (whichMetric == "zscore") {
         
         
-        zScore = rep(NA, length(rsScore))
+        zScore <- rep(NA, length(rsScore))
         for (i in seq_along(zScore)) {
             # only for one sided test (greater than)
-            zScore[i] = (rsScore[i] - mean(nullDist[, calcCols[i]])) / sd(x = nullDist[, calcCols[i]])
+            zScore[i] <- (rsScore[i] - mean(nullDist[, calcCols[i]])) / sd(x = nullDist[, calcCols[i]])
         }
         
-        thisStat = as.numeric(zScore)
+        thisStat <- as.numeric(zScore)
     }
     
     

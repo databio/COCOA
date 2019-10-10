@@ -1,8 +1,8 @@
 #' @param scoringMetric A character object with the scoring metric.
 #' There are different scoring metrics available for 
 #' signalCoordType="singleBase" vs  signalCoordType="multiBase".
-#' For "singleBase", the available scoring methods are "regionMean", 
-#' "simpleMean", and "rankSum". The default method is "regionMean".
+#' For "singleBase", the available scoring methods are "regionMean" and 
+#' "simpleMean". The default method is "regionMean".
 #' For "multiBase", the scoring methods are "proportionWeightedMean" and 
 #' "simpleMean". The default is "proportionWeightedMean".
 #' "regionMean" is a weighted
@@ -24,14 +24,4 @@
 #' of the regionSet region is covered. Then this proportion is used to
 #' weight the signal value when calculating the mean. 
 #' The denominator of the mean
-#' is the sum of all the proportion overlaps. 
-#' Wilcoxon rank sum test ("rankSum") is also supported but is
-#' skewed toward ranking large region sets highly and is
-#' significantly slower than the "regionMean" method. 
-#' For the ranksum method, the absolute loadings for loadings that
-#' overlap the given region set are taken as a group and all the
-#' loadings that do not overlap the region set are taken as
-#' the other group. Then p value is then given as the score.
-#' It is a one sided test, with the alternative hypothesis
-#' that the loadings in the region set will be greater than
-#' the loadings not in the region set.
+#' is the sum of all the proportion overlaps.

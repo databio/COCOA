@@ -8,7 +8,8 @@ runCOCOAPerm(genomicSignal, signalCoord, GRList, rsScores, sampleLabels,
   signalCol = c("PC1", "PC2"), signalCoordType = "default",
   scoringMetric = "default", absVal = TRUE, variationMetric = "cor",
   nPerm = 300, useSimpleCache = TRUE, cacheDir = getwd(),
-  dataID = "tmp", correctionMethod = "BH", ...)
+  dataID = "tmp", correctionMethod = "BH", gammaFitMethod = "mme",
+  realScoreInDist = TRUE, force = FALSE, verbose = TRUE, ...)
 }
 \arguments{
 \item{genomicSignal}{matrix/data.frame. 
@@ -47,11 +48,14 @@ columns should be "features"
 all columns in featureMat will be used (subset when passing to function
 in order to not use all columns)}
 
+\item{signalCol}{character. The column names of `sampleLabels` that
+you want to test. These must also be columns in rsScores.}
+
 \item{scoringMetric}{A character object with the scoring metric.
 There are different scoring metrics available for 
 signalCoordType="singleBase" vs  signalCoordType="multiBase".
-For "singleBase", the available scoring methods are "regionMean", 
-"simpleMean", and "rankSum". The default method is "regionMean".
+For "singleBase", the available scoring methods are "regionMean" and 
+"simpleMean". The default method is "regionMean".
 For "multiBase", the scoring methods are "proportionWeightedMean" and 
 "simpleMean". The default is "proportionWeightedMean".
 "regionMean" is a weighted
@@ -73,17 +77,7 @@ that overlaps with a regionSet region, we calculate what proportion
 of the regionSet region is covered. Then this proportion is used to
 weight the signal value when calculating the mean. 
 The denominator of the mean
-is the sum of all the proportion overlaps. 
-Wilcoxon rank sum test ("rankSum") is also supported but is
-skewed toward ranking large region sets highly and is
-significantly slower than the "regionMean" method. 
-For the ranksum method, the absolute loadings for loadings that
-overlap the given region set are taken as a group and all the
-loadings that do not overlap the region set are taken as
-the other group. Then p value is then given as the score.
-It is a one sided test, with the alternative hypothesis
-that the loadings in the region set will be greater than
-the loadings not in the region set.}
+is the sum of all the proportion overlaps.}
 
 \item{absVal}{logical. If TRUE, take the absolute value of values in
 signal. Choose TRUE if you think there may be some 
@@ -113,15 +107,35 @@ as a cache.}
 is "BH" for Benjamini and Hochberg false discovery rate. For acceptable 
 arguments and more info see ?stats::p.adjust() (method parameter)}
 
+\item{gammaFitMethod}{character. method to use for fitting the gamma
+distribution to null distribution. Options are 
+"mme" (moment matching estimation), "mle" (maximum likelihood estimation), 
+"qme" (quantile matching estimation), and "mge" (maximum goodness-of-fit 
+estimation). See ?COCOA::getGammaPVal and 
+?fitdistrplus::fitdist() for more info.}
+
+\item{realScoreInDist}{logical. Should the actual score (from 
+test with no permutations) be included in the null distribution 
+when fitting the gamma distribution. realScoreInDist=TRUE is 
+recommended.}
+
+\item{force}{logical. If force=TRUE, when fitting the gamma distribution
+returns an error (as may happen when a method other than "mme"
+is used) then allow the error. If force=FALSE, when fitting the 
+gamma distribution returns an error then don't return an error but 
+instead use the "mme" method
+for fitting that specific gamma distribution.}
+
+\item{verbose}{A "logical" object. Whether progress 
+of the function should be shown. One
+bar indicates the region set is completed.}
+
 \item{...}{character. Optional additional arguments for simpleCache}
 
 \item{sampleLabels}{data.frame/matrix. Sample labels/values that 
 you are running COCOA to find region sets associated with. These 
 values will be shuffled for the permutation test. Rows are samples.
 Each column is a sample label.}
-
-\item{colsToAnnotate}{character. The column names of `sampleLabels` that
-you want to test. These must also be columns in rsScores.}
 }
 \value{
 Returns a list where each item is a data.frame of COCOA results 
@@ -148,7 +162,7 @@ data("esr1_chr1")
 data("nrf1_chr1")
 data("brcaMethylData1")
 data("brcaPCScores657")
-pcCor = corFeature
+pcCor <- corFeature
 sampleLabels <- brcaPCScores657[colnames(brcaMethylData1), ]
 sampleLabels$ER_Status <- scale(as.numeric(sampleLabels$ER_Status), 
                                center=TRUE, scale=FALSE)
@@ -158,10 +172,16 @@ realRSScores <- corPerm(randomInd=1:4, genomicSignal=brcaMethylData1,
         calcCols=c("PC1", "PC2"), sampleLabels=sampleLabels, 
         variationMetric="cor")
 
-a=runCOCOAPerm(genomicSignal=brcaMethylData1, 
-        signalCoord=brcaMCoord1, GRList=GRangesList(esr1_chr1, nrf1_chr1),
-        rsScores=realRSScores, 
-        sampleLabels=sampleLabels, signalCol=c("PC1", "PC2"),
-        variationMetric="cor", nPerm = 10, useSimpleCache=FALSE)
+permResults <- runCOCOAPerm(genomicSignal=brcaMethylData1,
+                           signalCoord=brcaMCoord1,
+                           GRList=GRangesList(esr1_chr1, nrf1_chr1),
+                           rsScores=realRSScores,
+                           sampleLabels=sampleLabels,
+                           signalCol=c("PC1", "PC2"),
+                           variationMetric="cor",
+                           nPerm = 10,
+                           useSimpleCache=FALSE)
+permResults
+  
 
 }
