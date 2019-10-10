@@ -219,7 +219,7 @@ aggregateSignal <- function(signal,
     
     # make sure that scoringMetric is consistent with signalCoordType
     if (signalCoordType == "singleBase") {
-        if (!(scoringMetric %in% c("regionMean", "simpleMean", 
+        if (!(scoringMetric %in% c("regionMean", "simpleMean" #, 
                                    # "rankSum", "meanDiff"
                                    ))) {
             stop("The scoringMetric you selected is not available for
@@ -577,7 +577,8 @@ runCOCOA <- function(signal,
     ######## check that scoringMetric is appropriate
     
     if (!(scoringMetric %in% c("default", "regionMean", "simpleMean", 
-                               "meanDiff", "rankSum", "proportionWeightedMean"))) {
+                               # "meanDiff", "rankSum", 
+                               "proportionWeightedMean"))) {
         stop(cleanws("scoringMetric was not recognized. 
                       Check spelling and available options."))
     }
