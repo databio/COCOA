@@ -24,7 +24,6 @@ First we will load the necessary data: region sets to test, BRCA DNA methylation
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 library(COCOA)
-devtools::load_all()
 data("esr1_chr1")
 data("gata3_chr1")
 data("nrf1_chr1")
@@ -32,7 +31,7 @@ data("atf3_chr1")
 data("brcaMCoord1")
 data("brcaMethylData1")
 data("brcaPCScores657")
-sampleLabels = brcaPCScores657[colnames(brcaMethylData1), ]
+sampleLabels <- brcaPCScores657[colnames(brcaMethylData1), ]
 ```
 
 
@@ -71,13 +70,13 @@ We need to set the seed for reproducible results since we are doing random shuff
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 set.seed(100)
 
-nPerm = 5
-permRSScores = list()
+nPerm <- 5
+permRSScores <- list()
 
 for (i in 1:nPerm) {
     # shuffling sample labels
-    randomInd = sample(1:nrow(sampleLabels), nrow(sampleLabels))
-    permRSScores[[i]] = corPerm(randomInd=randomInd, 
+    randomInd <- sample(1:nrow(sampleLabels), nrow(sampleLabels))
+    permRSScores[[i]] <- corPerm(randomInd=randomInd, 
                            genomicSignal=brcaMethylData1, 
                            signalCoord=brcaMCoord1, 
                            GRList=GRList,
@@ -93,7 +92,7 @@ permRSScores
 We now have a list where each item is a result of runCOCOA but we'll reformat it so that we have a list where each item is a null distribution for a single region set. We have `nPerm` list items in permRSScores.
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
-nullDistList = convertToFromNullDist(permRSScores)
+nullDistList <- convertToFromNullDist(permRSScores)
 nullDistList
 ```
 
@@ -105,14 +104,14 @@ To reduce the number of permutations (and the run time for COCOA), we will appro
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 # p-values based on fitted gamma distributions
-        gPValDF = getGammaPVal(scores = rsScores, 
+        gPValDF <- getGammaPVal(rsScores <- rsScores, 
                                nullDistList = nullDistList, 
                                calcCols = "ER_Status", 
                                method = "mme", realScoreInDist = TRUE)
-        gPValDF = cbind(gPValDF, 
+        gPValDF <- cbind(gPValDF, 
                         rsScores[, colnames(rsScores)[!(colnames(rsScores) 
                                                                 %in% "ER_Status")]])
-        gPValDF = cbind(gPValDF, rsNames)
+        gPValDF <- cbind(gPValDF, rsNames)
         gPValDF
 ```
 
