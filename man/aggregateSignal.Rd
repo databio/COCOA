@@ -6,7 +6,7 @@
 \usage{
 aggregateSignal(signal, signalCoord, regionSet, signalCol = c("PC1",
   "PC2"), signalCoordType = "default", scoringMetric = "default",
-  verbose = FALSE, wilcox.conf.int = FALSE, absVal = TRUE)
+  verbose = FALSE, absVal = TRUE)
 }
 \arguments{
 \item{signal}{matrix of loadings (the coefficients of 
@@ -47,8 +47,8 @@ will be used. Otherwise, "multiBase" will be used.}
 \item{scoringMetric}{A character object with the scoring metric.
 There are different scoring metrics available for 
 signalCoordType="singleBase" vs  signalCoordType="multiBase".
-For "singleBase", the available scoring methods are "regionMean", 
-"simpleMean", and "rankSum". The default method is "regionMean".
+For "singleBase", the available scoring methods are "regionMean" and 
+"simpleMean". The default method is "regionMean".
 For "multiBase", the scoring methods are "proportionWeightedMean" and 
 "simpleMean". The default is "proportionWeightedMean".
 "regionMean" is a weighted
@@ -70,25 +70,11 @@ that overlaps with a regionSet region, we calculate what proportion
 of the regionSet region is covered. Then this proportion is used to
 weight the signal value when calculating the mean. 
 The denominator of the mean
-is the sum of all the proportion overlaps. 
-Wilcoxon rank sum test ("rankSum") is also supported but is
-skewed toward ranking large region sets highly and is
-significantly slower than the "regionMean" method. 
-For the ranksum method, the absolute loadings for loadings that
-overlap the given region set are taken as a group and all the
-loadings that do not overlap the region set are taken as
-the other group. Then p value is then given as the score.
-It is a one sided test, with the alternative hypothesis
-that the loadings in the region set will be greater than
-the loadings not in the region set.}
+is the sum of all the proportion overlaps.}
 
 \item{verbose}{A "logical" object. Whether progress 
 of the function should be shown. One
 bar indicates the region set is completed.}
-
-\item{wilcox.conf.int}{logical. Only applies when using "rankSum" scoring
-method. returns a 95% confidence interval from the Wilcoxon rank sum test
-instead of p value.}
 
 \item{absVal}{logical. If TRUE, take the absolute value of values in
 signal. Choose TRUE if you think there may be some 

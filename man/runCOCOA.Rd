@@ -6,7 +6,7 @@
 \usage{
 runCOCOA(signal, signalCoord, GRList, signalCol = c("PC1", "PC2"),
   signalCoordType = "default", scoringMetric = "default",
-  verbose = TRUE, wilcox.conf.int = FALSE, absVal = TRUE)
+  verbose = TRUE, absVal = TRUE)
 }
 \arguments{
 \item{signal}{matrix of loadings (the coefficients of 
@@ -87,10 +87,6 @@ the loadings not in the region set.}
 \item{verbose}{A "logical" object. Whether progress 
 of the function should be shown. One
 bar indicates the region set is completed.}
-
-\item{wilcox.conf.int}{logical. Only applies when using "rankSum" scoring
-method. returns a 95% confidence interval from the Wilcoxon rank sum test
-instead of p value.}
 
 \item{absVal}{logical. If TRUE, take the absolute value of values in
 signal. Choose TRUE if you think there may be some 

@@ -33,10 +33,10 @@ list of COCOA results.
 }
 \examples{
 # six region sets (rows), 2 signals (columns)
-fakePermScores = data.frame(abs(rnorm(6)), abs(rnorm(6)))
-fakePermScores2 = data.frame(abs(rnorm(6)), abs(rnorm(6)))
+fakePermScores <- data.frame(abs(rnorm(6)), abs(rnorm(6)))
+fakePermScores2 <- data.frame(abs(rnorm(6)), abs(rnorm(6)))
 # 2 fake COCOA results (i.e. nPerm=2)
-permRSScores = list(fakePermScores, fakePermScores2)
+permRSScores <- list(fakePermScores, fakePermScores2)
 convertToFromNullDist(permRSScores)
 
 }
