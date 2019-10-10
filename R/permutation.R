@@ -37,8 +37,9 @@
 #' @param useSimpleCache logical. Whether to use save caches. Caches
 #' will be created for each permutation so that if the function is disrupted
 #' it can restart where it left off. The final results are also saved 
-#' as a cache.  
-#' @param cacheDir character.
+#' as a cache. See simpleCache package for more details.
+#' @param cacheDir character. The path for the directory in which the
+#' caches should be saved. 
 #' @param correctionMethod character. P value correction method. Default
 #' is "BH" for Benjamini and Hochberg false discovery rate. For acceptable 
 #' arguments and more info see ?stats::p.adjust() (method parameter) 
@@ -59,7 +60,7 @@
 #' instead use the "mme" method
 #' for fitting that specific gamma distribution.
 #' @template verbose
-#' @param ... character. Optional additional arguments for simpleCache
+#' @param ... character. Optional additional arguments for simpleCache.
 #'
 #' 
 #' @return Returns a list where each item is a data.frame of COCOA results 
@@ -107,7 +108,7 @@ runCOCOAPerm <- function(genomicSignal,
                          nPerm=300,
                          useSimpleCache=TRUE,
                          cacheDir=getwd(),
-                         dataID="tmp",
+                         dataID="",
                          correctionMethod="BH",
                          gammaFitMethod="mme",
                          realScoreInDist=TRUE,
@@ -208,7 +209,7 @@ runCOCOAPerm <- function(genomicSignal,
     
         simpleCache(paste0("gammaPValsUncorrected", .analysisID), {
             # p-values based on fitted gamma distributions
-            gPValDF <- getGammaPVal(scores = rsScores, 
+            gPValDF <- getGammaPVal(rsScores = rsScores, 
                                    nullDistList = nullDistList, 
                                    calcCols = colsToAnnotate, 
                                    method = gammaFitMethod, 
@@ -230,7 +231,7 @@ runCOCOAPerm <- function(genomicSignal,
                                 calcCols=colsToAnnotate, whichMetric = "zscore")
         
         # p-values based on fitted gamma distributions
-        gPValDF <- getGammaPVal(scores = rsScores, 
+        gPValDF <- getGammaPVal(rsScores = rsScores, 
                                nullDistList = nullDistList, 
                                calcCols = colsToAnnotate, 
                                method = gammaFitMethod, 

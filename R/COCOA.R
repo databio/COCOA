@@ -679,30 +679,30 @@ createCorFeatureMat <- function(dataMat, featureMat,
                                centerDataMat=TRUE, centerFeatureMat = TRUE, 
                                testType="cor", covariate=NULL) {
     
-    featureMat = as.matrix(featureMat)
-    featureNames = colnames(featureMat)
-    nFeatures = ncol(featureMat)
-    nDataDims = nrow(dataMat)
+    featureMat <- as.matrix(featureMat)
+    featureNames <- colnames(featureMat)
+    nFeatures <- ncol(featureMat)
+    nDataDims <- nrow(dataMat)
     
     if (centerDataMat) {
-        cpgMeans = rowMeans(dataMat, na.rm = TRUE)
+        cpgMeans <- rowMeans(dataMat, na.rm = TRUE)
         # centering before calculating correlation
-        dataMat = apply(X = dataMat, MARGIN = 2, function(x) x - cpgMeans)
+        dataMat <- apply(X = dataMat, MARGIN = 2, function(x) x - cpgMeans)
         
     }
     
     if (centerFeatureMat) {
-        featureMeans = colMeans(featureMat, na.rm = TRUE)
+        featureMeans <- colMeans(featureMat, na.rm = TRUE)
         # centering before calculating correlation
-        featureMat = t(apply(X = t(featureMat), MARGIN = 2, function(x) x - featureMeans))
+        featureMat <- t(apply(X = t(featureMat), MARGIN = 2, function(x) x - featureMeans))
         if (dim(featureMat)[1] == 1) {
-            featureMat = t(featureMat)
+            featureMat <- t(featureMat)
         }
-        featureMat = as.matrix(featureMat)
+        featureMat <- as.matrix(featureMat)
     }
     
     # avoid this copy and/or delay transpose until after calculating correlation?
-    dataMat = as.data.frame(t(dataMat))
+    dataMat <- as.data.frame(t(dataMat))
     
     
     if (testType == "cor") {
@@ -719,7 +719,7 @@ createCorFeatureMat <- function(dataMat, featureMat,
     } else if (testType == "pcor") {
         # partial correlation (account for covariates), ppcor package
         
-        featurePCCor = apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 2, 
+        featurePCCor <- apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 2, 
                                                                            FUN = function(x) pcor.test(x = x, y=y,
                                                                                                        z=covariate,
                                                                                                        method="pearson")$estimate))
@@ -734,11 +734,11 @@ createCorFeatureMat <- function(dataMat, featureMat,
     
     # if standard deviation of the data was zero, NA will be produced
     # set to 0 because no standard deviation means no correlation with attribute of interest
-    featurePCCor[is.na(featurePCCor)] = 0
+    featurePCCor[is.na(featurePCCor)] <- 0
     colnames(featurePCCor) <- featureNames
     
     return(featurePCCor)
-    # corLoadRatio = signal[, signalCol] / featurePCCor 
+    # corLoadRatio <- signal[, signalCol] / featurePCCor 
     # hist(corLoadRatio[, "PC10"])
 }
 
@@ -1297,17 +1297,17 @@ getTopRegions <- function(signal,
                           signalCol = c("PC1", "PC2"), cutoff = 0.8, 
                           returnQuantile=TRUE) {
     
-    regionLoadDT = averagePerRegion(signal=signal,
+    regionLoadDT <- averagePerRegion(signal=signal,
                             signalCoord=signalCoord, regionSet=regionSet, 
                             signalCol = signalCol,
                             returnQuantile = returnQuantile)[]
     
-    keepInd = regionLoadDT[, signalCol, with=FALSE] >= cutoff
+    keepInd <- regionLoadDT[, signalCol, with=FALSE] >= cutoff
     
     # keep region if it is above cutoff in any of the PCs in signalCol
-    keepInd = apply(X = keepInd, MARGIN = 1, FUN = any)
+    keepInd <- apply(X = keepInd, MARGIN = 1, FUN = any)
     
-    highGR = dtToGr(regionLoadDT[keepInd, ])
+    highGR <- dtToGr(regionLoadDT[keepInd, ])
     
     values(highGR) <- as.data.frame(regionLoadDT[keepInd, signalCol, with=FALSE])
     
@@ -1652,10 +1652,10 @@ rsRankingIndex <- function(rsScores, signalCol, decreasing=TRUE, newColName = si
         stop("signalCol should be a character vector or list of character vectors.")
     }
     if (is(signalCol, "list")) {
-        if (!all(sapply(signalCol, FUN = class) %in% "character")) {
+        if (!all(vapply(X = signalCol, FUN = class, FUN.VALUE = "a") %in% "character")) {
             stop("Items of signalCol should be character vectors.")
         }
-        if (!length(unique(sapply(signalCol, FUN = length)))) {
+        if (!length(unique(vapply(signalCol, FUN = length, FUN.VALUE = 2)))) {
             stop("Items of signalCol should be the same length as each other.")
         }
         if (!all(unlist(signalCol) %in% colnames(rsScores))) {
@@ -1674,12 +1674,12 @@ rsRankingIndex <- function(rsScores, signalCol, decreasing=TRUE, newColName = si
     }
     
     
-    dtOrder = rep(-99L, length(decreasing))
+    dtOrder <- rep(-99L, length(decreasing))
     # how to sort scores
     # -1 for decreasing order of scores
-    dtOrder[decreasing] = -1L
+    dtOrder[decreasing] <- -1L
     # +1 for increasing order of scores
-    dtOrder[!decreasing] = 1L
+    dtOrder[!decreasing] <- 1L
     
     # so by references changes will not be a problem
     rsScores <- copy(rsScores)
@@ -1693,12 +1693,12 @@ rsRankingIndex <- function(rsScores, signalCol, decreasing=TRUE, newColName = si
         rsEnSortedInd <- subset(rsScores, select= signalCol[[1]])
         setnames(rsEnSortedInd, newColName)
         
-        colNameMat = do.call(rbind, signalCol) 
+        colNameMat <- do.call(rbind, signalCol) 
         
         # then scores by each PC and make a column with the original index for sorted region sets
         # this object will be used to pull out region sets that were top hits for each PC
         for (i in seq_along(signalCol[[1]])) {
-            theseOrderCols = colNameMat[, i]
+            theseOrderCols <- colNameMat[, i]
             
             setorderv(rsScores, cols = theseOrderCols, order=dtOrder, na.last=TRUE)
             
