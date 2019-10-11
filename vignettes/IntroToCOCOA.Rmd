@@ -12,11 +12,11 @@ vignette: >
 
 # The COCOA Bioconductor package
 
-**Coordinate Covariation Analysis (COCOA) is a method to understand variation among samples** and can be used with data that includes genomic coordinates such as DNA methylation and ATAC-seq data. To describe the method on a high level, COCOA quantifies inter-sample variation with a technique such as principal component analysis (PCA) then uses a database of "region sets" to annotate the variation among samples. A region set is a set of genomic regions that share a biological annotation, for instance transcription factor (TF) binding regions, histone modification regions, or open chromatin regions. COCOA can identify region sets where there is inter-sample variation, giving you biologically meaningful insight into variation in your data. For a more in-depth description of the method, see the "Method details" section of this vignette. In contrast to some other common techniques, COCOA is unsupervised, meaning that samples do not have to be divided into groups such as case/control or healthy/disease, although COCOA works in those situations as well. Also, COCOA focuses on continuous variation between samples instead of having cutoffs. Because of this, COCOA can be used as a complementary method alongside "differential" methods that find discrete differences between groups of samples and it can also be used in situations where there are no groups.  
+**Coordinate Covariation Analysis (COCOA) is a method to understand epigenetic variation among samples** and can be used with data that includes genomic coordinates such as DNA methylation and chromatin accessibility data. To describe the method on a high level, COCOA quantifies inter-sample variation with either a supervised or unsupervised technique then uses a database of "region sets" to annotate the variation among samples. A region set is a set of genomic regions that share a biological annotation, for instance transcription factor (TF) binding regions, histone modification regions, or open chromatin regions. COCOA can identify region sets where there is inter-sample variation, giving you biologically meaningful insight into variation in your data. For a more in-depth description of the method, see the "Method details" section of this vignette. In contrast to some other common techniques, COCOA is unsupervised, meaning that samples do not have to be divided into groups such as case/control or healthy/disease, although COCOA works in those situations as well. Also, COCOA focuses on continuous variation between samples instead of having cutoffs. Because of this, COCOA can be used as a complementary method alongside "differential" methods that find discrete differences between groups of samples and it can also be used in situations where there are no groups.  
 
 ## Our test case
 
-In this vignette, we will see how COCOA can find meaningful sources of inter-sample variation in breast cancer patients. We will use data from The Cancer Genome Atlas: 450k DNA methylation microarrays for 657 breast cancer patients (TCGA-BRCA, https://portal.gdc.cancer.gov/). This vignette begins after PCA has been performed on the DNA methylation data. As you can see below, PC1 and PC4 cluster patients based on estrogen receptor status which is an important prognostic marker for breast cancer: 
+In this vignette, we will see how COCOA can find meaningful sources of inter-sample variation in breast cancer patients. We will use data from The Cancer Genome Atlas: 450k DNA methylation microarrays for 657 breast cancer patients (TCGA-BRCA, https://portal.gdc.cancer.gov/). This vignette begins after principal component analysis (PCA) has been performed on the DNA methylation data. As you can see below, PC1 and PC4 cluster patients based on estrogen receptor status which is an important prognostic marker for breast cancer: 
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
 library(COCOA)
@@ -291,13 +291,22 @@ A "meta-region" loading profile is a summary of the loadings in the genome in an
 
 ## Q and A
 
-1. What data types can COCOA be used with?
-So far, COCOA has been validated on single base pair resolution DNA methylation data. Theoretically, COCOA could work with any type of genomic coordinate-based data: data where you have a genomic coordinate or range and an associated value. This could include ATAC-seq data, single nucleotide polymorphism/mutation data, copy number variation etc. although COCOA would probably work better for data where smaller regions or single bases are measured. Future releases of COCOA will likely have support for more of these data types. If you are interested in using COCOA for these analyses before the next Bioconductor release, you can check out the Github page to see the latest version or download the "dev" version of COCOA from Bioconductor.  
+1. Where can I get more information about COCOA?
 
-2. Can COCOA be used with other dimensionality reduction techniques such as t-SNE?
+Be on the lookout for a preprint/paper about COCOA! As of October 2019, the best ways to get COCOA info are the vignettes and reference manual on the Bioconductor website. You can also check out ongoing development or report an issue with COCOA [on Github](https://github.com/databio/COCOA).
+
+
+2. What data types can COCOA be used with?
+
+So far, COCOA has been validated on single base pair resolution DNA methylation data, chromatin accessibility data, and a multi-omics analysis that included DNA methylation. Theoretically, COCOA could work with any type of genomic coordinate-based data: data where you have a genomic coordinate or range and an associated value. This could include histone modification data, single nucleotide polymorphism/mutation data, copy number variation etc. although COCOA would probably work better for data where smaller regions or single bases are measured. 
+
+
+3. Can COCOA be used with other dimensionality reduction techniques such as t-SNE?
+
 Short answer for t-SNE: no. In general though, it depends. COCOA must have a score for each original dimension that quantifies how much it contributes to the new dimension. Since t-SNE maps the original dimensions to new dimensions in a nonlinear way, the mappings of the original dimensions to the new dimensions are not comparable to each other and cannot be aggregated into a single score for a region set in a uniform way. 
 
-3. Where did the name COCOA come from?
+
+4. Where did the name COCOA come from?
 
 The method is called Coordinate Covariation Analysis because it uses PCA to capture covariation of individual signals/features at genomic coordinates. The top PCs capture both variation between samples and covariation between individual genomic features. COCOA annotates the covariation of individual genomic features with region sets in order to gain insight into variation between samples.
 
