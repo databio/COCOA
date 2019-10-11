@@ -293,7 +293,7 @@ runCOCOAPerm <- function(genomicSignal,
 #'                          sampleLabels=sampleLabels,
 #'                          variationMetric="cor")
 #' onePermResult
-#' 
+#' @export
 corPerm <- function(randomInd, genomicSignal, 
                     signalCoord, GRList, calcCols,
                     sampleLabels, variationMetric = "cor", 

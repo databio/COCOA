@@ -8,7 +8,7 @@ runCOCOAPerm(genomicSignal, signalCoord, GRList, rsScores, sampleLabels,
   signalCol = c("PC1", "PC2"), signalCoordType = "default",
   scoringMetric = "default", absVal = TRUE, variationMetric = "cor",
   nPerm = 300, useSimpleCache = TRUE, cacheDir = getwd(),
-  dataID = "tmp", correctionMethod = "BH", gammaFitMethod = "mme",
+  dataID = "", correctionMethod = "BH", gammaFitMethod = "mme",
   realScoreInDist = TRUE, force = FALSE, verbose = TRUE, ...)
 }
 \arguments{
@@ -96,9 +96,10 @@ or "cov" (covariation).}
 \item{useSimpleCache}{logical. Whether to use save caches. Caches
 will be created for each permutation so that if the function is disrupted
 it can restart where it left off. The final results are also saved 
-as a cache.}
+as a cache. See simpleCache package for more details.}
 
-\item{cacheDir}{character.}
+\item{cacheDir}{character. The path for the directory in which the
+caches should be saved.}
 
 \item{dataID}{character. A unique identifier for this dataset 
 (for saving results with simpleCache)}
@@ -130,7 +131,7 @@ for fitting that specific gamma distribution.}
 of the function should be shown. One
 bar indicates the region set is completed.}
 
-\item{...}{character. Optional additional arguments for simpleCache}
+\item{...}{character. Optional additional arguments for simpleCache.}
 
 \item{sampleLabels}{data.frame/matrix. Sample labels/values that 
 you are running COCOA to find region sets associated with. These 
