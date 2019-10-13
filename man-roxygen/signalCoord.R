@@ -1,8 +1,8 @@
-#' @param signalCoord a GRanges object or data frame with coordinates 
-#' for the genomic signal/original data (eg DNA methylation/ATAC-seq) 
+#' @param signalCoord A GRanges object or data frame with coordinates 
+#' for the genomic signal/original epigenetic data. 
 #' Coordinates should be in the 
-#' same order as the original data and the loadings 
+#' same order as the original data and the feature contribution scores 
 #' (each item/row in signalCoord
 #' corresponds to a row in signal). If a data.frame, 
-#' must have chr and start columns. If end is included, start 
-#' and end should be the same. Start coordinate will be used for calculations.
+#' must have chr and start columns (optionally can have end column, 
+#' depending on the epigenetic data type).

@@ -1,4 +1,4 @@
-#' @param absVal logical. If TRUE, take the absolute value of values in
+#' @param absVal Logical. If TRUE, take the absolute value of values in
 #' signal. Choose TRUE if you think there may be some 
 #' genomic loci in a region set that will increase and others
 #' will decrease (if there may be anticorrelation between

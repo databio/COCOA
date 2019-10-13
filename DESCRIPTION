@@ -15,7 +15,7 @@ Description: COCOA is a method for understanding variation among samples
     discrete differences between groups. COCOA can identify biologically
     meaningful sources of variation between samples and
     increase understanding of variation in your data.
-Authors@R: c(person("John", "Lawson", email="jtl2hk@virginia.edu", role=c("aut", "cre")), person("Nathan", "Sheffield", role=c("aut"), comment="http://www.databio.org"))
+Authors@R: c(person("John", "Lawson", email="jtl2hk@virginia.edu", role=c("aut", "cre")), person("Nathan", "Sheffield", role=c("aut"), comment="http://www.databio.org"), person("Jason", "Smith", role=c("ctb")))
 Depends: R (>= 3.5), GenomicRanges
 Imports:
     BiocGenerics,

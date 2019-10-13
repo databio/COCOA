@@ -1,16 +1,17 @@
-#' @param scoringMetric A character object with the scoring metric.
-#' There are different scoring metrics available for 
+#' <%=ifelse(exists("aggrMethod") && aggrMethod, "@param aggrMethod character. A character object with the aggregation method.", "") %>
+#' <%=ifelse(exists("aggrMethod") && aggrMethod, "Similar to runCOCOA `scoringMetric` parameter.", "@param scoringMetric A character object with the scoring metric.") %>
+#' There are different methods available for 
 #' signalCoordType="singleBase" vs  signalCoordType="multiBase".
-#' For "singleBase", the available scoring methods are "regionMean" and 
+#' For "singleBase", the available methods are "regionMean" and 
 #' "simpleMean". The default method is "regionMean".
-#' For "multiBase", the scoring methods are "proportionWeightedMean" and 
+#' For "multiBase", the methods are "proportionWeightedMean" and 
 #' "simpleMean". The default is "proportionWeightedMean".
 #' "regionMean" is a weighted
 #' average of the signal, weighted by region (absolute value of signal 
 #' if absVal=TRUE). First the signal is
 #' averaged within each regionSet region, 
 #' then all the regions are averaged. With
-#' "regionMean" score, be cautious in interpretation for
+#' "regionMean" method, be cautious in interpretation for
 #' region sets with low number of regions that overlap signalCoord. 
 #' The "simpleMean"
 #' method is just the unweighted average of all (absolute) signal values that

@@ -2,41 +2,47 @@
 % Please edit documentation in R/COCOA.R
 \name{getMetaRegionProfile}
 \alias{getMetaRegionProfile}
-\title{Create a "meta-region" loading profile}
+\title{Create a "meta-region" profile}
 \usage{
 getMetaRegionProfile(signal, signalCoord, regionSet, signalCol = c("PC1",
-  "PC2"), signalCoordType = "default", binNum = 25, verbose = TRUE,
+  "PC2"), signalCoordType = "default", binNum = 21, verbose = TRUE,
   aggrMethod = "default", absVal = TRUE)
 }
 \arguments{
-\item{signal}{matrix of loadings (the coefficients of 
-the linear combination that defines each PC). One named column for each PC.
-One row for each original dimension/variable (should be same order 
-as original data/signalCoord). Given by prcomp(x)$rotation.}
+\item{signal}{Matrix of feature contribution scores (the contribution of 
+each epigenetic feature to each target variable). One named column for each 
+target variable.
+One row for each original epigenetic feature (should be same order 
+as original data/signalCoord). For (an unsupervised) example, if PCA was
+done on epigenetic data and the
+goal was to find region sets associated with the principal components, you 
+could use the x$rotation output of prcomp(epigenetic data) as the
+feature contribution scores/`signal` parameter.}
 
-\item{signalCoord}{a GRanges object or data frame with coordinates 
-for the genomic signal/original data (eg DNA methylation/ATAC-seq) 
+\item{signalCoord}{A GRanges object or data frame with coordinates 
+for the genomic signal/original epigenetic data. 
 Coordinates should be in the 
-same order as the original data and the loadings 
+same order as the original data and the feature contribution scores 
 (each item/row in signalCoord
 corresponds to a row in signal). If a data.frame, 
-must have chr and start columns. If end is included, start 
-and end should be the same. Start coordinate will be used for calculations.}
+must have chr and start columns (optionally can have end column, 
+depending on the epigenetic data type).}
 
 \item{regionSet}{A genomic ranges (GRanges) object with regions corresponding
 to the same biological annotation.}
 
 \item{signalCol}{A character vector with the sample variables
-of interest (e.g. PCs or sample phenotypes). 
+of interest/target variables (e.g. PCs or sample phenotypes). 
 
 
 
 e.g. c("PC1", "PC2")}
 
-\item{signalCoordType}{character. Can be "default", "singleBase", or 
+\item{signalCoordType}{Character. Can be "default", "singleBase", or 
 "multiBase". This describes whether the coordinates for `signal` 
 (`signalCoord`) are each a single base (e.g. as for DNA methylation)
-or a region/multiple bases (e.g. as for ATAC-seq). Different scoring
+or a region/multiple bases (e.g. as for chromatin accessibility). 
+Different scoring
 options are available for each type of data. If "default" is given,
 the type of coordinates will be detected automatically. For "default", if each
 coordinate start value equals the coordinate end value 
@@ -44,28 +50,34 @@ coordinate start value equals the coordinate end value
 will be used. Otherwise, "multiBase" will be used.}
 
 \item{binNum}{Number of bins to split each region into when
-making the aggregate loading profile. More bins will
+making the aggregate profile. More bins will
 give a higher resolution but perhaps more noisy profile.}
 
 \item{verbose}{A "logical" object. Whether progress 
-of the function should be shown, one
-bar indicates the region set is completed. Useful when
-using `lapply` to get the loading profiles of many region sets.}
+of the function should be shown. One
+bar indicates the region set is completed.}
 
-\item{aggrMethod}{character. A character object with the aggregation method.
-Similar to `scoringMetric`.
-There are different aggregation methods available for 
+\item{absVal}{Logical. If TRUE, take the absolute value of values in
+signal. Choose TRUE if you think there may be some 
+genomic loci in a region set that will increase and others
+will decrease (if there may be anticorrelation between
+regions in a region set). Choose FALSE if you expect regions in a 
+given region set to all change in the same direction (all be positively
+correlated with each other).}
+
+\item{scoringMetric}{A character object with the scoring metric.
+There are different methods available for 
 signalCoordType="singleBase" vs  signalCoordType="multiBase".
-For "singleBase", the available scoring methods are "regionMean" and
+For "singleBase", the available methods are "regionMean" and 
 "simpleMean". The default method is "regionMean".
-For "multiBase", the scoring methods are "proportionWeightedMean" and 
+For "multiBase", the methods are "proportionWeightedMean" and 
 "simpleMean". The default is "proportionWeightedMean".
 "regionMean" is a weighted
 average of the signal, weighted by region (absolute value of signal 
 if absVal=TRUE). First the signal is
 averaged within each regionSet region, 
 then all the regions are averaged. With
-"regionMean" score, be cautious in interpretation for
+"regionMean" method, be cautious in interpretation for
 region sets with low number of regions that overlap signalCoord. 
 The "simpleMean"
 method is just the unweighted average of all (absolute) signal values that
@@ -80,39 +92,37 @@ of the regionSet region is covered. Then this proportion is used to
 weight the signal value when calculating the mean. 
 The denominator of the mean
 is the sum of all the proportion overlaps.}
-
-\item{absVal}{logical. If TRUE, take the absolute value of values in
-signal. Choose TRUE if you think there may be some 
-genomic loci in a region set that will increase and others
-will decrease (if there may be anticorrelation between
-regions in a region set). Choose FALSE if you expect regions in a 
-given region set to all change in the same direction (all be positively
-correlated with each other).}
 }
 \value{
-A data.frame with the binned loading profile,
-one row per bin. columns: binID and one column for each PC
+A data.frame with the binned meta-region profile,
+one row per bin. columns: binID and one column for each target variable
 in signalCol. The function will return NULL if there
-is no overlap between regionSet and signalCoord.
+is no overlap between signalCoord and any of the bin groups that come 
+from regionSet (e.g. none of the bin1's overlapped signalCoord, 
+NULL returned).
 }
 \description{
-This loading profile can show enrichment 
-of genomic signals with high loading values in region set but not in
+This profile can show enrichment 
+of genomic signals with high feature contribution scores 
+in the region set but not in the
 surrounding genome, suggesting that variation is linked specifically
 to that region set.
 }
 \details{
 All regions in a given region set 
-are combined into a single aggregate profile. Regions should be
+are combined into a single aggregate profile. Regions in `regionSet` 
+should be
 expanded on each side to include a wider area of the genome around
 the regions of interest (see example and vignettes). 
-To make the profile, first we take 
-the absolute value of the loadings. Then each region is
-split into `binNum` bins. All loadings in each bin are 
-averaged to get one value per bin. Finally, corresponding bins from
-the different regions are averaged (eg all bin1's averaged with each other, 
-all bin2's averaged with each other, etc.) to get a single "meta-region"
-loading profile. Since DNA strand information is not considered, 
+To make the profile, first we optionally take 
+the absolute value of `signal` (`absVal` parameter). 
+Then each expanded regionSet region is
+split into `binNum` bins. The corresponding 
+bins from each region
+(e.g. all bin1's, all bin2's, etc.) are grouped.  
+All overlapping values from `signal` are 
+aggregated in each bin group according to the `aggrMethod` parameter to 
+get a meta-region profile. Since DNA strand information is not considered, 
 the profile is averaged symmetrically around the center.
 A peak in the middle of this profile suggests
 that variability is specific to the region set of interest and is 
@@ -130,5 +140,5 @@ getMetaRegionProfile(signal=brcaLoadings1,
                     signalCoord=brcaMCoord1, 
                     regionSet=esr1_chr1_expanded, 
                     signalCol=c("PC1", "PC2"), 
-                    binNum=25)
+                    binNum=21)
 }

@@ -16,7 +16,7 @@
 #' Visualize how genomic signal in a region set changes 
 #' along a given axis
 #' 
-#' Look at genomic signal (eg, DNA methylation values) in regions of 
+#' Look at genomic signal (e.g., DNA methylation values) in regions of 
 #' interest across samples, 
 #' with samples ordered according to a variable of interest (e.g. PC score). 
 #' The ComplexHeatmap package
@@ -29,46 +29,48 @@
 #' @templateVar refGenomeWarning TRUE
 #' @templateVar rsVisualization TRUE
 #' @template regionSet
-#' @param sampleScores A matrix. Must contain a column with name given
+#' @param sampleScores A matrix. Must contain a column for the 
+#' variable of interest with name given
 #' by "orderByCol" that will be used to order samples.  
-#' E.g. Could be the principal component scores for the samples 
-#' (ie transformed methylation data). Must have sample names/IDs as row names,
+#' E.g. The variable of interest could be 
+#' the principal component scores for the samples. 
+#' sampleScores must have sample names/IDs as row names,
 #' These same sample names must be column names of genomicSignal
-#' @param orderByCol a character object. A variable to order samples by
+#' @param orderByCol A character object. A variable to order samples by
 #' (order rows of heatmap by variable, from high to low value).
 #' Must be the name of a column in sampleScores. For instance, if doing
 #' unsupervised COCOA with PCA, orderByCol might be the name of one of the PCs
 #' (e.g. "PC1"). If doing supervised COCOA, orderByCol might be the name
-#' of the variable that is the focus of the supervised analysis. 
-#' @param topXVariables numeric. The number of variables from genomicSignal
+#' of the target variable of the supervised analysis. 
+#' @param topXVariables Numeric. The number of variables from genomicSignal
 #' to plot. The variables with the highest scores according to 
 #' variableScores will be plotted. Can help to reduce the size of the plot.
-#' @param variableScores numeric. A vector that has a numeric score for
+#' @param variableScores Numeric. A vector that has a numeric score for
 #' each variable in genomicSignal (length(variableScores) should equal
 #' nrow(genomicSignal)). Only used if topXVariables is given. The highest
 #' `topXVariables` will be plotted.
-#' @param decreasing logical. Whether samples should be sorted in 
+#' @param decreasing Logical. Whether samples should be sorted in 
 #' decreasing order of `orderByCol` or not (FALSE is increasing order).
-#' @param cluster_rows "logical" object, whether rows should be clustered. 
+#' @param cluster_rows Logical. Whether rows should be clustered. 
 #' This should be kept as FALSE to keep the correct ranking of 
 #' samples/observations according to their PC score.
-#' @param cluster_columns "logical" object, whether to cluster columns 
-#' (the genomic signal, eg DNA methylation values for each CpG).
-#' @param row_title character object, row title
-#' @param column_title character object, column title
-#' @param column_title_side character object, where to put the column title:
+#' @param cluster_columns Logical. Whether to cluster columns 
+#' (the genomic signal, e.g. DNA methylation values for each CpG).
+#' @param row_title Character object, row title
+#' @param column_title Character object, column title
+#' @param column_title_side Character object, where to put the column title:
 #' "top" or "bottom"
-#' @param name character object, legend title
-#' @param col a vector of colors or a color mapping function which
+#' @param name Character object, legend title
+#' @param col A vector of colors or a color mapping function which
 #' will be passed to the ComplexHeatmap::Heatmap() function. See ?Heatmap
 #' (the "col" parameter) for more details. "#EEEEEE" is the code for a
 #' color similar to white.
-#' @param ... optional parameters for ComplexHeatmap::Heatmap()
+#' @param ... Optional parameters for ComplexHeatmap::Heatmap()
 #' @return A heatmap of genomic signal values (eg DNA methylation levels) 
-#' in regions of interest (regionSet), with rows ordered by PC score.
-#' Each row is a patient/sample and each column is an individual genomic signal value. 
-#' Rows are ordered by PC score for `orderByCol`, high scores at top and low at 
-#' the bottom.
+#' in regions of interest (regionSet), with rows ordered by the
+#' column of sampleScores given with `orderByCol`.
+#' Each row is a patient/sample and 
+#' each column is an individual genomic signal value. 
 #'
 #' @examples data("brcaMethylData1")
 #' data("brcaMCoord1")
@@ -179,9 +181,11 @@ signalAlongAxis <- function(genomicSignal, signalCoord, regionSet,
 
 #' Heatmap of region set scores
 #' 
-#' Heatmap of the ranking of region set scores across PCs
-#' A visualization of the rank of region sets in each PC, allowing the
-#' user to see if a region set is ranked highly in all PCs or only a subset.
+#' Heatmap of the ranking of region set scores across target variables.
+#' A visualization of the rank of region sets in each target variable, 
+#' allowing the
+#' user to see if a region set is ranked highly for all target variables 
+#' or only a subset.
 #' Region sets will be ranked from highest scoring to lowest based on 
 #' their score for `orderByCol`.
 #' The ComplexHeatmap package
@@ -191,35 +195,38 @@ signalAlongAxis <- function(genomicSignal, signalCoord, regionSet,
 #' @template rsScores
 #' @templateVar usesRSScores TRUE
 #' @template signalCol
-#' @param orderByCol a character object. PC to order by in heatmap 
+#' @param orderByCol A character object. Target variable to order by in heatmap 
 #' (arranged in decreasing order for scores so p values should 
 #' be -log transformed). Must be the name of a column in rsScores.
-#' @param rsNameCol character. Name of the column in rsScores that has the
+#' @param rsNameCol Character. Name of the column in rsScores that has the
 #' names/identifiers for the region sets so these can be included 
 #' in the plot as row names.
 #' @param topX Number of top region sets to include in the heatmap
-#' @param row_title character object, row title
-#' @param column_title character object, column title
-#' @param column_title_side character object, where to put the column title:
+#' @param row_title Character object, row title
+#' @param column_title Character object, column title
+#' @param column_title_side Character object, where to put the column title:
 #' "top" or "bottom"
-#' @param cluster_rows "logical" object, whether rows should be clustered. 
+#' @param cluster_rows Logical object, whether rows should be clustered. 
 #' This should be kept as FALSE to keep the correct ranking of region sets.
-#' @param cluster_columns "logical" object, whether to cluster columns. It is recommended
-#' to keep this as FALSE so it will be easier to compare PCs 
-#' (with cluster_columns = FALSE, they will be in the same specified
-#' order in different heatmaps)
-#' @param show_row_names "logical" object, display row names (ie region set names)
+#' @param cluster_columns Logical object, whether to cluster columns. 
+#' It is recommended
+#' to keep this as FALSE so it will be easier to compare target variables
+#' that are ordered (such as principal components). 
+#' With cluster_columns = FALSE, they will be in the same specified
+#' order in different heatmaps.
+#' @param show_row_names Logical object, display row names (ie region set names)
 #' @param row_names_max_width "unit" object. The amount of room to 
 #' allocate for row names. See ?grid::unit for object type.
-#' @param name character object, legend title
-#' @param col a vector of colors or a color mapping function which
+#' @param name Character object, legend title
+#' @param col A vector of colors or a color mapping function which
 #' will be passed to the ComplexHeatmap::Heatmap() function. See ?Heatmap
 #' (the "col" parameter) for more details. "#EEEEEE" is the code for a
 #' color similar to white.
-#' @param ... optional parameters for ComplexHeatmap::Heatmap().
+#' @param ... Optional parameters for ComplexHeatmap::Heatmap().
 #' @return A heatmap of region set scores across. Each row is a region set,
-#' each column is a PC. The color corresponds to the relative rank of a 
-#' region set's score for a given PC out of all tested region sets.
+#' each column is a target variable. 
+#' The color corresponds to the relative rank of a 
+#' region set's score for a given target variable out of all tested region sets.
 #'
 #' @examples data("rsScores")
 #' scoreHeatmap <- rsScoreHeatmap(rsScores, 
@@ -320,60 +327,61 @@ rsScoreHeatmap <- function(rsScores, signalCol=paste0("PC", 1:5),
 }
 
 
-#' Visualize how individual regions are associated with variable of interest 
-#' (VOI)
+#' Visualize how individual regions are associated with target variable
 #' 
-#' Visualize how much each region in a region set is associated with each VOI.
-#' For each VOI, the average absolute loading is calculated for 
-#' each region in the region set. Then for a given VOI, 
-#' the average loading is converted to a percentile/quantile based 
-#' on the distribution of all loadings for that VOI. These values are
+#' Visualize how much each region in a region set 
+#' is associated with each target variable. 
+#' For each target variable (`signalCol`), the average (absolute) 
+#' signal value is calculated for 
+#' each region in the region set. Then for a given target variable, 
+#' the average signal is converted to a percentile/quantile based 
+#' on the distribution of all signal values 
+#' for that target variable. These values are
 #' plotted in a heatmap.
 #' 
-#' @param signal matrix of loadings (the coefficients of 
-#' the linear combination that defines each PC). One named column for each VOI.
-#' One row for each original dimension/variable (should be same order 
-#' as original data/signalCoord). The x$rotation output of prcomp().
+#' @template signal
 #' @template signalCoord
 #' @templateVar refGenomeWarning TRUE
 #' @templateVar rsVisualization TRUE
 #' @template regionSet
-#' @param rsName character vector. Names of the region sets in the same
+#' @param rsName Character vector. Names of the region sets in the same
 #' order as GRList. For use as a title for each heatmap.
 #' @template signalCol
-#' @param maxRegionsToPlot how many top regions from region set to include
+#' @param maxRegionsToPlot How many top regions from region set to include
 #' in heatmap. Including too many may slow down computation and increase memory
 #' use. If regionSet has more regions than maxRegionsToPlot, a number of regions 
 #' equal to maxRegionsToPlot will be randomly sampled from the region set and
 #' these regions will be plotted. Clustering rows is a major limiting factor
 #' on how long it takes to plot the regions so if you want to plot many regions, 
 #' you can also set cluster_rows to FALSE.
-#' @param row_title character object, row title
-#' @param column_title character object, column title
-#' @param column_title_side character object, where to put the column title:
+#' @param row_title Character object, row title
+#' @param column_title Character object, column title
+#' @param column_title_side Character object, where to put the column title:
 #' "top" or "bottom"
-#' @param cluster_rows "logical" object, whether to cluster rows or not (may 
+#' @param cluster_rows Logical object, whether to cluster rows or not (may 
 #' increase computation time significantly for large number of rows)
-#' @param cluster_columns "logical" object, whether to cluster columns. 
+#' @param cluster_columns Logical object, whether to cluster columns. 
 #' It is recommended
 #' to keep this as FALSE so it will be easier to compare PCs 
 #' (with cluster_columns = FALSE, they will be in the same specified
 #' order in different heatmaps)
-#' @param name character object, legend title
-#' @param col a vector of colors or a color mapping function which
+#' @param name Character object, legend title
+#' @param col A vector of colors or a color mapping function which
 #' will be passed to the ComplexHeatmap::Heatmap() function. See ?Heatmap
 #' (the "col" parameter) for more details.
 #' @template absVal
-#' @param ... optional parameters for ComplexHeatmap::Heatmap()
-#' @return a heatmap. Columns are signalCol's, rows are regions. 
+#' @param ... Optional parameters for ComplexHeatmap::Heatmap()
+#' @return A heatmap. Columns are signalCol's, rows are regions. 
 #' This heatmap allows you to see if some regions are 
-#' associated with certain VOIs but not others. Also, you can see if a subset of 
-#' regions in the region set are associated with VOIs while another subset
-#' are not associated with any VOIs 
-#' To color each region, first the absolute loading 
+#' associated with certain target variables but not others. 
+#' Also, you can see if a subset of 
+#' regions in the region set are associated with 
+#' target variables while another subset
+#' are not associated with any target variables 
+#' To color each region, first the (absolute) signal 
 #' values within that region are
-#' averaged. Then this average is compared to the distribution of absolute
-#' loading values for all individual genomic signal values to get 
+#' averaged. Then this average is compared to the distribution of all (absolute)
+#' individual signal values for the given target variable to get 
 #' a quantile/percentile 
 #' for that region. Colors are based on this quantile/percentile. 
 #' The output is a Heatmap object (ComplexHeatmap package).
@@ -382,7 +390,7 @@ rsScoreHeatmap <- function(rsScores, signalCol=paste0("PC", 1:5),
 #' data("brcaMCoord1")
 #' data("esr1_chr1")
 #' data("brcaPCScores")
-#' regionByPCHM <- regionQuantileByVOI(signal = brcaLoadings1, 
+#' regionByPCHM <- regionQuantileByTargetVar(signal = brcaLoadings1, 
 #'                                    signalCoord = brcaMCoord1, 
 #'                                    regionSet = esr1_chr1, 
 #'                                    rsName = "Estrogen Receptor Chr1", 
@@ -395,7 +403,7 @@ rsScoreHeatmap <- function(rsScores, signalCol=paste0("PC", 1:5),
 #'                                    
 #' 
 #' @export
-regionQuantileByVOI <- function(signal, signalCoord, regionSet, 
+regionQuantileByTargetVar <- function(signal, signalCoord, regionSet, 
                                rsName = "", signalCol=paste0("PC", 1:5),
                                maxRegionsToPlot = 8000, cluster_rows = TRUE, 
                                row_title = "Region", column_title = rsName,

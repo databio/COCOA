@@ -13,7 +13,7 @@ signalAlongAxis(genomicSignal, signalCoord, regionSet, sampleScores,
   col = c("blue", "#EEEEEE", "red"), ...)
 }
 \arguments{
-\item{genomicSignal}{matrix/data.frame. 
+\item{genomicSignal}{Matrix/data.frame. 
 The genomic signal (e.g. DNA methylation levels)
 Columns of genomicSignal should be samples/patients. 
 Rows should be individual signal/features
@@ -21,77 +21,79 @@ Rows should be individual signal/features
 Must have sample names/IDs as column names,
 These same sample names must be row names of sampleScores.}
 
-\item{signalCoord}{a GRanges object or data frame with coordinates 
-for the genomic signal/original data (eg DNA methylation/ATAC-seq) 
+\item{signalCoord}{A GRanges object or data frame with coordinates 
+for the genomic signal/original epigenetic data. 
 Coordinates should be in the 
-same order as the original data and the loadings 
+same order as the original data and the feature contribution scores 
 (each item/row in signalCoord
 corresponds to a row in signal). If a data.frame, 
-must have chr and start columns. If end is included, start 
-and end should be the same. Start coordinate will be used for calculations.}
+must have chr and start columns (optionally can have end column, 
+depending on the epigenetic data type).}
 
 \item{regionSet}{A genomic ranges (GRanges) object with regions corresponding
 to the same biological annotation.
 Must be from the same reference genome as the coordinates for the actual data/samples (signalCoord).
 The regions that will be visualized.}
 
-\item{sampleScores}{A matrix. Must contain a column with name given
+\item{sampleScores}{A matrix. Must contain a column for the 
+variable of interest with name given
 by "orderByCol" that will be used to order samples.  
-E.g. Could be the principal component scores for the samples 
-(ie transformed methylation data). Must have sample names/IDs as row names,
+E.g. The variable of interest could be 
+the principal component scores for the samples. 
+sampleScores must have sample names/IDs as row names,
 These same sample names must be column names of genomicSignal}
 
-\item{orderByCol}{a character object. A variable to order samples by
+\item{orderByCol}{A character object. A variable to order samples by
 (order rows of heatmap by variable, from high to low value).
 Must be the name of a column in sampleScores. For instance, if doing
 unsupervised COCOA with PCA, orderByCol might be the name of one of the PCs
 (e.g. "PC1"). If doing supervised COCOA, orderByCol might be the name
-of the variable that is the focus of the supervised analysis.}
+of the target variable of the supervised analysis.}
 
-\item{topXVariables}{numeric. The number of variables from genomicSignal
+\item{topXVariables}{Numeric. The number of variables from genomicSignal
 to plot. The variables with the highest scores according to 
 variableScores will be plotted. Can help to reduce the size of the plot.}
 
-\item{variableScores}{numeric. A vector that has a numeric score for
+\item{variableScores}{Numeric. A vector that has a numeric score for
 each variable in genomicSignal (length(variableScores) should equal
 nrow(genomicSignal)). Only used if topXVariables is given. The highest
 `topXVariables` will be plotted.}
 
-\item{decreasing}{logical. Whether samples should be sorted in 
+\item{decreasing}{Logical. Whether samples should be sorted in 
 decreasing order of `orderByCol` or not (FALSE is increasing order).}
 
-\item{cluster_columns}{"logical" object, whether to cluster columns 
-(the genomic signal, eg DNA methylation values for each CpG).}
+\item{cluster_columns}{Logical. Whether to cluster columns 
+(the genomic signal, e.g. DNA methylation values for each CpG).}
 
-\item{cluster_rows}{"logical" object, whether rows should be clustered. 
+\item{cluster_rows}{Logical. Whether rows should be clustered. 
 This should be kept as FALSE to keep the correct ranking of 
 samples/observations according to their PC score.}
 
-\item{row_title}{character object, row title}
+\item{row_title}{Character object, row title}
 
-\item{column_title}{character object, column title}
+\item{column_title}{Character object, column title}
 
-\item{column_title_side}{character object, where to put the column title:
+\item{column_title_side}{Character object, where to put the column title:
 "top" or "bottom"}
 
-\item{name}{character object, legend title}
+\item{name}{Character object, legend title}
 
-\item{col}{a vector of colors or a color mapping function which
+\item{col}{A vector of colors or a color mapping function which
 will be passed to the ComplexHeatmap::Heatmap() function. See ?Heatmap
 (the "col" parameter) for more details. "#EEEEEE" is the code for a
 color similar to white.}
 
-\item{...}{optional parameters for ComplexHeatmap::Heatmap()}
+\item{...}{Optional parameters for ComplexHeatmap::Heatmap()}
 }
 \value{
 A heatmap of genomic signal values (eg DNA methylation levels) 
-in regions of interest (regionSet), with rows ordered by PC score.
-Each row is a patient/sample and each column is an individual genomic signal value. 
-Rows are ordered by PC score for `orderByCol`, high scores at top and low at 
-the bottom.
+in regions of interest (regionSet), with rows ordered by the
+column of sampleScores given with `orderByCol`.
+Each row is a patient/sample and 
+each column is an individual genomic signal value.
 }
 \description{
-Look at genomic signal (eg, DNA methylation values) in regions of 
+Look at genomic signal (e.g., DNA methylation values) in regions of 
 interest across samples, 
 with samples ordered according to a variable of interest (e.g. PC score). 
 The ComplexHeatmap package

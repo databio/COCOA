@@ -2,31 +2,36 @@
 % Please edit documentation in R/COCOA.R
 \name{getTopRegions}
 \alias{getTopRegions}
-\title{Get regions that are most associated with PCs of interest}
+\title{Get regions that are most associated with target variable}
 \usage{
 getTopRegions(signal, signalCoord, regionSet, signalCol = c("PC1",
   "PC2"), cutoff = 0.8, returnQuantile = TRUE)
 }
 \arguments{
-\item{signal}{matrix of loadings (the coefficients of 
-the linear combination that defines each PC). One named column for each PC.
-One row for each original dimension/variable (should be same order 
-as original data/signalCoord). The x$rotation output of prcomp().}
+\item{signal}{Matrix of feature contribution scores (the contribution of 
+each epigenetic feature to each target variable). One named column for each 
+target variable.
+One row for each original epigenetic feature (should be same order 
+as original data/signalCoord). For (an unsupervised) example, if PCA was
+done on epigenetic data and the
+goal was to find region sets associated with the principal components, you 
+could use the x$rotation output of prcomp(epigenetic data) as the
+feature contribution scores/`signal` parameter.}
 
-\item{signalCoord}{a GRanges object or data frame with coordinates 
-for the genomic signal/original data (eg DNA methylation/ATAC-seq) 
+\item{signalCoord}{A GRanges object or data frame with coordinates 
+for the genomic signal/original epigenetic data. 
 Coordinates should be in the 
-same order as the original data and the loadings 
+same order as the original data and the feature contribution scores 
 (each item/row in signalCoord
 corresponds to a row in signal). If a data.frame, 
-must have chr and start columns. If end is included, start 
-and end should be the same. Start coordinate will be used for calculations.}
+must have chr and start columns (optionally can have end column, 
+depending on the epigenetic data type).}
 
 \item{regionSet}{A genomic ranges (GRanges) object with regions corresponding
 to the same biological annotation.}
 
 \item{signalCol}{A character vector with the sample variables
-of interest (e.g. PCs or sample phenotypes). 
+of interest/target variables (e.g. PCs or sample phenotypes). 
 
 
 
@@ -34,17 +39,22 @@ e.g. c("PC1", "PC2")}
 
 \item{returnQuantile}{"logical" object. If FALSE, return region averages. If TRUE,
 for each region, return the quantile of that region's average value
-based on the distribution of individual genomic signal/feature values}
+based on the distribution of individual feature values in `signal` for
+that `signalCol`}
 }
 \value{
 a GRanges object with region coordinates for regions with
-scores/quantiles above "cutoff" for any PC in signalCol. The scores/quantiles
+scores/quantiles above "cutoff" for any target variable in signalCol. 
+The scores/quantiles
 for signalCol are given as metadata in the GRanges.
 }
 \description{
-Get a GRanges with top regions from the region set based on average
-loadings for the regions or the quantile of the region's loading.
-Returns average loading or quantile as GRanges metadata.
+Get a GRanges with top regions from the region set based on 
+average feature contribution scores
+for the regions or the quantile of the region's average
+feature contribution score based on the 
+distribution of all feature contribution scores for the target variable.
+Returns average feature contribution score or quantile as GRanges metadata.
 }
 \examples{
 data("brcaLoadings1")

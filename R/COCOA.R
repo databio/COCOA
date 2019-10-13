@@ -2,26 +2,28 @@
 #' Coordinate Covariation Analysis (COCOA)
 #'
 #' 
-#' COCOA is a method for understanding variation among samples.
+#' COCOA is a method for understanding epigenetic variation among samples.
 #' COCOA can be used with data that includes 
-#' genomic coordinates such as DNA methylation. 
-#' To describe the method on a high level, COCOA uses a database of 
-#' "region sets" and principal component analysis (PCA) of your data 
-#' to identify sources of variation among samples. A region set is a set of 
+#' genomic coordinates and an epigenetic signal,
+#' such as DNA methylation and chromatin accessibility 
+#' data. 
+#' To describe the method on a high level, COCOA quantifies 
+#' inter-sample variation with either a supervised or unsupervised 
+#' technique then uses a database of "region sets" to 
+#' annotate the variation among samples. A region set is a set of 
 #' genomic regions that share a biological annotation, 
 #' for instance transcription factor (TF) binding regions, 
 #' histone modification regions, or open chromatin regions. 
-#' In contrast to some other common techniques, COCOA is unsupervised, 
-#' meaning that samples do not have to be divided into groups 
-#' such as case/control or healthy/disease, although COCOA works in 
-#' those situations as well. Also, COCOA focuses on continuous variation 
+#' In contrast to some other common techniques, COCOA offers both
+#' supervised (known groups/phenotype) and unsupervised (no known groups/
+#' phenotype) analyses. Also, COCOA focuses on continuous variation 
 #' between samples instead of having cutoffs. Because of this, COCOA can 
 #' be used as a complementary method alongside "differential" methods 
 #' that find discrete differences between groups of samples and 
 #' it can also be used in situations where there are no groups.  
 #' COCOA can identify biologically meaningful 
 #' sources of variation between samples and increase understanding of 
-#' variation in your data. 
+#' epigenetic variation in your data. 
 #'
 #' @docType package
 #' @name COCOA
@@ -74,16 +76,15 @@ if (getRversion() >= "2.15.1") {
 #########################################################################
 
 
-#' Use PCA loadings to score a region set
+#' Score a region set using feature contribution scores
 #' 
-#' First, this function identifies which loadings are within the region set. 
-#' Then the loadings are used to score the region set 
+#' First, this function identifies which epigenetic features 
+#' overlap the region set. 
+#' Then the region set is scored using the feature contribution scores 
+#' (`signal` input) 
 #' according to the `scoringMetric` parameter.  
 #' 
-#' @param signal matrix of loadings (the coefficients of 
-#' the linear combination that defines each PC). One named column for each PC.
-#' One row for each original dimension/variable (should be same order 
-#' as original data/signalCoord). The x$rotation output of prcomp().
+#' @template signal
 #' @template signalCoord
 #' @template signalCoordType
 #' @templateVar refGenomeWarning TRUE
@@ -98,15 +99,13 @@ if (getRversion() >= "2.15.1") {
 # instead of p value.
 #' @template absVal
 
-#' @return a data.frame with one row and the following 
+#' @return A data.frame with one row and the following 
 #' columns: one column for each item of signalCol with names given
-#' by signalCol. These columns have scores for the region set for each PC.
+#' by signalCol. These columns have scores for the region set for each signalCol.
 #' Other columns: signalCoverage (formerly cytosine_coverage) which
-#' has number of cytosines that overlapped with regionSet (or for "multiBase"
-#' data, 
-#' the number of regions from signalCoord that overlapped regionSet) 
+#' has number of epigenetic features that overlapped at all with regionSet,
 #' regionSetCoverage which has number of regions from regionSet
-#' that overlapped any coordinates from signalCoord, 
+#' that overlapped any of the epigenetic features, 
 #' totalRegionNumber that has
 #' number of regions in regionSet, meanRegionSize that has average
 #' size in base pairs of regions in regionSet, the average is based on
@@ -115,7 +114,7 @@ if (getRversion() >= "2.15.1") {
 #' is used, then the output will also have a "sumProportionOverlap" column.
 #' During this scoring method, the proportion overlap between each signalCoord
 #' region and overlapping regionSet region is calculated. This column is
-#' the sum of all those proportion overlaps and is another method to quantify
+#' the sum of all those proportion overlaps and is another way to quantify
 #' coverage of regionSet in addition to regionSetCoverage.
 #' 
 #' @examples
@@ -445,76 +444,35 @@ aggregateSignal <- function(signal,
 
 
 
-#' Do COCOA with many region sets
+#' Score many region sets
 #' 
-#' This function will give each region set a score for each PC
-#' in `signalCol` based on
+#' This function will give each region set a score for each target variable
+#' given by `signalCol` based on
 #' the `scoringMetric` parameter. Based on these scores, you can determine
-#' which region sets out of a region set database (given by GRList) 
-#' are most associated with the top PCs. See the vignette "Introduction
+#' which region sets out of a region set database (given by `GRList`) 
+#' are most associated with the target variables. See the vignette "Introduction
 #' to Coordinate Covariation Analysis" for help interpreting your 
 #' results. 
 #'
-#' @param signal matrix of loadings (the coefficients of 
-#' the linear combination that defines each PC). One named column for each PC.
-#' One row for each original dimension/variable (should be same order 
-#' as original data/signalCoord). The x$rotation output of prcomp().
+#' @template signal
 #' @template signalCoord
 #' @template signalCoordType
 #' @template GRList
 #' @template signalCol
-#' @param scoringMetric A character object with the scoring metric.
-#' There are different scoring metrics available for 
-#' signalCoordType="singleBase" vs  signalCoordType="multiBase".
-#' For "singleBase", the available scoring methods are "regionMean", 
-#' "simpleMean", and "rankSum". The default method is "regionMean".
-#' For "multiBase", the scoring methods are "proportionWeightedMean" and 
-#' "simpleMean". The default is "proportionWeightedMean".
-#' "regionMean" is a weighted
-#' average of the signal, weighted by region (absolute value of signal 
-#' if absVal=TRUE). First the signal is
-#' averaged within each regionSet region, 
-#' then all the regions are averaged. With
-#' "regionMean" score, be cautious in interpretation for
-#' region sets with low number of regions that overlap signalCoord. 
-#' The "simpleMean"
-#' method is just the unweighted average of all (absolute) signal values that
-#' overlap the given region set. For multiBase data, this includes
-#' signal regions that overlap a regionSet region at all (1 base
-#' overlap or more) and the signal for each overlapping region is
-#' given the same weight for the average regardless of how much it overlaps. 
-#' "proportionWeightedMean" is a weighted average of all signalCoord 
-#' regions that overlap with regionSet regions. For each signalCoord region
-#' that overlaps with a regionSet region, we calculate what proportion
-#' of the regionSet region is covered. Then this proportion is used to
-#' weight the signal value when calculating the mean. 
-#' The denominator of the mean
-#' is the sum of all the proportion overlaps. 
-#' Wilcoxon rank sum test ("rankSum") is also supported but is
-#' skewed toward ranking large region sets highly and is
-#' significantly slower than the "regionMean" method. 
-#' For the ranksum method, the absolute loadings for loadings that
-#' overlap the given region set are taken as a group and all the
-#' loadings that do not overlap the region set are taken as
-#' the other group. Then p value is then given as the score.
-#' It is a one sided test, with the alternative hypothesis
-#' that the loadings in the region set will be greater than
-#' the loadings not in the region set.
+#' @template scoringMetric
 #' @template verbose
 # @param wilcox.conf.int logical. Only applies when using "rankSum" scoring
 # method. returns a 95% confidence interval from the Wilcoxon rank sum test
 # instead of p value.
 #' @template absVal
-#' @return data.frame of results, one row for each region set. 
+#' @return Data.frame of results, one row for each region set. 
 #' It has the following columns:
 #' one column for each item of signalCol with names given
-#' by signalCol. These columns have scores for the region set for each PC.
+#' by signalCol. These columns have scores for the region set for each signalCol.
 #' Other columns: signalCoverage (formerly cytosine_coverage) which
-#' has number of cytosines that overlapped with regionSet (or for "multiBase"
-#' data, 
-#' the number of regions from signalCoord that overlapped regionSet) 
+#' has number of epigenetic features that overlapped at all with regionSet,
 #' regionSetCoverage which has number of regions from regionSet
-#' that overlapped any coordinates from signalCoord, 
+#' that overlapped any of the epigenetic features, 
 #' totalRegionNumber that has
 #' number of regions in regionSet, meanRegionSize that has average
 #' size in base pairs of regions in regionSet, the average is based on
@@ -523,7 +481,7 @@ aggregateSignal <- function(signal,
 #' is used, then the output will also have a "sumProportionOverlap" column.
 #' During this scoring method, the proportion overlap between each signalCoord
 #' region and overlapping regionSet region is calculated. This column is
-#' the sum of all those proportion overlaps and is another method to quantify
+#' the sum of all those proportion overlaps and is another way to quantify
 #' coverage of regionSet in addition to regionSetCoverage.
 #' 
 #' 
@@ -745,24 +703,28 @@ createCorFeatureMat <- function(dataMat, featureMat,
 }
 
 
-#' Create a "meta-region" loading profile 
+#' Create a "meta-region" profile 
 #' 
-#' This loading profile can show enrichment 
-#' of genomic signals with high loading values in region set but not in
+#' This profile can show enrichment 
+#' of genomic signals with high feature contribution scores 
+#' in the region set but not in the
 #' surrounding genome, suggesting that variation is linked specifically
 #' to that region set. 
 #' 
 #' All regions in a given region set 
-#' are combined into a single aggregate profile. Regions should be
+#' are combined into a single aggregate profile. Regions in `regionSet` 
+#' should be
 #' expanded on each side to include a wider area of the genome around
 #' the regions of interest (see example and vignettes). 
-#' To make the profile, first we take 
-#' the absolute value of the loadings. Then each region is
-#' split into `binNum` bins. All loadings in each bin are 
-#' averaged to get one value per bin. Finally, corresponding bins from
-#' the different regions are averaged (eg all bin1's averaged with each other, 
-#' all bin2's averaged with each other, etc.) to get a single "meta-region"
-#' loading profile. Since DNA strand information is not considered, 
+#' To make the profile, first we optionally take 
+#' the absolute value of `signal` (`absVal` parameter). 
+#' Then each expanded regionSet region is
+#' split into `binNum` bins. The corresponding 
+#' bins from each region
+#' (e.g. all bin1's, all bin2's, etc.) are grouped.  
+#' All overlapping values from `signal` are 
+#' aggregated in each bin group according to the `aggrMethod` parameter to 
+#' get a meta-region profile. Since DNA strand information is not considered, 
 #' the profile is averaged symmetrically around the center.
 #' A peak in the middle of this profile suggests
 #' that variability is specific to the region set of interest and is 
@@ -771,55 +733,24 @@ createCorFeatureMat <- function(dataMat, featureMat,
 #' histone modification region sets may be in large genomic blocks
 #' and not show a peak, despite having variation across samples.
 #'
-#'
-#' @param signal matrix of loadings (the coefficients of 
-#' the linear combination that defines each PC). One named column for each PC.
-#' One row for each original dimension/variable (should be same order 
-#' as original data/signalCoord). Given by prcomp(x)$rotation.
+#' @template signal
 #' @template signalCoord
 #' @template regionSet
 #' @template signalCol
 #' @template signalCoordType
 #' @param binNum Number of bins to split each region into when
-#' making the aggregate loading profile. More bins will
+#' making the aggregate profile. More bins will
 #' give a higher resolution but perhaps more noisy profile.
-#' @param verbose A "logical" object. Whether progress 
-#' of the function should be shown, one
-#' bar indicates the region set is completed. Useful when
-#' using `lapply` to get the loading profiles of many region sets.
-#' @param aggrMethod character. A character object with the aggregation method.
-#' Similar to `scoringMetric`.
-#' There are different aggregation methods available for 
-#' signalCoordType="singleBase" vs  signalCoordType="multiBase".
-#' For "singleBase", the available scoring methods are "regionMean" and
-#' "simpleMean". The default method is "regionMean".
-#' For "multiBase", the scoring methods are "proportionWeightedMean" and 
-#' "simpleMean". The default is "proportionWeightedMean".
-#' "regionMean" is a weighted
-#' average of the signal, weighted by region (absolute value of signal 
-#' if absVal=TRUE). First the signal is
-#' averaged within each regionSet region, 
-#' then all the regions are averaged. With
-#' "regionMean" score, be cautious in interpretation for
-#' region sets with low number of regions that overlap signalCoord. 
-#' The "simpleMean"
-#' method is just the unweighted average of all (absolute) signal values that
-#' overlap the given region set. For multiBase data, this includes
-#' signal regions that overlap a regionSet region at all (1 base
-#' overlap or more) and the signal for each overlapping region is
-#' given the same weight for the average regardless of how much it overlaps. 
-#' "proportionWeightedMean" is a weighted average of all signalCoord 
-#' regions that overlap with regionSet regions. For each signalCoord region
-#' that overlaps with a regionSet region, we calculate what proportion
-#' of the regionSet region is covered. Then this proportion is used to
-#' weight the signal value when calculating the mean. 
-#' The denominator of the mean
-#' is the sum of all the proportion overlaps. 
+#' @template verbose
+#' @templateVar usesAggrMethod TRUE
+#' @template scoringMetric
 #' @template absVal
-#' @return A data.frame with the binned loading profile,
-#' one row per bin. columns: binID and one column for each PC
+#' @return A data.frame with the binned meta-region profile,
+#' one row per bin. columns: binID and one column for each target variable
 #' in signalCol. The function will return NULL if there
-#' is no overlap between regionSet and signalCoord.
+#' is no overlap between signalCoord and any of the bin groups that come 
+#' from regionSet (e.g. none of the bin1's overlapped signalCoord, 
+#' NULL returned).
 #' 
 #' @examples 
 #' data("brcaMCoord1")
@@ -830,13 +761,13 @@ createCorFeatureMat <- function(dataMat, featureMat,
 #'                     signalCoord=brcaMCoord1, 
 #'                     regionSet=esr1_chr1_expanded, 
 #'                     signalCol=c("PC1", "PC2"), 
-#'                     binNum=25)
+#'                     binNum=21)
 #' @export
 
 getMetaRegionProfile <- function(signal, signalCoord, regionSet,
                     signalCol = c("PC1", "PC2"),
                     signalCoordType = "default", 
-                    binNum = 25,
+                    binNum = 21,
                     verbose=TRUE,  
                     aggrMethod = "default", absVal=TRUE) {
     
@@ -969,10 +900,11 @@ makeSymmetric <- function(prof) {
 # Produced originally for binning Ewing RRBS data across various region sets
 #
 # @param BSDT A data.table. For COCOA, a data.table of loading values
-# with the PCs to be annotated. One column for the loadings of each PC
-# and also has columns with the coordinates for CpGs that the loadings
-# are for: chr (chromosome) and start column
-# @param rangeDT A data table with the sets of regions to be binned, 
+# with the PCs to be annotated. One column for the signal of each 
+# target variable
+# and also has columns with the coordinates for the epigenetic features:
+# chr (chromosome) and start column (also possibly end)
+# @param rangeDT A data.table with the sets of regions to be binned, 
 # with columns named start, end
 # @param binCount Number of bins across the region
 # @param byRegionGroup Pass along to binCount (see ?binCount)
@@ -982,15 +914,7 @@ makeSymmetric <- function(prof) {
 # bar indicates the region set is completed.
 # useful when using BSBinAggregate with 'apply' to do many 
 # region sets at a time.
-# @param aggrMethod 
-# "unweightedMean" determines whether single, or multiple, genomic signal(s) 
-# that span(s) more than a single position overlap(s) with a region set 
-# location. This method determines the unweighted mean signal of any genomic 
-# signal that overlaps in any amount with a region set region.
-# "proportionWeightedMean" determines whether single, or multiple, 
-# genomic signal(s) that span(s) more than a single position overlap(s) with a 
-# region set location. This method weights the signals by the proportion 
-# overlap with the corresponding region set regions.
+# @param aggrMethod see ?getMetaRegionProfile()
 BSBinAggregate <- function(BSDT, rangeDT, binCount,
                            byRegionGroup = TRUE,
                            splitFactor = NULL,
@@ -1087,10 +1011,7 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount,
 
 # modification of BSAggregate to just return mean per region
 # 
-# @param signal matrix of loadings (the coefficients of 
-# the linear combination that defines each PC). One named column for each PC.
-# One row for each original dimension/variable (should be same order 
-# as original data/signalCoord). The x$rotation output of prcomp().
+# @template signal
 # @template signalCoord
 # @template regionSet
 # Must be from the same reference genome
@@ -1102,7 +1023,8 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount,
 # @template absVal
 # @return a data.table with region coordinates and average loading 
 # values for each region. Has columns chr, start, end, and a column for each
-# PC in signalCol. Regions are not in order along the rows of the data.table.
+# target variable in signalCol. 
+# Regions are not in order along the rows of the data.table.
 #
 # @example averagePerRegion(BSDT = BSDT, regionsGRL, 
 #          jCommand = MIRA:::buildJ(cols = "methylProp", "mean")) 
@@ -1264,24 +1186,26 @@ weightedAvePerRegion <- function(signalDT,
 
 
 
-#' Get regions that are most associated with PCs of interest
+#' Get regions that are most associated with target variable
 #'
-#' Get a GRanges with top regions from the region set based on average
-#' loadings for the regions or the quantile of the region's loading.
-#' Returns average loading or quantile as GRanges metadata.
+#' Get a GRanges with top regions from the region set based on 
+#' average feature contribution scores
+#' for the regions or the quantile of the region's average
+#' feature contribution score based on the 
+#' distribution of all feature contribution scores for the target variable.
+#' Returns average feature contribution score or quantile as GRanges metadata.
 #' 
-#' @param signal matrix of loadings (the coefficients of 
-#' the linear combination that defines each PC). One named column for each PC.
-#' One row for each original dimension/variable (should be same order 
-#' as original data/signalCoord). The x$rotation output of prcomp().
+#' @template signal
 #' @template signalCoord
 #' @template regionSet
 #' @template signalCol
 #' @param returnQuantile "logical" object. If FALSE, return region averages. If TRUE,
 #' for each region, return the quantile of that region's average value
-#' based on the distribution of individual genomic signal/feature values
+#' based on the distribution of individual feature values in `signal` for
+#' that `signalCol`
 #' @return a GRanges object with region coordinates for regions with
-#' scores/quantiles above "cutoff" for any PC in signalCol. The scores/quantiles
+#' scores/quantiles above "cutoff" for any target variable in signalCol. 
+#' The scores/quantiles
 #' for signalCol are given as metadata in the GRanges.
 
 # Are regions in order along the rows of the data.table?
@@ -1669,14 +1593,17 @@ BSFilter <- function(BSDT, minReads = 10, excludeGR = NULL) {
 
 #' Get indices for top scored region sets 
 #' 
-#' For each PC, get index of original region sets but ordered by rsScores
-#' ranking for each PC. The original index refers to that region set's position
+#' For each target variable, get index of original region sets 
+#' but ordered by rsScores
+#' ranking for each target variable. 
+#' The original index refers to that region set's position
 #' in the `GRList` param given to `runCOCOA` which is also that region set's
 #' row index in the COCOA output. The first number in a given column 
 #' of this function's output will be the
-#' original index of the region set ranked first for that PC. Second row for a
+#' original index of the region set ranked first for that target variable.
+#' The second row for a
 #' column will be the original index of the region set that ranked second
-#' for that PC, etc. You can use this function to make it easier 
+#' for that target variable, etc. You can use this function to make it easier 
 #' when you want to select the top region sets for further analysis or
 #' just for sorting the results. Region set scores are sorted in decreasing
 #' or increasing order according to the `decreasing` parameter.
@@ -1684,13 +1611,16 @@ BSFilter <- function(BSDT, minReads = 10, excludeGR = NULL) {
 #' @template rsScores
 #' @templateVar isRSRankingIndex TRUE
 #' @template signalCol
-#' @param decreasing logical. Whether to sort rsScores in decreasing 
+#' @param decreasing Logical. Whether to sort rsScores in decreasing 
 #' or increasing order. 
-#' @param newColName character. The names of the columns of the output data.frame.
+#' @param newColName Character. The names of the columns of the output data.frame.
 #' The order should correspond to the order of the
 #'  input columns given by signalCol.
-#' @return A data.frame with columns signalCol. Each column has been 
-#' sorted by score for region sets for that PC (order given by `decreasing`
+#' @return A data.frame with one column for each `signalCol`. 
+#' Column names are given by `signalCol` or `newColName` (if used). 
+#' Each column has been 
+#' sorted by score for region sets for that target variable 
+#' (order given by `decreasing`
 #' param).
 #' Original indices for region sets that were used to create rsScores
 #' are given. Region sets with a score of NA are counted as having the 
@@ -1706,7 +1636,8 @@ BSFilter <- function(BSDT, minReads = 10, excludeGR = NULL) {
 #' 
 #' @export
 #' 
-rsRankingIndex <- function(rsScores, signalCol, decreasing=TRUE, newColName = signalCol) {
+rsRankingIndex <- function(rsScores, signalCol, 
+                           decreasing=TRUE, newColName = signalCol) {
     
     if (!(is(rsScores, "data.frame") || is(rsScores, "matrix"))) {
         stop("rsScores should be a data.frame. Check object class.")

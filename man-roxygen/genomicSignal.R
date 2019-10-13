@@ -1,4 +1,4 @@
-#' @param genomicSignal matrix/data.frame. 
+#' @param genomicSignal Matrix/data.frame. 
 #' The genomic signal (e.g. DNA methylation levels)
 #' Columns of genomicSignal should be samples/patients. 
 #' Rows should be individual signal/features
