@@ -18,22 +18,25 @@ Rows should be in the same order as the region sets in GRList
 (the list of region sets used to create rsScores.)}
 
 \item{signalCol}{A character vector with the sample variables
-of interest (e.g. PCs or sample phenotypes). 
+of interest/target variables (e.g. PCs or sample phenotypes). 
 The columns in rsScores for which you want
 the indices of the original region sets.
 
 e.g. c("PC1", "PC2")}
 
-\item{decreasing}{logical. Whether to sort rsScores in decreasing 
+\item{decreasing}{Logical. Whether to sort rsScores in decreasing 
 or increasing order.}
 
-\item{newColName}{character. The names of the columns of the output data.frame.
+\item{newColName}{Character. The names of the columns of the output data.frame.
 The order should correspond to the order of the
  input columns given by signalCol.}
 }
 \value{
-A data.frame with columns signalCol. Each column has been 
-sorted by score for region sets for that PC (order given by `decreasing`
+A data.frame with one column for each `signalCol`. 
+Column names are given by `signalCol` or `newColName` (if used). 
+Each column has been 
+sorted by score for region sets for that target variable 
+(order given by `decreasing`
 param).
 Original indices for region sets that were used to create rsScores
 are given. Region sets with a score of NA are counted as having the 
@@ -41,14 +44,17 @@ lowest scores and indices for these region sets will be at the bottom of the
 returned data.frame (na.last=TRUE in sorting)
 }
 \description{
-For each PC, get index of original region sets but ordered by rsScores
-ranking for each PC. The original index refers to that region set's position
+For each target variable, get index of original region sets 
+but ordered by rsScores
+ranking for each target variable. 
+The original index refers to that region set's position
 in the `GRList` param given to `runCOCOA` which is also that region set's
 row index in the COCOA output. The first number in a given column 
 of this function's output will be the
-original index of the region set ranked first for that PC. Second row for a
+original index of the region set ranked first for that target variable.
+The second row for a
 column will be the original index of the region set that ranked second
-for that PC, etc. You can use this function to make it easier 
+for that target variable, etc. You can use this function to make it easier 
 when you want to select the top region sets for further analysis or
 just for sorting the results. Region set scores are sorted in decreasing
 or increasing order according to the `decreasing` parameter.

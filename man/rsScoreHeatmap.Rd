@@ -23,60 +23,65 @@ Rows should be in the same order as the region sets in GRList
 (the list of region sets used to create rsScores.)}
 
 \item{signalCol}{A character vector with the sample variables
-of interest (e.g. PCs or sample phenotypes). 
+of interest/target variables (e.g. PCs or sample phenotypes). 
 
 
 Must be column names of rsScores.
 e.g. c("PC1", "PC2")}
 
-\item{orderByCol}{a character object. PC to order by in heatmap 
+\item{orderByCol}{A character object. Target variable to order by in heatmap 
 (arranged in decreasing order for scores so p values should 
 be -log transformed). Must be the name of a column in rsScores.}
 
-\item{rsNameCol}{character. Name of the column in rsScores that has the
+\item{rsNameCol}{Character. Name of the column in rsScores that has the
 names/identifiers for the region sets so these can be included 
 in the plot as row names.}
 
 \item{topX}{Number of top region sets to include in the heatmap}
 
-\item{col}{a vector of colors or a color mapping function which
+\item{col}{A vector of colors or a color mapping function which
 will be passed to the ComplexHeatmap::Heatmap() function. See ?Heatmap
 (the "col" parameter) for more details. "#EEEEEE" is the code for a
 color similar to white.}
 
-\item{row_title}{character object, row title}
+\item{row_title}{Character object, row title}
 
-\item{column_title}{character object, column title}
+\item{column_title}{Character object, column title}
 
-\item{column_title_side}{character object, where to put the column title:
+\item{column_title_side}{Character object, where to put the column title:
 "top" or "bottom"}
 
-\item{cluster_rows}{"logical" object, whether rows should be clustered. 
+\item{cluster_rows}{Logical object, whether rows should be clustered. 
 This should be kept as FALSE to keep the correct ranking of region sets.}
 
-\item{cluster_columns}{"logical" object, whether to cluster columns. It is recommended
-to keep this as FALSE so it will be easier to compare PCs 
-(with cluster_columns = FALSE, they will be in the same specified
-order in different heatmaps)}
+\item{cluster_columns}{Logical object, whether to cluster columns. 
+It is recommended
+to keep this as FALSE so it will be easier to compare target variables
+that are ordered (such as principal components). 
+With cluster_columns = FALSE, they will be in the same specified
+order in different heatmaps.}
 
-\item{show_row_names}{"logical" object, display row names (ie region set names)}
+\item{show_row_names}{Logical object, display row names (ie region set names)}
 
 \item{row_names_max_width}{"unit" object. The amount of room to 
 allocate for row names. See ?grid::unit for object type.}
 
-\item{name}{character object, legend title}
+\item{name}{Character object, legend title}
 
-\item{...}{optional parameters for ComplexHeatmap::Heatmap().}
+\item{...}{Optional parameters for ComplexHeatmap::Heatmap().}
 }
 \value{
 A heatmap of region set scores across. Each row is a region set,
-each column is a PC. The color corresponds to the relative rank of a 
-region set's score for a given PC out of all tested region sets.
+each column is a target variable. 
+The color corresponds to the relative rank of a 
+region set's score for a given target variable out of all tested region sets.
 }
 \description{
-Heatmap of the ranking of region set scores across PCs
-A visualization of the rank of region sets in each PC, allowing the
-user to see if a region set is ranked highly in all PCs or only a subset.
+Heatmap of the ranking of region set scores across target variables.
+A visualization of the rank of region sets in each target variable, 
+allowing the
+user to see if a region set is ranked highly for all target variables 
+or only a subset.
 Region sets will be ranked from highest scoring to lowest based on 
 their score for `orderByCol`.
 The ComplexHeatmap package

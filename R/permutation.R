@@ -19,48 +19,48 @@
 #' 
 #' 
 #' For reproducibility, set seed with 'set.seed()' function before running.
-#' @param nPerm numeric. The number of permutations to do.
+#' @param nPerm Numeric. The number of permutations to do.
 #' @template genomicSignal
 #' @template signalCoord
 #' @template GRList
 #' @template rsScores
 #' @template sampleLabels
-#' @param signalCol character. The column names of `sampleLabels` that
+#' @param signalCol Character. The column names of `sampleLabels` that
 #' you want to test. These must also be columns in rsScores.
 #' @template scoringMetric
 #' @template absVal
-#' @param dataID character. A unique identifier for this dataset 
+#' @param dataID Character. A unique identifier for this dataset 
 #' (for saving results with simpleCache)
-#' @param variationMetric character. Either "cor" (Pearson correlation), 
+#' @param variationMetric Character. Either "cor" (Pearson correlation), 
 #' "pcor" (partial correlation), "spearmanCor (Spearman correlation) 
 #' or "cov" (covariation). 
-#' @param useSimpleCache logical. Whether to use save caches. Caches
+#' @param useSimpleCache Logical. Whether to use save caches. Caches
 #' will be created for each permutation so that if the function is disrupted
 #' it can restart where it left off. The final results are also saved 
 #' as a cache. See simpleCache package for more details.
-#' @param cacheDir character. The path for the directory in which the
+#' @param cacheDir Character. The path for the directory in which the
 #' caches should be saved. 
-#' @param correctionMethod character. P value correction method. Default
+#' @param correctionMethod Character. P value correction method. Default
 #' is "BH" for Benjamini and Hochberg false discovery rate. For acceptable 
 #' arguments and more info see ?stats::p.adjust() (method parameter) 
-#' @param gammaFitMethod character. method to use for fitting the gamma
+#' @param gammaFitMethod Character. method to use for fitting the gamma
 #' distribution to null distribution. Options are 
 #' "mme" (moment matching estimation), "mle" (maximum likelihood estimation), 
 #' "qme" (quantile matching estimation), and "mge" (maximum goodness-of-fit 
 #' estimation). See ?COCOA::getGammaPVal and 
 #' ?fitdistrplus::fitdist() for more info.
-#' @param realScoreInDist logical. Should the actual score (from 
+#' @param realScoreInDist Logical. Should the actual score (from 
 #' test with no permutations) be included in the null distribution 
 #' when fitting the gamma distribution. realScoreInDist=TRUE is 
 #' recommended.
-#' @param force logical. If force=TRUE, when fitting the gamma distribution
+#' @param force Logical. If force=TRUE, when fitting the gamma distribution
 #' returns an error (as may happen when a method other than "mme"
 #' is used) then allow the error. If force=FALSE, when fitting the 
 #' gamma distribution returns an error then don't return an error but 
 #' instead use the "mme" method
 #' for fitting that specific gamma distribution.
 #' @template verbose
-#' @param ... character. Optional additional arguments for simpleCache.
+#' @param ... Character. Optional additional arguments for simpleCache.
 #'
 #' 
 #' @return Returns a list where each item is a data.frame of COCOA results 
@@ -548,10 +548,10 @@ pGammaList <- function(scoreVec, fitDistrList) {
 
 
 #' @template rsScores 
-#' @param nullDistList list. one item per region set. Each item is a 
+#' @param nullDistList List. one item per region set. Each item is a 
 #' data.frame with the 
 #' null distribution for a single region set. Each column in the data.frame
-#' is for a single variable (e.g. PC or latent factor)
+#' is for a single target variable (e.g. PC or phenotype)
 #' @param calcCols
 #' @param testType character. "greater", "lesser", "two-sided" Whether to
 #' create p values based on one sided test or not.

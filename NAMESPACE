@@ -2,10 +2,11 @@
 
 export(aggregateSignal)
 export(convertToFromNullDist)
+export(corPerm)
 export(getGammaPVal)
 export(getMetaRegionProfile)
 export(getPermStat)
-export(regionQuantileByVOI)
+export(regionQuantileByTargetVar)
 export(rsRankingIndex)
 export(rsScoreHeatmap)
 export(runCOCOA)

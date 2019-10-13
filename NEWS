@@ -22,6 +22,7 @@ Notable changes to this project will be documented in this file.
         - different scoring method for single base vs multiple base data
     - Other changes
         - absVal parameter added for several functions (aggregateLoadings, getLoadingProfile, runCOCOA)
+        - getMetaRegionProfile: default binNum changed from 25 to 21
 
 ## [1.0.2] -- 2019-03-06
 

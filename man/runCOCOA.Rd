@@ -2,26 +2,31 @@
 % Please edit documentation in R/COCOA.R
 \name{runCOCOA}
 \alias{runCOCOA}
-\title{Do COCOA with many region sets}
+\title{Score many region sets}
 \usage{
 runCOCOA(signal, signalCoord, GRList, signalCol = c("PC1", "PC2"),
   signalCoordType = "default", scoringMetric = "default",
   verbose = TRUE, absVal = TRUE)
 }
 \arguments{
-\item{signal}{matrix of loadings (the coefficients of 
-the linear combination that defines each PC). One named column for each PC.
-One row for each original dimension/variable (should be same order 
-as original data/signalCoord). The x$rotation output of prcomp().}
+\item{signal}{Matrix of feature contribution scores (the contribution of 
+each epigenetic feature to each target variable). One named column for each 
+target variable.
+One row for each original epigenetic feature (should be same order 
+as original data/signalCoord). For (an unsupervised) example, if PCA was
+done on epigenetic data and the
+goal was to find region sets associated with the principal components, you 
+could use the x$rotation output of prcomp(epigenetic data) as the
+feature contribution scores/`signal` parameter.}
 
-\item{signalCoord}{a GRanges object or data frame with coordinates 
-for the genomic signal/original data (eg DNA methylation/ATAC-seq) 
+\item{signalCoord}{A GRanges object or data frame with coordinates 
+for the genomic signal/original epigenetic data. 
 Coordinates should be in the 
-same order as the original data and the loadings 
+same order as the original data and the feature contribution scores 
 (each item/row in signalCoord
 corresponds to a row in signal). If a data.frame, 
-must have chr and start columns. If end is included, start 
-and end should be the same. Start coordinate will be used for calculations.}
+must have chr and start columns (optionally can have end column, 
+depending on the epigenetic data type).}
 
 \item{GRList}{GRangesList object. Each list item is 
 a distinct region set to test (region set: regions that correspond to 
@@ -30,16 +35,17 @@ must be from the same reference genome
 as the coordinates for the actual data/samples (signalCoord).}
 
 \item{signalCol}{A character vector with the sample variables
-of interest (e.g. PCs or sample phenotypes). 
+of interest/target variables (e.g. PCs or sample phenotypes). 
 
 
 
 e.g. c("PC1", "PC2")}
 
-\item{signalCoordType}{character. Can be "default", "singleBase", or 
+\item{signalCoordType}{Character. Can be "default", "singleBase", or 
 "multiBase". This describes whether the coordinates for `signal` 
 (`signalCoord`) are each a single base (e.g. as for DNA methylation)
-or a region/multiple bases (e.g. as for ATAC-seq). Different scoring
+or a region/multiple bases (e.g. as for chromatin accessibility). 
+Different scoring
 options are available for each type of data. If "default" is given,
 the type of coordinates will be detected automatically. For "default", if each
 coordinate start value equals the coordinate end value 
@@ -47,18 +53,18 @@ coordinate start value equals the coordinate end value
 will be used. Otherwise, "multiBase" will be used.}
 
 \item{scoringMetric}{A character object with the scoring metric.
-There are different scoring metrics available for 
+There are different methods available for 
 signalCoordType="singleBase" vs  signalCoordType="multiBase".
-For "singleBase", the available scoring methods are "regionMean", 
-"simpleMean", and "rankSum". The default method is "regionMean".
-For "multiBase", the scoring methods are "proportionWeightedMean" and 
+For "singleBase", the available methods are "regionMean" and 
+"simpleMean". The default method is "regionMean".
+For "multiBase", the methods are "proportionWeightedMean" and 
 "simpleMean". The default is "proportionWeightedMean".
 "regionMean" is a weighted
 average of the signal, weighted by region (absolute value of signal 
 if absVal=TRUE). First the signal is
 averaged within each regionSet region, 
 then all the regions are averaged. With
-"regionMean" score, be cautious in interpretation for
+"regionMean" method, be cautious in interpretation for
 region sets with low number of regions that overlap signalCoord. 
 The "simpleMean"
 method is just the unweighted average of all (absolute) signal values that
@@ -72,23 +78,13 @@ that overlaps with a regionSet region, we calculate what proportion
 of the regionSet region is covered. Then this proportion is used to
 weight the signal value when calculating the mean. 
 The denominator of the mean
-is the sum of all the proportion overlaps. 
-Wilcoxon rank sum test ("rankSum") is also supported but is
-skewed toward ranking large region sets highly and is
-significantly slower than the "regionMean" method. 
-For the ranksum method, the absolute loadings for loadings that
-overlap the given region set are taken as a group and all the
-loadings that do not overlap the region set are taken as
-the other group. Then p value is then given as the score.
-It is a one sided test, with the alternative hypothesis
-that the loadings in the region set will be greater than
-the loadings not in the region set.}
+is the sum of all the proportion overlaps.}
 
 \item{verbose}{A "logical" object. Whether progress 
 of the function should be shown. One
 bar indicates the region set is completed.}
 
-\item{absVal}{logical. If TRUE, take the absolute value of values in
+\item{absVal}{Logical. If TRUE, take the absolute value of values in
 signal. Choose TRUE if you think there may be some 
 genomic loci in a region set that will increase and others
 will decrease (if there may be anticorrelation between
@@ -97,16 +93,14 @@ given region set to all change in the same direction (all be positively
 correlated with each other).}
 }
 \value{
-data.frame of results, one row for each region set. 
+Data.frame of results, one row for each region set. 
 It has the following columns:
 one column for each item of signalCol with names given
-by signalCol. These columns have scores for the region set for each PC.
+by signalCol. These columns have scores for the region set for each signalCol.
 Other columns: signalCoverage (formerly cytosine_coverage) which
-has number of cytosines that overlapped with regionSet (or for "multiBase"
-data, 
-the number of regions from signalCoord that overlapped regionSet) 
+has number of epigenetic features that overlapped at all with regionSet,
 regionSetCoverage which has number of regions from regionSet
-that overlapped any coordinates from signalCoord, 
+that overlapped any of the epigenetic features, 
 totalRegionNumber that has
 number of regions in regionSet, meanRegionSize that has average
 size in base pairs of regions in regionSet, the average is based on
@@ -115,15 +109,15 @@ For "multiBase" data, if the "proportionWeightedMean" scoring metric
 is used, then the output will also have a "sumProportionOverlap" column.
 During this scoring method, the proportion overlap between each signalCoord
 region and overlapping regionSet region is calculated. This column is
-the sum of all those proportion overlaps and is another method to quantify
+the sum of all those proportion overlaps and is another way to quantify
 coverage of regionSet in addition to regionSetCoverage.
 }
 \description{
-This function will give each region set a score for each PC
-in `signalCol` based on
+This function will give each region set a score for each target variable
+given by `signalCol` based on
 the `scoringMetric` parameter. Based on these scores, you can determine
-which region sets out of a region set database (given by GRList) 
-are most associated with the top PCs. See the vignette "Introduction
+which region sets out of a region set database (given by `GRList`) 
+are most associated with the target variables. See the vignette "Introduction
 to Coordinate Covariation Analysis" for help interpreting your 
 results.
 }

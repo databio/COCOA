@@ -6,26 +6,28 @@
 \alias{COCOA-package}
 \title{Coordinate Covariation Analysis (COCOA)}
 \description{
-COCOA is a method for understanding variation among samples.
+COCOA is a method for understanding epigenetic variation among samples.
 COCOA can be used with data that includes 
-genomic coordinates such as DNA methylation. 
-To describe the method on a high level, COCOA uses a database of 
-"region sets" and principal component analysis (PCA) of your data 
-to identify sources of variation among samples. A region set is a set of 
+genomic coordinates and an epigenetic signal,
+such as DNA methylation and chromatin accessibility 
+data. 
+To describe the method on a high level, COCOA quantifies 
+inter-sample variation with either a supervised or unsupervised 
+technique then uses a database of "region sets" to 
+annotate the variation among samples. A region set is a set of 
 genomic regions that share a biological annotation, 
 for instance transcription factor (TF) binding regions, 
 histone modification regions, or open chromatin regions. 
-In contrast to some other common techniques, COCOA is unsupervised, 
-meaning that samples do not have to be divided into groups 
-such as case/control or healthy/disease, although COCOA works in 
-those situations as well. Also, COCOA focuses on continuous variation 
+In contrast to some other common techniques, COCOA offers both
+supervised (known groups/phenotype) and unsupervised (no known groups/
+phenotype) analyses. Also, COCOA focuses on continuous variation 
 between samples instead of having cutoffs. Because of this, COCOA can 
 be used as a complementary method alongside "differential" methods 
 that find discrete differences between groups of samples and 
 it can also be used in situations where there are no groups.  
 COCOA can identify biologically meaningful 
 sources of variation between samples and increase understanding of 
-variation in your data.
+epigenetic variation in your data.
 }
 \references{
 \url{http://github.com/databio}

@@ -12,20 +12,20 @@ runCOCOAPerm(genomicSignal, signalCoord, GRList, rsScores, sampleLabels,
   realScoreInDist = TRUE, force = FALSE, verbose = TRUE, ...)
 }
 \arguments{
-\item{genomicSignal}{matrix/data.frame. 
+\item{genomicSignal}{Matrix/data.frame. 
 The genomic signal (e.g. DNA methylation levels)
 Columns of genomicSignal should be samples/patients. 
 Rows should be individual signal/features
 (each row corresponds to one genomic coordinate/range)}
 
-\item{signalCoord}{a GRanges object or data frame with coordinates 
-for the genomic signal/original data (eg DNA methylation/ATAC-seq) 
+\item{signalCoord}{A GRanges object or data frame with coordinates 
+for the genomic signal/original epigenetic data. 
 Coordinates should be in the 
-same order as the original data and the loadings 
+same order as the original data and the feature contribution scores 
 (each item/row in signalCoord
 corresponds to a row in signal). If a data.frame, 
-must have chr and start columns. If end is included, start 
-and end should be the same. Start coordinate will be used for calculations.}
+must have chr and start columns (optionally can have end column, 
+depending on the epigenetic data type).}
 
 \item{GRList}{GRangesList object. Each list item is 
 a distinct region set to test (region set: regions that correspond to 
@@ -43,27 +43,28 @@ Rows should be in the same order as the region sets in GRList
 (the list of region sets used to create rsScores.)}
 
 \item{sampleLabels}{Matrix or data.frame. Rows should be samples, 
-columns should be "features" 
-(whatever you want to get correlation with: eg PC scores),
+columns should be the target variables 
+(whatever variable you want to test for association with
+the epigenetic signal: e.g. PC scores),
 all columns in featureMat will be used (subset when passing to function
-in order to not use all columns)}
+in order to not use all columns).}
 
-\item{signalCol}{character. The column names of `sampleLabels` that
+\item{signalCol}{Character. The column names of `sampleLabels` that
 you want to test. These must also be columns in rsScores.}
 
 \item{scoringMetric}{A character object with the scoring metric.
-There are different scoring metrics available for 
+There are different methods available for 
 signalCoordType="singleBase" vs  signalCoordType="multiBase".
-For "singleBase", the available scoring methods are "regionMean" and 
+For "singleBase", the available methods are "regionMean" and 
 "simpleMean". The default method is "regionMean".
-For "multiBase", the scoring methods are "proportionWeightedMean" and 
+For "multiBase", the methods are "proportionWeightedMean" and 
 "simpleMean". The default is "proportionWeightedMean".
 "regionMean" is a weighted
 average of the signal, weighted by region (absolute value of signal 
 if absVal=TRUE). First the signal is
 averaged within each regionSet region, 
 then all the regions are averaged. With
-"regionMean" score, be cautious in interpretation for
+"regionMean" method, be cautious in interpretation for
 region sets with low number of regions that overlap signalCoord. 
 The "simpleMean"
 method is just the unweighted average of all (absolute) signal values that
@@ -79,7 +80,7 @@ weight the signal value when calculating the mean.
 The denominator of the mean
 is the sum of all the proportion overlaps.}
 
-\item{absVal}{logical. If TRUE, take the absolute value of values in
+\item{absVal}{Logical. If TRUE, take the absolute value of values in
 signal. Choose TRUE if you think there may be some 
 genomic loci in a region set that will increase and others
 will decrease (if there may be anticorrelation between
@@ -87,40 +88,40 @@ regions in a region set). Choose FALSE if you expect regions in a
 given region set to all change in the same direction (all be positively
 correlated with each other).}
 
-\item{variationMetric}{character. Either "cor" (Pearson correlation), 
+\item{variationMetric}{Character. Either "cor" (Pearson correlation), 
 "pcor" (partial correlation), "spearmanCor (Spearman correlation) 
 or "cov" (covariation).}
 
-\item{nPerm}{numeric. The number of permutations to do.}
+\item{nPerm}{Numeric. The number of permutations to do.}
 
-\item{useSimpleCache}{logical. Whether to use save caches. Caches
+\item{useSimpleCache}{Logical. Whether to use save caches. Caches
 will be created for each permutation so that if the function is disrupted
 it can restart where it left off. The final results are also saved 
 as a cache. See simpleCache package for more details.}
 
-\item{cacheDir}{character. The path for the directory in which the
+\item{cacheDir}{Character. The path for the directory in which the
 caches should be saved.}
 
-\item{dataID}{character. A unique identifier for this dataset 
+\item{dataID}{Character. A unique identifier for this dataset 
 (for saving results with simpleCache)}
 
-\item{correctionMethod}{character. P value correction method. Default
+\item{correctionMethod}{Character. P value correction method. Default
 is "BH" for Benjamini and Hochberg false discovery rate. For acceptable 
 arguments and more info see ?stats::p.adjust() (method parameter)}
 
-\item{gammaFitMethod}{character. method to use for fitting the gamma
+\item{gammaFitMethod}{Character. method to use for fitting the gamma
 distribution to null distribution. Options are 
 "mme" (moment matching estimation), "mle" (maximum likelihood estimation), 
 "qme" (quantile matching estimation), and "mge" (maximum goodness-of-fit 
 estimation). See ?COCOA::getGammaPVal and 
 ?fitdistrplus::fitdist() for more info.}
 
-\item{realScoreInDist}{logical. Should the actual score (from 
+\item{realScoreInDist}{Logical. Should the actual score (from 
 test with no permutations) be included in the null distribution 
 when fitting the gamma distribution. realScoreInDist=TRUE is 
 recommended.}
 
-\item{force}{logical. If force=TRUE, when fitting the gamma distribution
+\item{force}{Logical. If force=TRUE, when fitting the gamma distribution
 returns an error (as may happen when a method other than "mme"
 is used) then allow the error. If force=FALSE, when fitting the 
 gamma distribution returns an error then don't return an error but 
@@ -131,7 +132,7 @@ for fitting that specific gamma distribution.}
 of the function should be shown. One
 bar indicates the region set is completed.}
 
-\item{...}{character. Optional additional arguments for simpleCache.}
+\item{...}{Character. Optional additional arguments for simpleCache.}
 
 \item{sampleLabels}{data.frame/matrix. Sample labels/values that 
 you are running COCOA to find region sets associated with. These 
