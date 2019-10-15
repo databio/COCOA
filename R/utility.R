@@ -30,14 +30,16 @@ checkConvertInputClasses <- function(signal=NULL,
         }
     }
     if (!is.null(signalCoord)) {
-        if (is(signalCoord, "GRanges")) {
-            coordinateDT <- grToDt(signalCoord)
-            assign("coordinateDT", coordinateDT, envir=.env)
-        } else if (is(signalCoord, "data.frame")) {
-            coordinateDT <- signalCoord
-            assign("coordinateDT", coordinateDT, envir=.env)
-        } else {
-            stop("signalCoord should be a data.frame or GRanges object.")
+        # if (is(signalCoord, "GRanges")) {
+            # coordinateDT <- grToDt(signalCoord)
+            # assign("coordinateDT", coordinateDT, envir=.env)
+        # } 
+        # signalCoord should be a GRanges
+        if (is(signalCoord, "data.frame")) {
+            signalCoord <- dtToGr(signalCoord)
+            assign("signalCoord", signalCoord, envir=.env)
+        } else if (!is(signalCoord, "GRanges")) {
+            stop("signalCoord should be a GRanges object.")
         }
     }
     if (!is.null(regionSet)) {

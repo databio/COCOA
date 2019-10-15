@@ -416,7 +416,6 @@ regionQuantileByTargetVar <- function(signal, signalCoord, regionSet,
     ################### checking inputs  #################################
     
     ########## check that inputs are the correct class
-    # exports coordinateDT to this environment (converts signalCoord)
     checkConvertInputClasses(signal=signal,
                              signalCoord=signalCoord,
                              regionSet=regionSet,
@@ -424,7 +423,7 @@ regionQuantileByTargetVar <- function(signal, signalCoord, regionSet,
     
     ########## check that dimensions of inputs are consistent
     # length of signal coord = nrow of `signal`
-    if (nrow(coordinateDT) != nrow(signal)) {
+    if (length(signalCoord) != nrow(signal)) {
         stop(cleanws("The number of coordinates in 
             signalCoord (length(signalCoord)) does not equal the number of 
                      rows in `signal`"))
@@ -455,7 +454,7 @@ regionQuantileByTargetVar <- function(signal, signalCoord, regionSet,
     
     
     rsRegionAverage <- averagePerRegion(signal = signal, 
-                                       signalCoord =coordinateDT, 
+                                       signalCoord =signalCoord, 
                                        regionSet = regionSet, 
                                        signalCol = signalCol,
                                        returnQuantile = TRUE,
