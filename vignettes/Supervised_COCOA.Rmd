@@ -34,7 +34,7 @@ data("brcaPCScores657")
 sampleLabels <- brcaPCScores657[colnames(brcaMethylData1), ]
 ```
 
-
+Let's convert estrogen receptor status to a number so we can do calculations with it. Then we will quantify the association between ER status and the DNA methylation level at each cytosine using Pearson correlation.
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 sampleLabels$ER_Status <- scale(as.numeric(sampleLabels$ER_Status), 
@@ -43,6 +43,7 @@ methylCor <- cor(t(brcaMethylData1), sampleLabels$ER_Status)
 colnames(methylCor) <- "ER_Status"
 ```
 
+Now we have a feature contribution score (the correlation coefficient in this case) for each methylation site that represents how much the methylation at that site is associated with ER status. We can use those individual cytosine scores to score region sets. We'll score our region sets with the `runCOCOA` function.
 
 # Score region sets
 
@@ -58,10 +59,13 @@ rsScores <- runCOCOA(signal=methylCor,
 rsScores
 ```
 
-Done in one step with corPerm
+Now we have a score for each region set that represents how much epigenetic variation in that region set is associated with the phenotype of interest, ER status.
+
+Both the correlation and scoring steps can be combined into one step with the `corPerm` function as will be shown in the next section. 
 
 # Estimating statistical significance
 
+Now that we have a score for each region set, we want to get an idea of the statistical significance of
 
 ## Permutations
 
