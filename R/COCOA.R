@@ -51,7 +51,7 @@
 #' @importFrom methods hasArg
 #' @importFrom fitdistrplus fitdist
 #' @importFrom simpleCache simpleCache
-#' @importFrom ppcor pcor
+#' @importFrom ppcor pcor.test
 NULL
 
 # now package lists GenomicRanges in "Depends" instead of "Imports" in 
@@ -140,7 +140,6 @@ aggregateSignal <- function(signal,
     ################### checking inputs  #################################
     
     ########## check that inputs are the correct class
-    # exports coordinateDT to this environment (converts signalCoord)
     checkConvertInputClasses(signal=signal,
                              signalCoord=signalCoord,
                              regionSet=regionSet,
@@ -148,7 +147,7 @@ aggregateSignal <- function(signal,
     
     ########## check that dimensions of inputs are consistent
     # length of signal coord = nrow of signal
-    if (nrow(coordinateDT) != nrow(signal)) {
+    if (length(signalCoord) != nrow(signal)) {
         stop(cleanws("The number of coordinates in 
             signalCoord (length(signalCoord)) does not equal the number of 
                      rows in `signal`"))
@@ -184,23 +183,12 @@ aggregateSignal <- function(signal,
     
     # detect signalCoordType
     if (signalCoordType == "default") {
-        if (is(signalCoord, "data.frame")) {
-            if ("end" %in% colnames(signalCoord)) {
-                if (all(signalCoord$start == signalCoord$end)) {
-                    signalCoordType <- "singleBase"
-                } else {
-                    signalCoordType <- "multiBase"
-                }
-            } else {
-                signalCoordType <- "singleBase"
-            }
+        
+        # when signalCoord is a GRanges object
+        if (any(start(signalCoord) != end(signalCoord))) {
+            signalCoordType <- "multiBase"
         } else {
-            # when signalCoord is a GRanges object
-            if (all(start(signalCoord) == end(signalCoord))) {
-                signalCoordType <- "singleBase" 
-            } else {
-                signalCoordType <- "multiBase"
-            }
+            signalCoordType <- "singleBase"
         }
     }
     
@@ -240,15 +228,14 @@ aggregateSignal <- function(signal,
         signal <- abs(signal) # required for later code
     }
     
-    loadingDT  <- as.data.table(signal)
+    # XX copies unnecessarily:reformat into data.table with chromosome location and weight
     
-    # reformat into data.table with chromosome location and weight
-    # also restricting to signalCol so unnecessary computations 
+    # restricting to signalCol so unnecessary computations 
     # are not done
-    loadingDT <- data.table(coordinateDT, 
-                            loadingDT[, signalCol, with=FALSE])
+    loadingDT  <- as.data.table(signal[, signalCol])
+
     # naming does not work if only using one PC so add this line for that case
-    setnames(loadingDT, c(colnames(coordinateDT), signalCol))
+    setnames(loadingDT, c(signalCol))
     
     # would rounding speed up aggregation?, potentially make a sparse matrix
     # if a lot of entries became 0
@@ -269,6 +256,7 @@ aggregateSignal <- function(signal,
                 # modified copy
                 loadAgMain <- BSAggregate(BSDT = loadingDT, 
                                           regionsGRL = GRangesList(regionSet),
+                                          BSCoord = signalCoord,
                                           jExpr = aggrCommand,
                                           byRegionGroup = TRUE,
                                           splitFactor = NULL,
@@ -291,7 +279,9 @@ aggregateSignal <- function(signal,
             }
         } else if (scoringMetric == "simpleMean") {
             # average of loadings for all CpGs within region set
-            loadMetrics <- signalOLMetrics(dataDT=loadingDT, regionSet=regionSet, 
+            loadMetrics <- signalOLMetrics(dataDT=loadingDT, 
+                                           dataGR=signalCoord,
+                                           regionSet=regionSet, 
                                            signalCol = signalCol,
                                            metrics="mean", 
                                            alsoNonOLMet=FALSE)
@@ -392,7 +382,7 @@ aggregateSignal <- function(signal,
         # for ATAC-seq
         if (scoringMetric == "proportionWeightedMean") {
             loadAgMain <- regionOLWeightedMean(signalDT = loadingDT, 
-                                               signalGR = dtToGr(coordinateDT),
+                                               signalGR = signalCoord,
                                                regionSet = regionSet,
                                                calcCols= signalCol)
             
@@ -400,7 +390,7 @@ aggregateSignal <- function(signal,
             #          c("numCpGsOverlapping", "numRegionsOverlapping"))
         } else if (scoringMetric == "simpleMean") {
             loadAgMain <- regionOLMean(signalDT = loadingDT, 
-                                       signalGR = dtToGr(coordinateDT),
+                                       signalGR = signalCoord,
                                        regionSet = regionSet,
                                        calcCols= signalCol)
             # setnames(loadAgMain, c("signalCoverage", "regionSetCoverage"),
@@ -509,7 +499,6 @@ runCOCOA <- function(signal,
     ################### checking inputs  #################################
     
     ########## check that inputs are the correct class
-    # exports coordinateDT to this environment (converts signalCoord)
     checkConvertInputClasses(signal=signal,
                              signalCoord=signalCoord,
                              regionSet=NULL,
@@ -518,7 +507,7 @@ runCOCOA <- function(signal,
     
     ########## check that dimensions of inputs are consistent
     # length of signal coord = nrow of signal
-    if (nrow(coordinateDT) != nrow(signal)) {
+    if (length(signalCoord) != nrow(signal)) {
         stop(cleanws("The number of coordinates in 
             signalCoord (length(signalCoord)) does not equal the number of 
                      rows in `signal`"))
@@ -554,23 +543,11 @@ runCOCOA <- function(signal,
     
     # detect signalCoordType
     if (signalCoordType == "default") {
-        if (is(signalCoord, "data.frame")) {
-            if ("end" %in% colnames(signalCoord)) {
-                if (all(signalCoord$start == signalCoord$end)) {
-                    signalCoordType <- "singleBase"
-                } else {
-                    signalCoordType <- "multiBase"
-                }
-            } else {
-                signalCoordType <- "singleBase"
-            }
+        # when signalCoord is a GRanges object
+        if (any(start(signalCoord) != end(signalCoord))) {
+            signalCoordType <- "multiBase"
         } else {
-            # when signalCoord is a GRanges object
-            if (all(start(signalCoord) == end(signalCoord))) {
-                signalCoordType <- "singleBase" 
-            } else {
-                signalCoordType <- "multiBase"
-            }
+            signalCoordType <- "singleBase"
         }
     }
     
@@ -591,7 +568,7 @@ runCOCOA <- function(signal,
     resultsList <- lapplyAlias(GRList,
                                function(x) aggregateSignal(
                                 signal = signal,
-                                signalCoord = coordinateDT,
+                                signalCoord = signalCoord,
                                 signalCoordType = signalCoordType,
                                 regionSet = x,
                                 signalCol = signalCol,
@@ -773,8 +750,7 @@ getMetaRegionProfile <- function(signal, signalCoord, regionSet,
     
     ################### checking inputs  #################################
     
-    ########## check that inputs are the correct class
-    # exports coordinateDT to this environment (converts signalCoord)
+    ########## check that inputs are the correct class, convert
     checkConvertInputClasses(signal=signal,
                              signalCoord=signalCoord,
                              regionSet=regionSet,
@@ -782,7 +758,7 @@ getMetaRegionProfile <- function(signal, signalCoord, regionSet,
     
     ########## check that dimensions of inputs are consistent
     # length of signal coord = nrow of signal
-    if (nrow(coordinateDT) != nrow(signal)) {
+    if (length(signalCoord) != nrow(signal)) {
         stop(cleanws("The number of coordinates in 
             signalCoord (length(signalCoord)) does not equal the number of 
                      rows in `signal`"))
@@ -818,23 +794,11 @@ getMetaRegionProfile <- function(signal, signalCoord, regionSet,
     
     # detect signalCoordType
     if (signalCoordType == "default") {
-        if (is(signalCoord, "data.frame")) {
-            if ("end" %in% colnames(signalCoord)) {
-                if (all(signalCoord$start == signalCoord$end)) {
-                    signalCoordType <- "singleBase"
-                } else {
-                    signalCoordType <- "multiBase"
-                }
-            } else {
-                signalCoordType <- "singleBase"
-            }
+        # when signalCoord is a GRanges object
+        if (any(start(signalCoord) != end(signalCoord))) {
+            signalCoordType <- "multiBase"
         } else {
-            # when signalCoord is a GRanges object
-            if (all(start(signalCoord) == end(signalCoord))) {
-                signalCoordType <- "singleBase" 
-            } else {
-                signalCoordType <- "multiBase"
-            }
+            signalCoordType <- "singleBase"
         }
     }
     
@@ -860,13 +824,13 @@ getMetaRegionProfile <- function(signal, signalCoord, regionSet,
     } else {
         loadingDT <- as.data.table(signal)
     }
-    loadingDT <- cbind(coordinateDT, loadingDT)
     
     GRDT <- grToDt(regionSet)
     
     loadProf <- BSBinAggregate(BSDT = loadingDT, 
                                rangeDT = GRDT, 
                                binCount = binNum,
+                               BSCoord = signalCoord,
                                byRegionGroup = TRUE, 
                                splitFactor = NULL,
                                signalCol = signalCol,
@@ -907,6 +871,8 @@ makeSymmetric <- function(prof) {
 # @param rangeDT A data.table with the sets of regions to be binned, 
 # with columns named start, end
 # @param binCount Number of bins across the region
+# @param BSCoord GRanges. Coordinates for BSDT. If NULL, then "chr" and "start"
+# columns must be in BSDT.
 # @param byRegionGroup Pass along to binCount (see ?binCount)
 # @template signalCol
 # @param verbose A "logical" object. Whether progress 
@@ -916,14 +882,21 @@ makeSymmetric <- function(prof) {
 # region sets at a time.
 # @param aggrMethod see ?getMetaRegionProfile()
 BSBinAggregate <- function(BSDT, rangeDT, binCount,
+                           BSCoord=NULL,
                            byRegionGroup = TRUE,
                            splitFactor = NULL,
                            signalCol,
                            verbose = FALSE,
                            aggrMethod) {
     if (!is(rangeDT, "data.table")) {
-    stop("rangeDT must be a data.table")
-}
+        stop("rangeDT must be a data.table")
+    }
+    
+    if (is.null(BSCoord)) {
+        BSCoord <- BSdtToGRanges(list(BSDT))
+    }
+    
+    
     seqnamesColName <- "seqnames"  # default column name
     if (! "seqnames" %in% colnames(rangeDT)) {
         if ("chr" %in% colnames(rangeDT)) {
@@ -945,9 +918,10 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount,
     
     if (aggrMethod == "proportionWeightedMean") {
 
-        binMeansList <- lapply(X = binnedGR, 
+        binMeansList <- lapply(X = binnedGR,
                                FUN = function(x) regionOLWeightedMean(signalDT = BSDT, 
-                                                                      signalGR = dtToGr(BSDT[, .(chr, start, end)]), 
+                                                                      # signalGR = dtToGr(BSDT[, .(chr, start, end)]), 
+                                                                      signalGR = BSCoord,
                                                                       regionSet = x, 
                                                                       calcCols = signalCol))
         
@@ -970,7 +944,8 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount,
 
         binMeansList <- lapply(X = binnedGR, 
                                FUN = function(x) regionOLMean(signalDT = BSDT, 
-                                                              signalGR = dtToGr(BSDT[, .(chr, start, end)]), 
+                                                              # signalGR = dtToGr(BSDT[, .(chr, start, end)]),
+                                                              signalGR = BSCoord,
                                                               regionSet = x, 
                                                               calcCols = signalCol))
         # any bins that had no overlap with data will be NULL
@@ -991,6 +966,7 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount,
         # what is output if a region set has no overlap?
         binnedBSDT <- BSAggregate(BSDT,
                                   regionsGRL=GRangesList(binnedGR),
+                                  BSCoord = BSCoord, 
                                   jExpr=buildJ(signalCol,
                                                rep("mean", length(signalCol))),
                                   byRegionGroup = byRegionGroup,
@@ -1039,8 +1015,7 @@ averagePerRegion <- function(signal,
 
     ################### checking inputs  #################################
     
-    ########## check that inputs are the correct class
-    # exports coordinateDT to this environment (converts signalCoord)
+    ########## check that inputs are the correct class and converts
     checkConvertInputClasses(signal=signal,
                              signalCoord=signalCoord,
                              regionSet=regionSet,
@@ -1048,7 +1023,7 @@ averagePerRegion <- function(signal,
     
     ########## check that dimensions of inputs are consistent
     # length of signal coord = nrow of signal
-    if (nrow(coordinateDT) != nrow(signal)) {
+    if (length(signalCoord) != nrow(signal)) {
         stop(cleanws("The number of coordinates in 
             signalCoord (length(signalCoord)) does not equal the number of 
                      rows in `signal`"))
@@ -1068,15 +1043,15 @@ averagePerRegion <- function(signal,
     #################################################################
 
     # determine whether coordinates are single base or a range
-    if (!("end" %in% colnames(coordinateDT))) {
-        dataCoordType <- "singleBase"
-    } else {
-        if (all(coordinateDT$start == coordinateDT$end)) {
-            dataCoordType <- "singleBase"
-        } else {
+    # if (!("end" %in% colnames(coordinateDT))) {
+    #     dataCoordType <- "singleBase"
+    # } else {
+        if (any(start(signalCoord) != end(signalCoord))) {
             dataCoordType <- "multiBase"
+        } else {
+            dataCoordType <- "singleBase"
         }
-    }
+    # }
 
     # take absolute value or not
     if (absVal) {
@@ -1088,11 +1063,12 @@ averagePerRegion <- function(signal,
     # use different function for single base data and for region data
     if (dataCoordType == "singleBase") {
         # linking coordinates to loading values, has columns chr start, signalCol
-        BSDT  <- cbind(coordinateDT, signalDT[, .SD, .SDcols = signalCol])
+        BSDT  <- signalDT[, .SD, .SDcols = signalCol]
         jExpr <- buildJ(signalCol, rep("mean", length(signalCol)))
 
         avPerRegion <- BSAggregate(BSDT = BSDT,
                                    regionsGRL = regionSet,
+                                   BSCoord = signalCoord,
                                    excludeGR = NULL,
                                    regionsGRL.length = NULL,
                                    splitFactor = NULL, 
@@ -1216,6 +1192,7 @@ weightedAvePerRegion <- function(signalDT,
 #' data("esr1_chr1")
 #' getTopRegions(signal=brcaLoadings1,
 #' signalCoord=brcaMCoord1, regionSet=esr1_chr1, returnQuantile = TRUE)
+#' @export
 
 getTopRegions <- function(signal, 
                           signalCoord, 
@@ -1341,6 +1318,8 @@ getTopRegions <- function(loadingMat,
 # to splitFactor.
 # @param regionsGRL Regions across which you want to aggregate. Should be 
 # from a single region set. eg GRangesList(regionSet)
+# @param BSCoord GRanges. Coordinates for BSDT. If NULL, then "chr" and "start"
+# columns must be in BSDT.
 # @param excludeGR A GRanges object with regions you want to 
 # exclude from the aggregation function. These regions will be eliminated
 # from the input table and not counted.
@@ -1366,7 +1345,7 @@ getTopRegions <- function(loadingMat,
 # return the quantile/percentile of the mean of each region
 # in relation to the distribution of original values in BSDT
 # 
-BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL, 
+BSAggregate <- function(BSDT, regionsGRL, BSCoord=NULL, excludeGR=NULL, 
                         regionsGRL.length = NULL, splitFactor=NULL, 
                         keepCols=NULL, sumCols=NULL, 
                         jExpr=NULL, byRegionGroup=FALSE, 
@@ -1400,7 +1379,12 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL,
         origBSDT <- data.table::copy(BSDT)
     }
     # TODO: BSdtToGRanges needs to include end coordinate!!!
-    bsgr <- BSdtToGRanges(list(BSDT))
+    if (is.null(BSCoord)) {
+        bsgr <- BSdtToGRanges(list(BSDT))
+    } else {
+        bsgr <- BSCoord
+    }
+    
 
     additionalColNames <- setdiff(colnames(BSDT), 
                                   c("chr","start", "end",
@@ -1446,10 +1430,12 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL,
 
     #TODO: if overlap method is single, but "end" is present, find center
     # and set that to start!
-    if (all(start(bsgr[[1]]) != end(bsgr[[1]]))) {
+    # if (all(start(bsgr[[1]]) != end(bsgr[[1]]))) {
+    if (all(start(bsgr) != end(bsgr))) {
         stop("BSDT start and end coordinates are not the same. Choose a different aggrMethod.")
     } else {
-        fo <- findOverlaps(query = bsgr[[1]], subject = regionsGR)
+        # fo <- findOverlaps(query = bsgr[[1]], subject = regionsGR)
+        fo <- findOverlaps(query = bsgr, subject = regionsGR)
     }
 
     ### use info from findOverlaps to see how many individual
@@ -1460,11 +1446,11 @@ BSAggregate <- function(BSDT, regionsGRL, excludeGR=NULL,
         regionSetCoverage <- length(unique(subjectHits(fo)))
     }
 
-    if("end" %in% colnames(BSDT)){
-        setkey(BSDT, chr, start, end)
-    } else{
-        setkey(BSDT, chr, start) 
-    }
+    # if("end" %in% colnames(BSDT)){
+    #     setkey(BSDT, chr, start, end)
+    # } else{
+    #     setkey(BSDT, chr, start) 
+    # }
 
     # Gut check:
     # stopifnot(all(elementMetadata(bsgr[[1]])$readCount == BSDT$readCount))
@@ -1742,11 +1728,12 @@ rsRankingIndex <- function(rsScores, signalCol,
 # 
 # Faster if given total average for each column of interest
 # 
-# @param dataDT a data.table with chr, start, end columns as well
-# as columns to get metrics of eg (PC1, PC2). All columns
-# except chr, start, and end will be considered 
+# @param dataDT a data.table with
+# columns to get metrics of eg (PC1, PC2). All columns
+# will be considered 
 # columns to get the metrics from so no unnecessary columns should be
 # included.
+# @param dataGR GRanges. Coordinates for dataDT.
 # @template regionSet 
 # Metrics will be calculated on
 # only coordinates within this region set (and optionally separately
@@ -1764,13 +1751,14 @@ rsRankingIndex <- function(rsScores, signalCol,
 # mean for non overlapping CpGs without manually calculating it)
 # 
 signalOLMetrics <- function(dataDT,
+                            dataGR,
                             regionSet,
                             signalCol = colnames(dataDT)[!(colnames(dataDT) %in% c("chr", "start", "end"))],
                             metrics=c("mean", "sd"),
                             alsoNonOLMet=TRUE) {
     
     # convert DT to GR for finding overlaps
-    dataGR <- BSdtToGRanges(list(dataDT))[[1]]
+    # dataGR <- BSdtToGRanges(list(dataDT))[[1]]
     
     OL <- findOverlaps(query = regionSet, subject = dataGR)
     
@@ -1959,10 +1947,10 @@ regionOLWeightedMean <- function(signalDT, signalGR,
     
     # some rows may be duplicated if a signalDT region overlapped multiple
     # regions from signalGR but that is ok
-    signalDT <- signalDT[queryHits(hits), ]
+    # signalDT <- signalDT[queryHits(hits), ] # done in next step to prevent extra copying
     
     # weight the signalDT values by the proportion overlap (weighted average)
-    weightedSum <- t(as.matrix(polap)) %*% as.matrix(signalDT[, calcCols, with=FALSE])
+    weightedSum <- t(as.matrix(polap)) %*% as.matrix(signalDT[queryHits(hits), calcCols, with=FALSE])
     
     # weighted average
     denom <- sum(polap)
