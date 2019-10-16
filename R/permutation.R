@@ -75,7 +75,7 @@
 #' sampleLabels$ER_Status <- scale(as.numeric(sampleLabels$ER_Status), 
 #'                                center=TRUE, scale=FALSE)
 #' # give the actual order of samples to `corPerm` to get the real scores
-#' correctSampleOrder=1:nrow(sampleScores)
+#' correctSampleOrder=1:nrow(sampleLabels)
 #' realRSScores <- corPerm(randomInd=correctSampleOrder,
 #'                         genomicSignal=brcaMethylData1,
 #'                         signalCoord=brcaMCoord1,
@@ -523,6 +523,21 @@ permListToOneNullDist <- function(resultsList, rsInd) {
 getGammaPVal <- function(rsScores, nullDistList, calcCols, method="mme", 
                          realScoreInDist=TRUE, force=FALSE) {
     
+    
+    # take absolute value since gamma distribution cannot have negative values
+    if (any(rsScores < 0)) {
+        rsScores <- abs(rsScores)
+    }
+    conditionalAbs <- function(x) {
+        if (any(x < 0)) {
+            return(abs(x))
+        } else {
+            return(x)
+        }
+    }
+    nullDistList <- lapply(X = nullDistList, FUN = conditionalAbs)
+    
+    
     # make sure the same columns are present/in the same order
     
     
@@ -621,13 +636,23 @@ pGammaList <- function(scoreVec, fitDistrList) {
     return(pValVec)
 }
 
-
+#' Get p-value or z-score based on permutation results
+#' 
+#' This function starts with real COCOA scores for each
+#' region set and null distributions for each
+#' region set that come
+#' from running COCOA on permuted data. Then this function uses the
+#' null distributions to get an empirical p-value or z-score for
+#' each region set. See vignettes for the workflow that leads to
+#' this function.
+#'
 #' @template rsScores 
 #' @param nullDistList List. one item per region set. Each item is a 
 #' data.frame with the 
 #' null distribution for a single region set. Each column in the data.frame
 #' is for a single target variable (e.g. PC or phenotype)
-#' @param calcCols
+#' @param calcCols Character. The names of the columns with the COCOA scores
+#' in `rsScores` and `nullDistList` items.
 #' @param testType character. "greater", "lesser", "two-sided" Whether to
 #' create p values based on one sided test or not.
 #' @param whichMetric character. Can be "pval" or "zscore"
