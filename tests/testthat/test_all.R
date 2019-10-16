@@ -199,7 +199,7 @@ test_that("aggregateSignal, scoring metrics, and runCOCOA", {
 test_that("ATAC-seq scoring methods", {
     
     # test "regionOLWeightedMean"
-    weightedAve <- regionOLWeightedMean(signalDT = regionDataDT, signalGR = COCOA:::dtToGr(regionCoordDT), 
+    weightedAve <- regionOLWeightedMean(signalMat = regionDataDT, signalGR = COCOA:::dtToGr(regionCoordDT), 
                          regionSet = regionSet1, calcCols = c("PC1", "PC2"))
     # proportion overlap is first then PC
     correctAve <- data.frame(PC1=((101/400)*1+(101/201)*1+(51/201)*2+1*3+(26/51)*5+(151/451)*6) / 

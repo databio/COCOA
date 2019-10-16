@@ -7,6 +7,10 @@
 # same code within each exported function and can change it in one place.
 # default NULL means do not check a given parameter
 
+# @return Does not teturn anything but optionally can assign
+# objects to the environment that called it. Can assign `signalCoord`,
+# and `GRList` if they need to be converted to a different object class.
+
 checkConvertInputClasses <- function(signal=NULL,
                                      signalCoord=NULL,
                                      regionSet=NULL,
