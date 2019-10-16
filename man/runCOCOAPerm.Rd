@@ -164,15 +164,32 @@ data("esr1_chr1")
 data("nrf1_chr1")
 data("brcaMethylData1")
 data("brcaPCScores657")
-pcCor <- corFeature
 sampleLabels <- brcaPCScores657[colnames(brcaMethylData1), ]
 sampleLabels$ER_Status <- scale(as.numeric(sampleLabels$ER_Status), 
                                center=TRUE, scale=FALSE)
-# give the actual order of samples to randomInd to get the real scores
-realRSScores <- corPerm(randomInd=1:4, genomicSignal=brcaMethylData1, 
-        signalCoord=brcaMCoord1, GRList=GRangesList(esr1_chr1, nrf1_chr1),
-        calcCols=c("PC1", "PC2"), sampleLabels=sampleLabels, 
-        variationMetric="cor")
+# give the actual order of samples to `corPerm` to get the real scores
+correctSampleOrder=1:nrow(sampleScores)
+realRSScores <- corPerm(randomInd=correctSampleOrder,
+                        genomicSignal=brcaMethylData1,
+                        signalCoord=brcaMCoord1,
+                        GRList=GRangesList(esr1_chr1, nrf1_chr1),
+                        calcCols=c("PC1", "PC2"),
+                        sampleLabels=sampleLabels,
+                        variationMetric="cor")
+        
+# give random order of samples to get random COCOA scores 
+# so you start building a null distribution for each region set 
+# (see vignette for example of building a null distribution with `corPerm`)
+randomOrder <- sample(1:nrow(sampleLabels), 
+                      size=nrow(sampleLabels),
+                      replace=FALSE)
+randomRSScores <- corPerm(randomInd=randomOrder, 
+                          genomicSignal=brcaMethylData1,
+                          signalCoord=brcaMCoord1,
+                          GRList=GRangesList(esr1_chr1, nrf1_chr1),
+                          calcCols=c("PC1", "PC2"),
+                          sampleLabels=sampleLabels,
+                          variationMetric="cor")
 
 permResults <- runCOCOAPerm(genomicSignal=brcaMethylData1,
                            signalCoord=brcaMCoord1,
