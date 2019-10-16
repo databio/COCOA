@@ -6,7 +6,8 @@
 \usage{
 corPerm(randomInd, genomicSignal, signalCoord, GRList, calcCols,
   sampleLabels, variationMetric = "cor", scoringMetric = "default",
-  verbose = TRUE, absVal = TRUE)
+  verbose = TRUE, absVal = TRUE, centerDataMat = TRUE,
+  centerFeatureMat = TRUE)
 }
 \arguments{
 \item{randomInd}{numeric. A vector of 1:(number of samples) but shuffled in a

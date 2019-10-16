@@ -6,9 +6,10 @@
 \usage{
 runCOCOAPerm(genomicSignal, signalCoord, GRList, rsScores, sampleLabels,
   signalCol = c("PC1", "PC2"), signalCoordType = "default",
-  scoringMetric = "default", absVal = TRUE, variationMetric = "cor",
-  nPerm = 300, useSimpleCache = TRUE, cacheDir = getwd(),
-  dataID = "", correctionMethod = "BH", gammaFitMethod = "mme",
+  scoringMetric = "default", absVal = TRUE, centerDataMat = TRUE,
+  centerFeatureMat = TRUE, variationMetric = "cor", nPerm = 300,
+  useSimpleCache = TRUE, cacheDir = getwd(), dataID = "",
+  correctionMethod = "BH", gammaFitMethod = "mme",
   realScoreInDist = TRUE, force = FALSE, verbose = TRUE, ...)
 }
 \arguments{
@@ -168,7 +169,7 @@ sampleLabels <- brcaPCScores657[colnames(brcaMethylData1), ]
 sampleLabels$ER_Status <- scale(as.numeric(sampleLabels$ER_Status), 
                                center=TRUE, scale=FALSE)
 # give the actual order of samples to `corPerm` to get the real scores
-correctSampleOrder=1:nrow(sampleScores)
+correctSampleOrder=1:nrow(sampleLabels)
 realRSScores <- corPerm(randomInd=correctSampleOrder,
                         genomicSignal=brcaMethylData1,
                         signalCoord=brcaMCoord1,
