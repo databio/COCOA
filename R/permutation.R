@@ -121,6 +121,8 @@ runCOCOAPerm <- function(genomicSignal,
                          signalCoordType = "default",
                          scoringMetric="default",
                          absVal=TRUE,
+                         centerDataMat=TRUE,
+                         centerFeatureMat=TRUE,
                          variationMetric="cor",
                          nPerm=300,
                          useSimpleCache=TRUE,
@@ -132,10 +134,32 @@ runCOCOAPerm <- function(genomicSignal,
                          force=FALSE,
                          verbose=TRUE, ...) {
     
+    
     colsToAnnotate <- signalCol
     allResultsList <- list()
     
+    # more efficient to only do once (not that high impact though)
+    if (centerDataMat) {
+        cpgMeans <- rowMeans(genomicSignal, na.rm = TRUE)
+        # centering before calculating correlation
+        genomicSignal <- apply(X = genomicSignal, MARGIN = 2, function(x) x - cpgMeans)
+        # don't do later
+        centerDataMat <- FALSE
+    }
+    if (centerFeatureMat) {
+        featureMeans <- colMeans(sampleLabels, na.rm = TRUE)
+        # centering before calculating correlation (also, t() converts to matrix)
+        sampleLabels <- t(apply(X = t(sampleLabels), MARGIN = 2, function(x) x - featureMeans))
+        if (dim(sampleLabels)[1] == 1) {
+            sampleLabels <- t(sampleLabels)
+        }
+        # don't do later
+        centerFeatureMat <- FALSE
+    }
     
+
+    
+        
     indList <- list()
     # generate random indices for shuffling of samples
     for (i in 1:nPerm) {
@@ -162,6 +186,8 @@ runCOCOAPerm <- function(genomicSignal,
                                    variationMetric = variationMetric,
                                    scoringMetric=scoringMetric,
                                    absVal=absVal,
+                                   centerDataMat = centerDataMat,
+                                   centerFeatureMat = centerFeatureMat,
                                    verbose=verbose)
                     message(i) # must be ahead of object that is saved as cache, not after
                     tmp
@@ -338,7 +364,8 @@ corPerm <- function(randomInd, genomicSignal,
                     signalCoord, GRList, calcCols,
                     sampleLabels, variationMetric = "cor", 
                     scoringMetric="default", verbose=TRUE,
-                    absVal=TRUE) {
+                    absVal=TRUE, centerDataMat=TRUE,
+                    centerFeatureMat=TRUE) {
     
     # if vector is given, return error
     if (is.null(dim(sampleLabels))) {
@@ -348,6 +375,7 @@ corPerm <- function(randomInd, genomicSignal,
     if (any(!(calcCols %in% colnames(sampleLabels)))) {
         stop("Not all specified columns are present in `sampleLabels`")
     }
+    
     
     # subset to only calcCols
     sampleLabels <- sampleLabels[, calcCols, drop=FALSE]
@@ -362,9 +390,16 @@ corPerm <- function(randomInd, genomicSignal,
     # calculate correlation
     featureLabelCor <- createCorFeatureMat(dataMat = genomicSignal, 
                                           featureMat = sampleLabels, 
-                                          centerDataMat = TRUE, 
-                                          centerFeatureMat = TRUE,
+                                          centerDataMat = centerDataMat, 
+                                          centerFeatureMat = centerFeatureMat,
                                           testType = variationMetric)
+    
+    # more efficient to do only once instead of for each region set later on
+    if (absVal) {
+        featureLabelCor <- abs(featureLabelCor)
+        absVal <- FALSE    
+    }
+    
     
     # run COCOA
     thisPermRes <- runCOCOA(signal=featureLabelCor, 

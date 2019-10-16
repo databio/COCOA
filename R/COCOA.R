@@ -143,7 +143,7 @@ aggregateSignal <- function(signal,
     checkConvertInputClasses(signal=signal,
                              signalCoord=signalCoord,
                              regionSet=regionSet,
-                             signalCol = signalCol)
+                             signalCol=signalCol)
     
     ########## check that dimensions of inputs are consistent
     # length of signal coord = nrow of signal
@@ -230,12 +230,26 @@ aggregateSignal <- function(signal,
     
     # XX copies unnecessarily:reformat into data.table with chromosome location and weight
     
+    # make sure `signal` is the correct type for further steps
+    # (proportionWeightedMean method requires a matrix)
+    if (!is(signal, "data.table") && (scoringMetric != "proportionWeightedMean")) {
+        signal <- as.data.table(signal)
+    } else if (!is(signal, "matrix") && (scoringMetric == "proportionWeightedMean")) {
+        signal <- as.matrix(signal)
+    }
+
     # restricting to signalCol so unnecessary computations 
     # are not done
-    loadingDT  <- as.data.table(signal[, signalCol])
+    if (is(signal, "data.table")) {
+        loadingDT <- signal[, signalCol, with=FALSE]
+        # # naming does not work if only using one PC so add this line for that case
+        # setnames(loadiangDT, signalCol)
+    } else {
+        loadingDT  <- signal[, signalCol, drop=FALSE]
+    }
+    
 
-    # naming does not work if only using one PC so add this line for that case
-    setnames(loadingDT, c(signalCol))
+
     
     # would rounding speed up aggregation?, potentially make a sparse matrix
     # if a lot of entries became 0
@@ -380,7 +394,7 @@ aggregateSignal <- function(signal,
         # signalCoordType == "multiBase"
         # for ATAC-seq
         if (scoringMetric == "proportionWeightedMean") {
-            loadAgMain <- regionOLWeightedMean(signalDT = loadingDT, 
+            loadAgMain <- regionOLWeightedMean(signalMat = loadingDT, 
                                                signalGR = signalCoord,
                                                regionSet = regionSet,
                                                calcCols= signalCol)
@@ -561,6 +575,15 @@ runCOCOA <- function(signal,
         }
     }
     
+    # convert object class outside aggregateSignal to extra prevent copying
+    # (one scoring method needs `signal` as a matrix though)
+    if (!is(signal, "data.table") && (scoringMetric != "proportionWeightedMean")) {
+        signal <- as.data.table(signal)
+    } else if (!is(signal, "matrix") && (scoringMetric == "proportionWeightedMean")) {
+        signal <- as.matrix(signal)
+    }
+    
+    
     
     # apply over the list of region sets
     resultsList <- lapplyAlias(GRList,
@@ -628,12 +651,11 @@ createCorFeatureMat <- function(dataMat, featureMat,
     
     if (centerFeatureMat) {
         featureMeans <- colMeans(featureMat, na.rm = TRUE)
-        # centering before calculating correlation
+        # centering before calculating correlation(also, t() converts to matrix)
         featureMat <- t(apply(X = t(featureMat), MARGIN = 2, function(x) x - featureMeans))
         if (dim(featureMat)[1] == 1) {
             featureMat <- t(featureMat)
         }
-        featureMat <- as.matrix(featureMat)
     }
     
     # avoid this copy and/or delay transpose until after calculating correlation?
@@ -917,7 +939,7 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount,
     if (aggrMethod == "proportionWeightedMean") {
 
         binMeansList <- lapply(X = binnedGR,
-                               FUN = function(x) regionOLWeightedMean(signalDT = BSDT, 
+                               FUN = function(x) regionOLWeightedMean(signalMat = BSDT, 
                                                                       # signalGR = dtToGr(BSDT[, .(chr, start, end)]), 
                                                                       signalGR = BSCoord,
                                                                       regionSet = x, 
@@ -1850,9 +1872,14 @@ rsWilcox <- function(dataDT,
 }
 
 
-# @param signalDT Data to be aggregated (e.g. raw data: ATAC-seq,
+# I optimized upstream so that a matrix would be given to this function
+# if this function is rewritten and no longer requires a matrix input,
+# then in order to prevent unnecessary object copying, 
+# rewrite upstream code that converts signalDT to matrix class
+
+# @param signalMat Data to be aggregated (e.g. raw data: ATAC-seq,
 # region based DNA methylation or loading values)
-# @param signalGR GRanges object with coordinates for signalDT
+# @param signalGR GRanges object with coordinates for signalMat
 # @template regionSet 
 # The region set to score.
 # @param calcCols character object. Column names. A weighted sum will be done 
@@ -1864,9 +1891,12 @@ rsWilcox <- function(dataDT,
 # containing weighted mean for each col.
 # Returns NULL if there is no overlap between signalGR and regionSet
 
-regionOLWeightedMean <- function(signalDT, signalGR, 
+regionOLWeightedMean <- function(signalMat, signalGR, 
                                  regionSet, calcCols) {
     
+    if (!is(signalMat, "matrix")) {
+        signalMat <- as.matrix(signalMat)
+    }
     
     hits  <- findOverlaps(query = signalGR, subject = regionSet)
     # if no overlap, return NULL
@@ -1880,12 +1910,12 @@ regionOLWeightedMean <- function(signalDT, signalGR,
                         regionSet[subjectHits(hits)])
     polap <- width(olap) / width(regionSet[subjectHits(hits)])
     
-    # some rows may be duplicated if a signalDT region overlapped multiple
+    # some rows may be duplicated if a signalMat region overlapped multiple
     # regions from signalGR but that is ok
-    # signalDT <- signalDT[queryHits(hits), ] # done in next step to prevent extra copying
+    # signalMat <- signalMat[queryHits(hits), ] # done in next step to prevent extra copying
     
-    # weight the signalDT values by the proportion overlap (weighted average)
-    weightedSum <- t(as.matrix(polap)) %*% as.matrix(signalDT[queryHits(hits), calcCols, with=FALSE])
+    # weight the signalMat values by the proportion overlap (weighted average)
+    weightedSum <- t(polap) %*% signalMat[queryHits(hits), calcCols]
     
     # weighted average
     denom <- sum(polap)
