@@ -71,15 +71,32 @@
 #' data("nrf1_chr1")
 #' data("brcaMethylData1")
 #' data("brcaPCScores657")
-#' pcCor <- corFeature
 #' sampleLabels <- brcaPCScores657[colnames(brcaMethylData1), ]
 #' sampleLabels$ER_Status <- scale(as.numeric(sampleLabels$ER_Status), 
 #'                                center=TRUE, scale=FALSE)
-#' # give the actual order of samples to randomInd to get the real scores
-#' realRSScores <- corPerm(randomInd=1:4, genomicSignal=brcaMethylData1, 
-#'         signalCoord=brcaMCoord1, GRList=GRangesList(esr1_chr1, nrf1_chr1),
-#'         calcCols=c("PC1", "PC2"), sampleLabels=sampleLabels, 
-#'         variationMetric="cor")
+#' # give the actual order of samples to `corPerm` to get the real scores
+#' correctSampleOrder=1:nrow(sampleScores)
+#' realRSScores <- corPerm(randomInd=correctSampleOrder,
+#'                         genomicSignal=brcaMethylData1,
+#'                         signalCoord=brcaMCoord1,
+#'                         GRList=GRangesList(esr1_chr1, nrf1_chr1),
+#'                         calcCols=c("PC1", "PC2"),
+#'                         sampleLabels=sampleLabels,
+#'                         variationMetric="cor")
+#'         
+#' # give random order of samples to get random COCOA scores 
+#' # so you start building a null distribution for each region set 
+#' # (see vignette for example of building a null distribution with `corPerm`)
+#' randomOrder <- sample(1:nrow(sampleLabels), 
+#'                       size=nrow(sampleLabels),
+#'                       replace=FALSE)
+#' randomRSScores <- corPerm(randomInd=randomOrder, 
+#'                           genomicSignal=brcaMethylData1,
+#'                           signalCoord=brcaMCoord1,
+#'                           GRList=GRangesList(esr1_chr1, nrf1_chr1),
+#'                           calcCols=c("PC1", "PC2"),
+#'                           sampleLabels=sampleLabels,
+#'                           variationMetric="cor")
 #' 
 #' permResults <- runCOCOAPerm(genomicSignal=brcaMethylData1,
 #'                            signalCoord=brcaMCoord1,
@@ -257,6 +274,29 @@ runCOCOAPerm <- function(genomicSignal,
     # zscores
 }
 
+#' Run COCOA with shuffled samples
+#' 
+#' This is a convenience function that does the two steps of COCOA: 
+#' quantifying the epigenetic variation and scoring the region sets. This
+#' function makes it easy to generate null distributions in order to
+#' evaluate the statistical significance of the real COCOA results.
+#' You can use the randomInd parameter to shuffle the samples,
+#' then run COCOA to get fake scores for each region set. By doing 
+#' this many times, you can build a null distribution for each 
+#' region set composed of the region set's random scores from each
+#' permutation. There are multiple options for quantifying the
+#' epigenetic variation, specified by the `variationMetric` parameter.
+#' Quantifying the variation for the real/non-permuted COCOA 
+#' scores should be done with the same 
+#' variation metric as is used for the random permutations. For an
+#' unsupervised analysis using dimensionality reduction, first, the
+#' dimensionality reduction is done outside `corPerm`, then the
+#' latent factors/principal components are input to `corPerm` as the
+#' sample labels (sampleLabels parameter) when calculating both the real and 
+#' also the permutated region set scores. For a supervised analysis, 
+#' the target variables/phenotypes are the sampleLabels.
+#' See the vignettes for examples.  
+#' 
 #' @param randomInd numeric. A vector of 1:(number of samples) but shuffled in a
 #' random order. E.g. randomInd = sample(1:ncol(genomicSignal), ncol(genomicSignal))
 #' where ncol(genomicSignal) is the number of samples. 
