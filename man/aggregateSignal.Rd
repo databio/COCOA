@@ -32,12 +32,8 @@ depending on the epigenetic data type).}
 to the same biological annotation.
 Must be from the same reference genome as the coordinates for the actual data/samples (signalCoord).}
 
-\item{signalCol}{A character vector with the sample variables
-of interest/target variables (e.g. PCs or sample phenotypes). 
-
-
-
-e.g. c("PC1", "PC2")}
+\item{signalCol}{A character vector with the names of the sample variables
+of interest/target variables (e.g. PCs or sample phenotypes).}
 
 \item{signalCoordType}{Character. Can be "default", "singleBase", or 
 "multiBase". This describes whether the coordinates for `signal` 

@@ -8,7 +8,8 @@
 # ComplexHeatmap
 ###
 
-# functions to visualize results of COCOA, relevant regions, and variation in the dataset
+# functions to visualize results of COCOA, relevant regions, 
+# and variation in the dataset
 # 
 
 # color schemes: red/blue, yellow/red, red/grey, skyblue/coral, skyblue/yellow
@@ -30,12 +31,11 @@
 #' @templateVar rsVisualization TRUE
 #' @template regionSet
 #' @param sampleScores A matrix. Must contain a column for the 
-#' variable of interest with name given
-#' by "orderByCol" that will be used to order samples.  
+#' variable of interest/target variable.
 #' E.g. The variable of interest could be 
 #' the principal component scores for the samples. 
-#' sampleScores must have sample names/IDs as row names,
-#' These same sample names must be column names of genomicSignal
+#' `sampleScores` must have sample names/IDs as row names,
+#' These same sample names must be column names of genomicSignal.
 #' @param orderByCol A character object. A variable to order samples by
 #' (order rows of heatmap by variable, from high to low value).
 #' Must be the name of a column in sampleScores. For instance, if doing

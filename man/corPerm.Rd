@@ -4,10 +4,10 @@
 \alias{corPerm}
 \title{Run COCOA with shuffled samples}
 \usage{
-corPerm(randomInd, genomicSignal, signalCoord, GRList, calcCols,
+corPerm(randomInd, genomicSignal, signalCoord, GRList, signalCol,
   sampleLabels, variationMetric = "cor", scoringMetric = "default",
-  verbose = TRUE, absVal = TRUE, centerDataMat = TRUE,
-  centerFeatureMat = TRUE)
+  verbose = TRUE, absVal = TRUE, centerGenomicSignal = TRUE,
+  centerSampleLabels = TRUE)
 }
 \arguments{
 \item{randomInd}{numeric. A vector of 1:(number of samples) but shuffled in a
@@ -38,17 +38,19 @@ the same biological annotation). The region set database
 must be from the same reference genome
 as the coordinates for the actual data/samples (signalCoord).}
 
-\item{calcCols}{character. the columns in `sampleLabels` for which to calculate
-correlation and then to run COCOA on}
+\item{signalCol}{A character vector with the names of the sample variables
+of interest/target variables (e.g. PCs or sample phenotypes). 
 
-\item{sampleLabels}{Matrix or data.frame. Rows should be samples, 
-columns should be the target variables 
+The columns in `sampleLabels` for which to calculate
+the variation related to the epigenetic data
+(e.g. correlation) and then to run COCOA on.}
+
+\item{sampleLabels}{Matrix or data.frame. Rows should be samples. 
+Columns should be the target variables 
 (whatever variable you want to test for association with
-the epigenetic signal: e.g. PC scores),
-all columns in featureMat will be used (subset when passing to function
-in order to not use all columns).}
+the epigenetic signal: e.g. PC scores),}
 
-\item{variationMetric}{character.}
+\item{variationMetric}{Character.}
 
 \item{scoringMetric}{A character object with the scoring metric.
 There are different methods available for 
@@ -90,10 +92,13 @@ regions in a region set). Choose FALSE if you expect regions in a
 given region set to all change in the same direction (all be positively
 correlated with each other).}
 
-\item{sampleLabels}{data.frame/matrix. Sample labels/values that 
-you are running COCOA to find region sets associated with. These 
-values will be shuffled for the permutation test. Rows are samples.
-Each column is a sample label.}
+\item{centerGenomicSignal}{Logical. Should rows in genomicSignal
+be centered based on
+their means? (subtracting row mean from each row)}
+
+\item{centerSampleLabels}{Logical. Should columns in sampleLabels be 
+centered based
+on their means? (subtract column mean from each column)}
 }
 \value{
 data.frame. The output of runCOCOA for one permutation
@@ -136,7 +141,7 @@ onePermResult <- corPerm(randomInd=randomInd,
                          genomicSignal=brcaMethylData1,
                          signalCoord=brcaMCoord1,
                          GRList=GRangesList(esr1_chr1, nrf1_chr1),
-                         calcCols="ER_Status",
+                         signalCol="ER_Status",
                          sampleLabels=sampleLabels,
                          variationMetric="cor")
 onePermResult

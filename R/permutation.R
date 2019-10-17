@@ -25,15 +25,19 @@
 #' @template GRList
 #' @template rsScores
 #' @template sampleLabels
-#' @param signalCol Character. The column names of `sampleLabels` that
-#' you want to test. These must also be columns in rsScores.
+#' @templateVar usesSampleLabels TRUE
+#' @template signalCol
 #' @template scoringMetric
 #' @template absVal
+#' @param centerGenomicSignal Logical. Should rows in genomicSignal
+#' be centered based on
+#' their means? (subtracting row mean from each row)
+#' @param centerSampleLabels Logical. Should columns in sampleLabels be 
+#' centered based
+#' on their means? (subtract column mean from each column)
 #' @param dataID Character. A unique identifier for this dataset 
 #' (for saving results with simpleCache)
-#' @param variationMetric Character. Either "cor" (Pearson correlation), 
-#' "pcor" (partial correlation), "spearmanCor (Spearman correlation) 
-#' or "cov" (covariation). 
+#' @template variationMetric
 #' @param useSimpleCache Logical. Whether to use save caches. Caches
 #' will be created for each permutation so that if the function is disrupted
 #' it can restart where it left off. The final results are also saved 
@@ -80,7 +84,7 @@
 #'                         genomicSignal=brcaMethylData1,
 #'                         signalCoord=brcaMCoord1,
 #'                         GRList=GRangesList(esr1_chr1, nrf1_chr1),
-#'                         calcCols=c("PC1", "PC2"),
+#'                         signalCol=c("PC1", "PC2"),
 #'                         sampleLabels=sampleLabels,
 #'                         variationMetric="cor")
 #'         
@@ -94,7 +98,7 @@
 #'                           genomicSignal=brcaMethylData1,
 #'                           signalCoord=brcaMCoord1,
 #'                           GRList=GRangesList(esr1_chr1, nrf1_chr1),
-#'                           calcCols=c("PC1", "PC2"),
+#'                           signalCol=c("PC1", "PC2"),
 #'                           sampleLabels=sampleLabels,
 #'                           variationMetric="cor")
 #' 
@@ -118,11 +122,10 @@ runCOCOAPerm <- function(genomicSignal,
                          rsScores,
                          sampleLabels,
                          signalCol=c("PC1", "PC2"),
-                         signalCoordType = "default",
                          scoringMetric="default",
                          absVal=TRUE,
-                         centerDataMat=TRUE,
-                         centerFeatureMat=TRUE,
+                         centerGenomicSignal=TRUE,
+                         centerSampleLabels=TRUE,
                          variationMetric="cor",
                          nPerm=300,
                          useSimpleCache=TRUE,
@@ -139,14 +142,14 @@ runCOCOAPerm <- function(genomicSignal,
     allResultsList <- list()
     
     # more efficient to only do once (not that high impact though)
-    if (centerDataMat) {
+    if (centerGenomicSignal) {
         cpgMeans <- rowMeans(genomicSignal, na.rm = TRUE)
         # centering before calculating correlation
         genomicSignal <- apply(X = genomicSignal, MARGIN = 2, function(x) x - cpgMeans)
         # don't do later
-        centerDataMat <- FALSE
+        centerGenomicSignal <- FALSE
     }
-    if (centerFeatureMat) {
+    if (centerSampleLabels) {
         featureMeans <- colMeans(sampleLabels, na.rm = TRUE)
         # centering before calculating correlation (also, t() converts to matrix)
         sampleLabels <- t(apply(X = t(sampleLabels), MARGIN = 2, function(x) x - featureMeans))
@@ -154,7 +157,7 @@ runCOCOAPerm <- function(genomicSignal,
             sampleLabels <- t(sampleLabels)
         }
         # don't do later
-        centerFeatureMat <- FALSE
+        centerSampleLabels <- FALSE
     }
     
 
@@ -181,13 +184,13 @@ runCOCOAPerm <- function(genomicSignal,
                                    genomicSignal=genomicSignal,
                                    signalCoord=signalCoord,
                                    GRList=GRList,
-                                   calcCols=colsToAnnotate,
+                                   signalCol=colsToAnnotate,
                                    sampleLabels=sampleLabels,
                                    variationMetric = variationMetric,
                                    scoringMetric=scoringMetric,
                                    absVal=absVal,
-                                   centerDataMat = centerDataMat,
-                                   centerFeatureMat = centerFeatureMat,
+                                   centerGenomicSignal = centerGenomicSignal,
+                                   centerSampleLabels = centerSampleLabels,
                                    verbose=verbose)
                     message(i) # must be ahead of object that is saved as cache, not after
                     tmp
@@ -213,7 +216,7 @@ runCOCOAPerm <- function(genomicSignal,
                                          genomicSignal=genomicSignal,
                                          signalCoord=signalCoord,
                                          GRList=GRList,
-                                         calcCols=colsToAnnotate,
+                                         signalCol=colsToAnnotate,
                                          sampleLabels=sampleLabels,
                                          variationMetric = variationMetric,
                                          scoringMetric=scoringMetric,
@@ -239,13 +242,13 @@ runCOCOAPerm <- function(genomicSignal,
 
         simpleCache(paste0("empiricalPValsUncorrected", .analysisID), {
             rsPVals <- getPermStat(rsScores=rsScores, nullDistList=nullDistList,
-                                  calcCols=colsToAnnotate, whichMetric = "pval")
+                                  signalCol=colsToAnnotate, whichMetric = "pval")
             rsPVals
         }, assignToVariable=rsPVals, cacheDir=cacheDir, ...)
         
         simpleCache(paste0("permZScores", .analysisID), {
             rsZScores <- getPermStat(rsScores=rsScores, nullDistList=nullDistList,
-                                    calcCols=colsToAnnotate, whichMetric = "zscore")
+                                    signalCol=colsToAnnotate, whichMetric = "zscore")
             rsZScores
             
         }, assignToVariable="rsZScores", cacheDir=cacheDir, ...)
@@ -254,7 +257,7 @@ runCOCOAPerm <- function(genomicSignal,
             # p-values based on fitted gamma distributions
             gPValDF <- getGammaPVal(rsScores = rsScores, 
                                    nullDistList = nullDistList, 
-                                   calcCols = colsToAnnotate, 
+                                   signalCol = colsToAnnotate, 
                                    method = gammaFitMethod, 
                                    realScoreInDist = realScoreInDist,
                                    force=force)
@@ -268,15 +271,15 @@ runCOCOAPerm <- function(genomicSignal,
         
     } else {
         rsPVals <- getPermStat(rsScores=rsScores, nullDistList=nullDistList,
-                              calcCols=colsToAnnotate, whichMetric = "pval")
+                              signalCol=colsToAnnotate, whichMetric = "pval")
         
         rsZScores <- getPermStat(rsScores=rsScores, nullDistList=nullDistList,
-                                calcCols=colsToAnnotate, whichMetric = "zscore")
+                                signalCol=colsToAnnotate, whichMetric = "zscore")
         
         # p-values based on fitted gamma distributions
         gPValDF <- getGammaPVal(rsScores = rsScores, 
                                nullDistList = nullDistList, 
-                               calcCols = colsToAnnotate, 
+                               signalCol = colsToAnnotate, 
                                method = gammaFitMethod, 
                                realScoreInDist = realScoreInDist,
                                force=force)
@@ -332,13 +335,19 @@ runCOCOAPerm <- function(genomicSignal,
 #' @template genomicSignal
 #' @template signalCoord
 #' @template GRList
-#' @param calcCols character. the columns in `sampleLabels` for which to calculate
-#' correlation and then to run COCOA on
+#' @templateVar usesSampleLabels TRUE
+#' @template signalCol
 #' @template sampleLabels
-#' @param variationMetric character. 
+#' @template variationMetric
 #' @template scoringMetric
 #' @template verbose
 #' @template absVal
+#' @param centerGenomicSignal Logical. Should rows in genomicSignal
+#' be centered based on
+#' their means? (subtracting row mean from each row)
+#' @param centerSampleLabels Logical. Should columns in sampleLabels be 
+#' centered based
+#' on their means? (subtract column mean from each column)
 #' @return data.frame. The output of runCOCOA for one permutation
 #' @examples data("brcaMCoord1")
 #' data("brcaLoadings1")
@@ -355,30 +364,30 @@ runCOCOAPerm <- function(genomicSignal,
 #'                          genomicSignal=brcaMethylData1,
 #'                          signalCoord=brcaMCoord1,
 #'                          GRList=GRangesList(esr1_chr1, nrf1_chr1),
-#'                          calcCols="ER_Status",
+#'                          signalCol="ER_Status",
 #'                          sampleLabels=sampleLabels,
 #'                          variationMetric="cor")
 #' onePermResult
 #' @export
 corPerm <- function(randomInd, genomicSignal, 
-                    signalCoord, GRList, calcCols,
+                    signalCoord, GRList, signalCol,
                     sampleLabels, variationMetric = "cor", 
                     scoringMetric="default", verbose=TRUE,
-                    absVal=TRUE, centerDataMat=TRUE,
-                    centerFeatureMat=TRUE) {
+                    absVal=TRUE, centerGenomicSignal=TRUE,
+                    centerSampleLabels=TRUE) {
     
     # if vector is given, return error
     if (is.null(dim(sampleLabels))) {
         stop("`sampleLabels` should be a matrix or data.frame")
     }
     
-    if (any(!(calcCols %in% colnames(sampleLabels)))) {
+    if (any(!(signalCol %in% colnames(sampleLabels)))) {
         stop("Not all specified columns are present in `sampleLabels`")
     }
     
     
-    # subset to only calcCols
-    sampleLabels <- sampleLabels[, calcCols, drop=FALSE]
+    # subset to only signalCol
+    sampleLabels <- sampleLabels[, signalCol, drop=FALSE]
     
     # because names are dropped for a single column data.frame when indexing
     # single col data.frame is automatically converted to numeric
@@ -390,8 +399,8 @@ corPerm <- function(randomInd, genomicSignal,
     # calculate correlation
     featureLabelCor <- createCorFeatureMat(dataMat = genomicSignal, 
                                           featureMat = sampleLabels, 
-                                          centerDataMat = centerDataMat, 
-                                          centerFeatureMat = centerFeatureMat,
+                                          centerDataMat = centerGenomicSignal, 
+                                          centerFeatureMat = centerSampleLabels,
                                           testType = variationMetric)
     
     # more efficient to do only once instead of for each region set later on
@@ -404,7 +413,7 @@ corPerm <- function(randomInd, genomicSignal,
     # run COCOA
     thisPermRes <- runCOCOA(signal=featureLabelCor, 
                            signalCoord=signalCoord, GRList=GRList, 
-                           signalCol = calcCols, 
+                           signalCol = signalCol, 
                            scoringMetric = scoringMetric, verbose = verbose,
                            absVal = absVal)
     
@@ -485,8 +494,9 @@ permListToOneNullDist <- function(resultsList, rsInd) {
 #' Has same score columns as rsScores. 
 #' Each column corresponds to a null distribution for that 
 #' region set for a given sample variable of interest (e.g. PC or sample phenotype).  
-#' @param calcCols character.
-#' @param method character. Has the method to use to fit the gamma 
+#' @templateVar usesRSScores TRUE
+#' @template signalCol
+#' @param method Character. Has the method to use to fit the gamma 
 #' distribution to the null distribution.
 #' Options are 
 #' "mme" (moment matching estimation), "mle" (maximum likelihood estimation), 
@@ -516,11 +526,11 @@ permListToOneNullDist <- function(resultsList, rsInd) {
 #' nullDistList <- convertToFromNullDist(permRSScores)
 #' getGammaPVal(rsScores=fakeOriginalScores,
 #'              nullDistList=nullDistList,
-#'              calcCols=c("PC1", "PC2"))
+#'              signalCol=c("PC1", "PC2"))
 #' 
 #' @export
 
-getGammaPVal <- function(rsScores, nullDistList, calcCols, method="mme", 
+getGammaPVal <- function(rsScores, nullDistList, signalCol, method="mme", 
                          realScoreInDist=TRUE, force=FALSE) {
     
     
@@ -541,7 +551,7 @@ getGammaPVal <- function(rsScores, nullDistList, calcCols, method="mme",
     # make sure the same columns are present/in the same order
     
     
-    colsToAnnotate <- calcCols[calcCols %in% colnames(rsScores)]
+    colsToAnnotate <- signalCol[signalCol %in% colnames(rsScores)]
     
     if (realScoreInDist) {
         # to get a more accurate gamma distribution, include the score from unpermuted test.
@@ -616,11 +626,7 @@ fitGammaNullDist <- function(nullDistDF, method="mme", force=FALSE) {
                                                                                                 method="mme")}))   
     }
     
-    return(modelList)    #' rsScores <- runCOCOA(signal=brcaLoadings1, 
-    #'                                  signalCoord=brcaMCoord1, 
-    #'                                  GRList=GRangesList(esr1_chr1), 
-    #'                                  signalCol=c("PC1", "PC2"), 
-    #'                                  scoringMetric="regionMean")
+    return(modelList)
 }
 
 pGammaList <- function(scoreVec, fitDistrList) {
@@ -644,18 +650,21 @@ pGammaList <- function(scoreVec, fitDistrList) {
 #' from running COCOA on permuted data. Then this function uses the
 #' null distributions to get an empirical p-value or z-score for
 #' each region set. See vignettes for the workflow that leads to
-#' this function.
+#' this function. The calculation of the p-value/z-score does not 
+#' include the real region set score in the null distribution.
 #'
 #' @template rsScores 
 #' @param nullDistList List. one item per region set. Each item is a 
 #' data.frame with the 
 #' null distribution for a single region set. Each column in the data.frame
-#' is for a single target variable (e.g. PC or phenotype)
-#' @param calcCols Character. The names of the columns with the COCOA scores
-#' in `rsScores` and `nullDistList` items.
-#' @param testType character. "greater", "lesser", "two-sided" Whether to
-#' create p values based on one sided test or not.
-#' @param whichMetric character. Can be "pval" or "zscore"
+#' is for a target variable (e.g. PC or phenotype), which is given
+#' by the `signalCol` parameter.
+#' @templateVar usesRSScores
+#' @template signalCol 
+#' @param testType Character. "greater", "lesser", "two-sided" Whether to
+#' create p values based on one sided test or not. Only applies when
+#' whichMetric="pval".
+#' @param whichMetric Character. Can be "pval" or "zscore"
 #' @examples 
 #' fakeOriginalScores <- data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
 #' fakePermScores <- data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
@@ -664,13 +673,13 @@ pGammaList <- function(scoreVec, fitDistrList) {
 #' permRSScores <- list(fakePermScores, fakePermScores2, fakePermScores3)
 #' nullDistList <- convertToFromNullDist(permRSScores)
 #' getPermStat(rsScores=fakeOriginalScores, nullDistList=nullDistList, 
-#'             calcCols=c("PC1", "PC2"), whichMetric="pval") 
+#'             signalCol=c("PC1", "PC2"), whichMetric="pval") 
 #' getPermStat(rsScores=fakeOriginalScores, nullDistList=nullDistList, 
-#'             calcCols=c("PC1", "PC2"), whichMetric="zscore") 
+#'             signalCol=c("PC1", "PC2"), whichMetric="zscore") 
 #' 
 #' @export
 
-getPermStat <- function(rsScores, nullDistList, calcCols, 
+getPermStat <- function(rsScores, nullDistList, signalCol, 
                         testType="greater", whichMetric = "pval") {
     
     if (is(rsScores, "data.table")) {
@@ -680,20 +689,20 @@ getPermStat <- function(rsScores, nullDistList, calcCols,
     # do once for each region set
     thisStatList <- list()
     for (i in 1:nrow(rsScores)) {
-        thisStatList[[i]] <- as.data.frame(t(getPermStatSingle(rsScore=rsScores[i, calcCols], 
+        thisStatList[[i]] <- as.data.frame(t(getPermStatSingle(rsScore=rsScores[i, signalCol], 
                                                               nullDist = nullDistList[[i]],
-                                                              calcCols = calcCols,
+                                                              signalCol = signalCol,
                                                               whichMetric=whichMetric)))
-        colnames(thisStatList[[i]]) <- calcCols
+        colnames(thisStatList[[i]]) <- signalCol
     }
     thisStat <- rbindlist(thisStatList)
     # add back on annotation info
-    thisStat <- cbind(thisStat, rsScores[, colnames(rsScores)[!(colnames(rsScores) %in% calcCols)]])
+    thisStat <- cbind(thisStat, rsScores[, colnames(rsScores)[!(colnames(rsScores) %in% signalCol)]])
     
     # pVals <- mapply(FUN = function(x, y) getPermPvalSingle(rsScore=x, 
     #                                            nullDist = y,
-    #                                            calcCols = calcCols), 
-    #        x = rsScores[, calcCols], y=nullDistList)
+    #                                            signalCol = signalCol), 
+    #        x = rsScores[, signalCol], y=nullDistList)
     
     
     return(thisStat)
@@ -702,9 +711,9 @@ getPermStat <- function(rsScores, nullDistList, calcCols,
 
 # get p values for a single region set (can get p val for multiple columns)
 # @param rsScore a row of values for a single region set. One 
-# value for each calcCols
+# value for each signalCol
 getPermStatSingle <- function(rsScore, nullDist, 
-                              calcCols, testType="greater", whichMetric = "pval") {
+                              signalCol, testType="greater", whichMetric = "pval") {
     
     if (is(nullDist, "data.table")) {
         nullDist <- as.data.frame(nullDist)
@@ -720,30 +729,38 @@ getPermStatSingle <- function(rsScore, nullDist,
         
         pVal <- rep(-1, length(rsScore))
         if (testType == "greater") {
-            
             for (i in seq_along(pVal)) {
                 # only for one sided test (greater than)
-                pVal[i] <- 1 - ecdf(x = nullDist[, calcCols[i]])(rsScore[i])
+                pVal[i] <- 1 - ecdf(x = nullDist[, signalCol[i]])(rsScore[i])
             }
+        } else if (testType == "lesser") {
+            for (i in seq_along(pVal)) {
+                # only for one sided test (less than)
+                pVal[i] <- ecdf(x = nullDist[, signalCol[i]])(rsScore[i])
+            }
+        } else if (testType == "two-sided") {
+            
+            for (i in seq_along(pVal)) {
+                cdfVal <- ecdf(x = nullDist[, signalCol[i]])(rsScore[i])
+                # convert to two sided pval
+                pVal[i] <- -2 * abs(cdfVal - 0.5) + 1
+            }
+
         }
-        
-        # (-abs(x-0.5) + 0.5) * 2
         
         thisStat <- pVal
     }
     
     if (whichMetric == "zscore") {
         
-        
         zScore <- rep(NA, length(rsScore))
         for (i in seq_along(zScore)) {
-            # only for one sided test (greater than)
-            zScore[i] <- (rsScore[i] - mean(nullDist[, calcCols[i]])) / sd(x = nullDist[, calcCols[i]])
+            # greater than/less than hypothesis does not matter for z-score
+            zScore[i] <- (rsScore[i] - mean(nullDist[, signalCol[i]])) / sd(x = nullDist[, signalCol[i]])
         }
         
         thisStat <- as.numeric(zScore)
     }
-    
     
     return(thisStat)
 }

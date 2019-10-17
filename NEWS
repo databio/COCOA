@@ -20,9 +20,12 @@ Notable changes to this project will be documented in this file.
     - Addition of functionality for region-based data such as ATAC-seq
         - default setting automatically detects whether data is single base(e.g. DNA methylation or multiple bases like ATAC-seq.
         - different scoring method for single base vs multiple base data
+    - New functions that enable supervised (and unsupervised) analysis
+	- 
     - Other changes
         - absVal parameter added for several functions (aggregateLoadings, getLoadingProfile, runCOCOA)
         - getMetaRegionProfile: default binNum changed from 25 to 21
+	- wilcoxon rank sum scoring method deprecated
 
 ## [1.0.2] -- 2019-03-06
 

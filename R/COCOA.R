@@ -620,12 +620,12 @@ runCOCOA <- function(signal,
 # all columns in featureMat will be used (subset when passing to function
 # in order to not use all columns)
 # @param centerDataMat logical object. Should rows in dataMat be centered based on
-# their means? (subtracting row means from each row)
-# @param centerFeatureMat. logical.
+# their means? (subtracting row mean from each row)
+# @param centerFeatureMat logical. Should columns in featureMat be centered based
+# on their means? (subtract column mean from each column)
 # @param testType character object. Can be "cor" (Pearson correlation),
 # "spearmanCor (Spearman correlation)
-# "pcor" (partial correlation), "cov" (covariance (Pearson)), "spearmanCov" 
-# (Spearman covariance)
+# "pcor" (partial correlation), "cov" (covariance (Pearson)),
 # @param covariate
 #
 # If a row in dataMat has 0 stand. deviation, correlation will be set to 0
@@ -1197,11 +1197,14 @@ weightedAvePerRegion <- function(signalDT,
 #' @template signalCoord
 #' @template regionSet
 #' @template signalCol
-#' @param returnQuantile "logical" object. If FALSE, return region averages. If TRUE,
+#' @param cutoff Numeric. Only regions with at least this value will be 
+#' returned (either above this average `signal` value or above this quantile
+#' if returnQuantile=TRUE).
+#' @param returnQuantile Logical. If FALSE, return region averages. If TRUE,
 #' for each region, return the quantile of that region's average value
 #' based on the distribution of individual feature values in `signal` for
-#' that `signalCol`
-#' @return a GRanges object with region coordinates for regions with
+#' that `signalCol`.
+#' @return A GRanges object with region coordinates for regions with
 #' scores/quantiles above "cutoff" for any target variable in signalCol. 
 #' The scores/quantiles
 #' for signalCol are given as metadata in the GRanges.
@@ -1219,7 +1222,8 @@ weightedAvePerRegion <- function(signalDT,
 getTopRegions <- function(signal, 
                           signalCoord, 
                           regionSet, 
-                          signalCol = c("PC1", "PC2"), cutoff = 0.8, 
+                          signalCol = c("PC1", "PC2"), 
+                          cutoff = 0.8, 
                           returnQuantile=TRUE) {
     
     regionLoadDT <- averagePerRegion(signal=signal,

@@ -5,9 +5,9 @@
 \title{Run COCOA permutations to get p-values}
 \usage{
 runCOCOAPerm(genomicSignal, signalCoord, GRList, rsScores, sampleLabels,
-  signalCol = c("PC1", "PC2"), signalCoordType = "default",
-  scoringMetric = "default", absVal = TRUE, centerDataMat = TRUE,
-  centerFeatureMat = TRUE, variationMetric = "cor", nPerm = 300,
+  signalCol = c("PC1", "PC2"), scoringMetric = "default",
+  absVal = TRUE, centerGenomicSignal = TRUE,
+  centerSampleLabels = TRUE, variationMetric = "cor", nPerm = 300,
   useSimpleCache = TRUE, cacheDir = getwd(), dataID = "",
   correctionMethod = "BH", gammaFitMethod = "mme",
   realScoreInDist = TRUE, force = FALSE, verbose = TRUE, ...)
@@ -43,15 +43,17 @@ region set and the epigenetic data.
 Rows should be in the same order as the region sets in GRList
 (the list of region sets used to create rsScores.)}
 
-\item{sampleLabels}{Matrix or data.frame. Rows should be samples, 
-columns should be the target variables 
+\item{sampleLabels}{Matrix or data.frame. Rows should be samples. 
+Columns should be the target variables 
 (whatever variable you want to test for association with
-the epigenetic signal: e.g. PC scores),
-all columns in featureMat will be used (subset when passing to function
-in order to not use all columns).}
+the epigenetic signal: e.g. PC scores),}
 
-\item{signalCol}{Character. The column names of `sampleLabels` that
-you want to test. These must also be columns in rsScores.}
+\item{signalCol}{A character vector with the names of the sample variables
+of interest/target variables (e.g. PCs or sample phenotypes). 
+
+The columns in `sampleLabels` for which to calculate
+the variation related to the epigenetic data
+(e.g. correlation) and then to run COCOA on.}
 
 \item{scoringMetric}{A character object with the scoring metric.
 There are different methods available for 
@@ -88,6 +90,14 @@ will decrease (if there may be anticorrelation between
 regions in a region set). Choose FALSE if you expect regions in a 
 given region set to all change in the same direction (all be positively
 correlated with each other).}
+
+\item{centerGenomicSignal}{Logical. Should rows in genomicSignal
+be centered based on
+their means? (subtracting row mean from each row)}
+
+\item{centerSampleLabels}{Logical. Should columns in sampleLabels be 
+centered based
+on their means? (subtract column mean from each column)}
 
 \item{variationMetric}{Character. Either "cor" (Pearson correlation), 
 "pcor" (partial correlation), "spearmanCor (Spearman correlation) 
@@ -134,11 +144,6 @@ of the function should be shown. One
 bar indicates the region set is completed.}
 
 \item{...}{Character. Optional additional arguments for simpleCache.}
-
-\item{sampleLabels}{data.frame/matrix. Sample labels/values that 
-you are running COCOA to find region sets associated with. These 
-values will be shuffled for the permutation test. Rows are samples.
-Each column is a sample label.}
 }
 \value{
 Returns a list where each item is a data.frame of COCOA results 
@@ -174,7 +179,7 @@ realRSScores <- corPerm(randomInd=correctSampleOrder,
                         genomicSignal=brcaMethylData1,
                         signalCoord=brcaMCoord1,
                         GRList=GRangesList(esr1_chr1, nrf1_chr1),
-                        calcCols=c("PC1", "PC2"),
+                        signalCol=c("PC1", "PC2"),
                         sampleLabels=sampleLabels,
                         variationMetric="cor")
         
@@ -188,7 +193,7 @@ randomRSScores <- corPerm(randomInd=randomOrder,
                           genomicSignal=brcaMethylData1,
                           signalCoord=brcaMCoord1,
                           GRList=GRangesList(esr1_chr1, nrf1_chr1),
-                          calcCols=c("PC1", "PC2"),
+                          signalCol=c("PC1", "PC2"),
                           sampleLabels=sampleLabels,
                           variationMetric="cor")
 

@@ -4,7 +4,7 @@
 \alias{getGammaPVal}
 \title{Get a p-value for region set scores based on a gamma distribution.}
 \usage{
-getGammaPVal(rsScores, nullDistList, calcCols, method = "mme",
+getGammaPVal(rsScores, nullDistList, signalCol, method = "mme",
   realScoreInDist = TRUE, force = FALSE)
 }
 \arguments{
@@ -24,9 +24,11 @@ Has same score columns as rsScores.
 Each column corresponds to a null distribution for that 
 region set for a given sample variable of interest (e.g. PC or sample phenotype).}
 
-\item{calcCols}{character.}
+\item{signalCol}{A character vector with the names of the sample variables
+of interest/target variables (e.g. PCs or sample phenotypes). 
+Must be column names of rsScores.}
 
-\item{method}{character. Has the method to use to fit the gamma 
+\item{method}{Character. Has the method to use to fit the gamma 
 distribution to the null distribution.
 Options are 
 "mme" (moment matching estimation), "mle" (maximum likelihood estimation), 
@@ -64,6 +66,6 @@ permRSScores <- list(fakePermScores, fakePermScores2, fakePermScores3)
 nullDistList <- convertToFromNullDist(permRSScores)
 getGammaPVal(rsScores=fakeOriginalScores,
              nullDistList=nullDistList,
-             calcCols=c("PC1", "PC2"))
+             signalCol=c("PC1", "PC2"))
 
 }
