@@ -31,12 +31,8 @@ depending on the epigenetic data type).}
 \item{regionSet}{A genomic ranges (GRanges) object with regions corresponding
 to the same biological annotation.}
 
-\item{signalCol}{A character vector with the sample variables
-of interest/target variables (e.g. PCs or sample phenotypes). 
-
-
-
-e.g. c("PC1", "PC2")}
+\item{signalCol}{A character vector with the names of the sample variables
+of interest/target variables (e.g. PCs or sample phenotypes).}
 
 \item{signalCoordType}{Character. Can be "default", "singleBase", or 
 "multiBase". This describes whether the coordinates for `signal` 
@@ -57,15 +53,8 @@ give a higher resolution but perhaps more noisy profile.}
 of the function should be shown. One
 bar indicates the region set is completed.}
 
-\item{absVal}{Logical. If TRUE, take the absolute value of values in
-signal. Choose TRUE if you think there may be some 
-genomic loci in a region set that will increase and others
-will decrease (if there may be anticorrelation between
-regions in a region set). Choose FALSE if you expect regions in a 
-given region set to all change in the same direction (all be positively
-correlated with each other).}
-
-\item{scoringMetric}{A character object with the scoring metric.
+\item{aggrMethod}{character. A character object with the aggregation method.
+Similar to runCOCOA `scoringMetric` parameter.
 There are different methods available for 
 signalCoordType="singleBase" vs  signalCoordType="multiBase".
 For "singleBase", the available methods are "regionMean" and 
@@ -92,6 +81,14 @@ of the regionSet region is covered. Then this proportion is used to
 weight the signal value when calculating the mean. 
 The denominator of the mean
 is the sum of all the proportion overlaps.}
+
+\item{absVal}{Logical. If TRUE, take the absolute value of values in
+signal. Choose TRUE if you think there may be some 
+genomic loci in a region set that will increase and others
+will decrease (if there may be anticorrelation between
+regions in a region set). Choose FALSE if you expect regions in a 
+given region set to all change in the same direction (all be positively
+correlated with each other).}
 }
 \value{
 A data.frame with the binned meta-region profile,

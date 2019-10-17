@@ -36,12 +36,11 @@ Must be from the same reference genome as the coordinates for the actual data/sa
 The regions that will be visualized.}
 
 \item{sampleScores}{A matrix. Must contain a column for the 
-variable of interest with name given
-by "orderByCol" that will be used to order samples.  
+variable of interest/target variable.
 E.g. The variable of interest could be 
 the principal component scores for the samples. 
-sampleScores must have sample names/IDs as row names,
-These same sample names must be column names of genomicSignal}
+`sampleScores` must have sample names/IDs as row names,
+These same sample names must be column names of genomicSignal.}
 
 \item{orderByCol}{A character object. A variable to order samples by
 (order rows of heatmap by variable, from high to low value).

@@ -4,7 +4,7 @@
 \alias{getPermStat}
 \title{Get p-value or z-score based on permutation results}
 \usage{
-getPermStat(rsScores, nullDistList, calcCols, testType = "greater",
+getPermStat(rsScores, nullDistList, signalCol, testType = "greater",
   whichMetric = "pval")
 }
 \arguments{
@@ -20,15 +20,17 @@ Rows should be in the same order as the region sets in GRList
 \item{nullDistList}{List. one item per region set. Each item is a 
 data.frame with the 
 null distribution for a single region set. Each column in the data.frame
-is for a single target variable (e.g. PC or phenotype)}
+is for a target variable (e.g. PC or phenotype), which is given
+by the `signalCol` parameter.}
 
-\item{calcCols}{Character. The names of the columns with the COCOA scores
-in `rsScores` and `nullDistList` items.}
+\item{signalCol}{A character vector with the names of the sample variables
+of interest/target variables (e.g. PCs or sample phenotypes).}
 
-\item{testType}{character. "greater", "lesser", "two-sided" Whether to
-create p values based on one sided test or not.}
+\item{testType}{Character. "greater", "lesser", "two-sided" Whether to
+create p values based on one sided test or not. Only applies when
+whichMetric="pval".}
 
-\item{whichMetric}{character. Can be "pval" or "zscore"}
+\item{whichMetric}{Character. Can be "pval" or "zscore"}
 }
 \description{
 This function starts with real COCOA scores for each
@@ -37,7 +39,8 @@ region set that come
 from running COCOA on permuted data. Then this function uses the
 null distributions to get an empirical p-value or z-score for
 each region set. See vignettes for the workflow that leads to
-this function.
+this function. The calculation of the p-value/z-score does not 
+include the real region set score in the null distribution.
 }
 \examples{
 fakeOriginalScores <- data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
@@ -47,8 +50,8 @@ fakePermScores3 <- data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
 permRSScores <- list(fakePermScores, fakePermScores2, fakePermScores3)
 nullDistList <- convertToFromNullDist(permRSScores)
 getPermStat(rsScores=fakeOriginalScores, nullDistList=nullDistList, 
-            calcCols=c("PC1", "PC2"), whichMetric="pval") 
+            signalCol=c("PC1", "PC2"), whichMetric="pval") 
 getPermStat(rsScores=fakeOriginalScores, nullDistList=nullDistList, 
-            calcCols=c("PC1", "PC2"), whichMetric="zscore") 
+            signalCol=c("PC1", "PC2"), whichMetric="zscore") 
 
 }

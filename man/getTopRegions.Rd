@@ -30,20 +30,20 @@ depending on the epigenetic data type).}
 \item{regionSet}{A genomic ranges (GRanges) object with regions corresponding
 to the same biological annotation.}
 
-\item{signalCol}{A character vector with the sample variables
-of interest/target variables (e.g. PCs or sample phenotypes). 
+\item{signalCol}{A character vector with the names of the sample variables
+of interest/target variables (e.g. PCs or sample phenotypes).}
 
+\item{cutoff}{Numeric. Only regions with at least this value will be 
+returned (either above this average `signal` value or above this quantile
+if returnQuantile=TRUE).}
 
-
-e.g. c("PC1", "PC2")}
-
-\item{returnQuantile}{"logical" object. If FALSE, return region averages. If TRUE,
+\item{returnQuantile}{Logical. If FALSE, return region averages. If TRUE,
 for each region, return the quantile of that region's average value
 based on the distribution of individual feature values in `signal` for
-that `signalCol`}
+that `signalCol`.}
 }
 \value{
-a GRanges object with region coordinates for regions with
+A GRanges object with region coordinates for regions with
 scores/quantiles above "cutoff" for any target variable in signalCol. 
 The scores/quantiles
 for signalCol are given as metadata in the GRanges.

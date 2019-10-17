@@ -88,7 +88,7 @@ for (i in 1:nPerm) {
                            genomicSignal=brcaMethylData1, 
                            signalCoord=brcaMCoord1, 
                            GRList=GRList,
-                           calcCols="ER_Status", 
+                           signalCol="ER_Status", 
                            sampleLabels=sampleLabels, 
                            variationMetric="cor")
 }
@@ -112,9 +112,9 @@ To reduce the number of permutations (and the run time for COCOA), we will appro
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 # p-values based on fitted gamma distributions
-        gPValDF <- getGammaPVal(rsScores <- rsScores, 
+        gPValDF <- getGammaPVal(rsScores = rsScores, 
                                nullDistList = nullDistList, 
-                               calcCols = "ER_Status", 
+                               signalCol = "ER_Status", 
                                method = "mme", realScoreInDist = TRUE)
         gPValDF <- cbind(gPValDF, 
                         rsScores[, colnames(rsScores)[!(colnames(rsScores) 

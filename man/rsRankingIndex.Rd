@@ -17,12 +17,14 @@ region set and the epigenetic data.
 Rows should be in the same order as the region sets in GRList
 (the list of region sets used to create rsScores.)}
 
-\item{signalCol}{A character vector with the sample variables
+\item{signalCol}{A character vector with the names of the sample variables
 of interest/target variables (e.g. PCs or sample phenotypes). 
-The columns in rsScores for which you want
-the indices of the original region sets.
 
-e.g. c("PC1", "PC2")}
+
+
+
+The columns in rsScores for which you want
+the indices of the original region sets.}
 
 \item{decreasing}{Logical. Whether to sort rsScores in decreasing 
 or increasing order.}

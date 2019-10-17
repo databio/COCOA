@@ -39,12 +39,8 @@ The regions that will be visualized.}
 \item{rsName}{Character vector. Names of the region sets in the same
 order as GRList. For use as a title for each heatmap.}
 
-\item{signalCol}{A character vector with the sample variables
-of interest/target variables (e.g. PCs or sample phenotypes). 
-
-
-
-e.g. c("PC1", "PC2")}
+\item{signalCol}{A character vector with the names of the sample variables
+of interest/target variables (e.g. PCs or sample phenotypes).}
 
 \item{maxRegionsToPlot}{How many top regions from region set to include
 in heatmap. Including too many may slow down computation and increase memory

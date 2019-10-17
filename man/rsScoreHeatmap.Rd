@@ -22,12 +22,9 @@ region set and the epigenetic data.
 Rows should be in the same order as the region sets in GRList
 (the list of region sets used to create rsScores.)}
 
-\item{signalCol}{A character vector with the sample variables
+\item{signalCol}{A character vector with the names of the sample variables
 of interest/target variables (e.g. PCs or sample phenotypes). 
-
-
-Must be column names of rsScores.
-e.g. c("PC1", "PC2")}
+Must be column names of rsScores.}
 
 \item{orderByCol}{A character object. Target variable to order by in heatmap 
 (arranged in decreasing order for scores so p values should 
