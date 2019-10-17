@@ -40,6 +40,10 @@ Let's convert estrogen receptor status to a number so we can do calculations wit
 sampleLabels$ER_Status <- scale(as.numeric(sampleLabels$ER_Status), 
                                center=TRUE, scale=FALSE)
 methylCor <- cor(t(brcaMethylData1), sampleLabels$ER_Status)
+# if the standard deviation of the methylation level 
+# for a CpG across samples is 0,
+# cor() will return NA, so manually set the correlation to 0 for these CpGs
+methylCor[is.na(methylCor)] <- 0
 colnames(methylCor) <- "ER_Status"
 ```
 
@@ -121,5 +125,4 @@ To reduce the number of permutations (and the run time for COCOA), we will appro
 
 
 # How to choose a metric?
-    
     
