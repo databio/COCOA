@@ -2,9 +2,11 @@ Package: COCOA
 Version: 1.1.2
 Date: 2019-3-06
 Title: Coordinate Covariation Analysis
-Description: COCOA is a method for understanding variation among samples
+Description: COCOA is a method for understanding epigenetic 
+    variation among samples
     and can be used with data that includes genomic coordinates
-    such as DNA methylation. On a high level, COCOA uses a database
+    such as DNA methylation and chromatin accessibility data. 
+    On a high level, COCOA uses a database
     of "region sets" and principal component analysis (PCA) of your data
     to identify sources of variation among samples. A region set is a
     set of genomic regions that share a biological annotation, for instance,
@@ -44,9 +46,10 @@ Suggests:
     LOLA
 VignetteBuilder: knitr
 License: GPL-3
-biocViews: PrincipalComponent, GenomicVariation, DNAMethylation, GeneRegulation, GenomeAnnotation, 
-	   SystemsBiology, FunctionalGenomics, ChIPSeq, 
-           MethylSeq, Sequencing, Epigenetics, ImmunoOncology
+biocViews: Epigenetics, DNAMethylation, ATACSeq, DNaseSeq, MethylSeq, MethylationArray,
+            PrincipalComponent, GenomicVariation, GeneRegulation, GenomeAnnotation, 
+            SystemsBiology, FunctionalGenomics, ChIPSeq, 
+            Sequencing, ImmunoOncology
 URL: http://code.databio.org/COCOA/
 BugReports: https://github.com/databio/COCOA
 RoxygenNote: 6.1.1
