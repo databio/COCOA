@@ -9,7 +9,7 @@ rsRankingIndex(rsScores, signalCol, decreasing = TRUE,
 }
 \arguments{
 \item{rsScores}{data.frame. A data.frame with region set
-scores. The output of the 'runCOCOA' function.
+scores. The output of the 'aggregateSignalGRList' function.
 Each row is a region set. One column for each sample
 variable of interest (e.g. PC or sample phenotype).
 Also can have columns with info on the overlap between the 
@@ -50,7 +50,8 @@ For each target variable, get index of original region sets
 but ordered by rsScores
 ranking for each target variable. 
 The original index refers to that region set's position
-in the `GRList` param given to `runCOCOA` which is also that region set's
+in the `GRList` param given to `aggregateSignalGRList` which is 
+also that region set's
 row index in the COCOA output. The first number in a given column 
 of this function's output will be the
 original index of the region set ranked first for that target variable.

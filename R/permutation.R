@@ -14,7 +14,7 @@
 #' to each null distribution to estimate p values (not limited by the 
 #' number of permutations),
 #' Requires that the user has previously calculated the real COCOA scores. 
-#' See these individual functions for more info on each step: corPerm, 
+#' See these individual functions for more info on each step: runCOCOA, 
 #' convertToFromNullDist, getPermStat, and getGammaPVal. 
 #' 
 #' 
@@ -24,15 +24,15 @@
 #' @template signalCoord
 #' @template GRList
 #' @template rsScores
-#' @template sampleLabels
-#' @templateVar usesSampleLabels TRUE
+#' @template targetVar
+#' @templateVar usesTargetVar TRUE
 #' @template signalCol
 #' @template scoringMetric
 #' @template absVal
 #' @param centerGenomicSignal Logical. Should rows in genomicSignal
 #' be centered based on
 #' their means? (subtracting row mean from each row)
-#' @param centerSampleLabels Logical. Should columns in sampleLabels be 
+#' @param centerTargetVar Logical. Should columns in targetVar be 
 #' centered based
 #' on their means? (subtract column mean from each column)
 #' @param dataID Character. A unique identifier for this dataset 
@@ -75,38 +75,38 @@
 #' data("nrf1_chr1")
 #' data("brcaMethylData1")
 #' data("brcaPCScores657")
-#' sampleLabels <- brcaPCScores657[colnames(brcaMethylData1), ]
-#' sampleLabels$ER_Status <- scale(as.numeric(sampleLabels$ER_Status), 
+#' targetVar <- brcaPCScores657[colnames(brcaMethylData1), ]
+#' targetVar$ER_Status <- scale(as.numeric(targetVar$ER_Status), 
 #'                                center=TRUE, scale=FALSE)
-#' # give the actual order of samples to `corPerm` to get the real scores
-#' correctSampleOrder=1:nrow(sampleLabels)
-#' realRSScores <- corPerm(randomInd=correctSampleOrder,
-#'                         genomicSignal=brcaMethylData1,
+#' # give the actual order of samples to `runCOCOA` to get the real scores
+#' correctSampleOrder=1:nrow(targetVar)
+#' realRSScores <- runCOCOA(genomicSignal=brcaMethylData1,
 #'                         signalCoord=brcaMCoord1,
 #'                         GRList=GRangesList(esr1_chr1, nrf1_chr1),
 #'                         signalCol=c("PC1", "PC2"),
-#'                         sampleLabels=sampleLabels,
+#'                         targetVar=targetVar,
+#'                         sampleOrder=correctSampleOrder,
 #'                         variationMetric="cor")
 #'         
 #' # give random order of samples to get random COCOA scores 
 #' # so you start building a null distribution for each region set 
-#' # (see vignette for example of building a null distribution with `corPerm`)
-#' randomOrder <- sample(1:nrow(sampleLabels), 
-#'                       size=nrow(sampleLabels),
+#' # (see vignette for example of building a null distribution with `runCOCOA`)
+#' randomOrder <- sample(1:nrow(targetVar), 
+#'                       size=nrow(targetVar),
 #'                       replace=FALSE)
-#' randomRSScores <- corPerm(randomInd=randomOrder, 
-#'                           genomicSignal=brcaMethylData1,
+#' randomRSScores <- runCOCOA(genomicSignal=brcaMethylData1,
 #'                           signalCoord=brcaMCoord1,
 #'                           GRList=GRangesList(esr1_chr1, nrf1_chr1),
 #'                           signalCol=c("PC1", "PC2"),
-#'                           sampleLabels=sampleLabels,
+#'                           targetVar=targetVar,
+#'                           sampleOrder=randomOrder,
 #'                           variationMetric="cor")
 #' 
 #' permResults <- runCOCOAPerm(genomicSignal=brcaMethylData1,
 #'                            signalCoord=brcaMCoord1,
 #'                            GRList=GRangesList(esr1_chr1, nrf1_chr1),
 #'                            rsScores=realRSScores,
-#'                            sampleLabels=sampleLabels,
+#'                            targetVar=targetVar,
 #'                            signalCol=c("PC1", "PC2"),
 #'                            variationMetric="cor",
 #'                            nPerm = 10,
@@ -120,12 +120,12 @@ runCOCOAPerm <- function(genomicSignal,
                          signalCoord,
                          GRList,
                          rsScores,
-                         sampleLabels,
+                         targetVar,
                          signalCol=c("PC1", "PC2"),
                          scoringMetric="default",
                          absVal=TRUE,
                          centerGenomicSignal=TRUE,
-                         centerSampleLabels=TRUE,
+                         centerTargetVar=TRUE,
                          variationMetric="cor",
                          nPerm=300,
                          useSimpleCache=TRUE,
@@ -149,15 +149,15 @@ runCOCOAPerm <- function(genomicSignal,
         # don't do later
         centerGenomicSignal <- FALSE
     }
-    if (centerSampleLabels) {
-        featureMeans <- colMeans(sampleLabels, na.rm = TRUE)
+    if (centerTargetVar) {
+        featureMeans <- colMeans(targetVar, na.rm = TRUE)
         # centering before calculating correlation (also, t() converts to matrix)
-        sampleLabels <- t(apply(X = t(sampleLabels), MARGIN = 2, function(x) x - featureMeans))
-        if (dim(sampleLabels)[1] == 1) {
-            sampleLabels <- t(sampleLabels)
+        targetVar <- t(apply(X = t(targetVar), MARGIN = 2, function(x) x - featureMeans))
+        if (dim(targetVar)[1] == 1) {
+            targetVar <- t(targetVar)
         }
         # don't do later
-        centerSampleLabels <- FALSE
+        centerTargetVar <- FALSE
     }
     
 
@@ -166,7 +166,7 @@ runCOCOAPerm <- function(genomicSignal,
     indList <- list()
     # generate random indices for shuffling of samples
     for (i in 1:nPerm) {
-        indList[[i]] <- sample(1:nrow(sampleLabels), nrow(sampleLabels))
+        indList[[i]] <- sample(1:nrow(targetVar), nrow(targetVar))
     }
 
     if (useSimpleCache) {
@@ -180,17 +180,17 @@ runCOCOAPerm <- function(genomicSignal,
                 # create sub caches, one for each permutation
                 simpleCache(onePermCacheName, cacheSubDir = paste0("rsPermScores_", nPerm, "Perm_", variationMetric, "_", dataID), {
                     
-                    tmp <- corPerm(randomInd=indList[[i]],
+                    tmp <- runCOCOA(sampleOrder=indList[[i]],
                                    genomicSignal=genomicSignal,
                                    signalCoord=signalCoord,
                                    GRList=GRList,
                                    signalCol=colsToAnnotate,
-                                   sampleLabels=sampleLabels,
+                                   targetVar=targetVar,
                                    variationMetric = variationMetric,
                                    scoringMetric=scoringMetric,
                                    absVal=absVal,
                                    centerGenomicSignal = centerGenomicSignal,
-                                   centerSampleLabels = centerSampleLabels,
+                                   centerTargetVar = centerTargetVar,
                                    verbose=verbose)
                     message(i) # must be ahead of object that is saved as cache, not after
                     tmp
@@ -212,12 +212,12 @@ runCOCOAPerm <- function(genomicSignal,
         for (i in seq_along(indList)) {
             # for (i in (length(rsPermScores) + 1):nPerm) {
                 
-            rsPermScores[[i]] <- corPerm(randomInd=indList[[i]],
+            rsPermScores[[i]] <- runCOCOA(sampleOrder=indList[[i]],
                                          genomicSignal=genomicSignal,
                                          signalCoord=signalCoord,
                                          GRList=GRList,
                                          signalCol=colsToAnnotate,
-                                         sampleLabels=sampleLabels,
+                                         targetVar=targetVar,
                                          variationMetric = variationMetric,
                                          scoringMetric=scoringMetric,
                                          absVal=absVal,
@@ -309,7 +309,7 @@ runCOCOAPerm <- function(genomicSignal,
 #' quantifying the epigenetic variation and scoring the region sets. This
 #' function makes it easy to generate null distributions in order to
 #' evaluate the statistical significance of the real COCOA results.
-#' You can use the randomInd parameter to shuffle the samples,
+#' You can use the sampleOrder parameter to shuffle the samples,
 #' then run COCOA to get fake scores for each region set. By doing 
 #' this many times, you can build a null distribution for each 
 #' region set composed of the region set's random scores from each
@@ -319,25 +319,25 @@ runCOCOAPerm <- function(genomicSignal,
 #' scores should be done with the same 
 #' variation metric as is used for the random permutations. For an
 #' unsupervised analysis using dimensionality reduction, first, the
-#' dimensionality reduction is done outside `corPerm`, then the
-#' latent factors/principal components are input to `corPerm` as the
-#' sample labels (sampleLabels parameter) when calculating both the real and 
+#' dimensionality reduction is done outside `runCOCOA`, then the
+#' latent factors/principal components are input to `runCOCOA` as the
+#' sample labels (targetVar parameter) when calculating both the real and 
 #' also the permutated region set scores. For a supervised analysis, 
-#' the target variables/phenotypes are the sampleLabels.
+#' the target variables/phenotypes are the targetVar.
 #' See the vignettes for examples.  
 #' 
-#' @param randomInd numeric. A vector of 1:(number of samples) but shuffled in a
-#' random order. E.g. randomInd = sample(1:ncol(genomicSignal), ncol(genomicSignal))
+#' @param sampleOrder numeric. A vector of 1:(number of samples) but shuffled in a
+#' random order. E.g. sampleOrder = sample(1:ncol(genomicSignal), ncol(genomicSignal))
 #' where ncol(genomicSignal) is the number of samples. 
-#' Set the seed with set.seed() before making randomInd to ensure reproducibility.
+#' Set the seed with set.seed() before making sampleOrder to ensure reproducibility.
 #' If the vector is unshuffled,
 #' this will give the real COCOA results.
 #' @template genomicSignal
 #' @template signalCoord
 #' @template GRList
-#' @templateVar usesSampleLabels TRUE
+#' @templateVar usesTargetVar TRUE
 #' @template signalCol
-#' @template sampleLabels
+#' @template targetVar
 #' @template variationMetric
 #' @template scoringMetric
 #' @template verbose
@@ -345,62 +345,64 @@ runCOCOAPerm <- function(genomicSignal,
 #' @param centerGenomicSignal Logical. Should rows in genomicSignal
 #' be centered based on
 #' their means? (subtracting row mean from each row)
-#' @param centerSampleLabels Logical. Should columns in sampleLabels be 
+#' @param centerTargetVar Logical. Should columns in targetVar be 
 #' centered based
 #' on their means? (subtract column mean from each column)
-#' @return data.frame. The output of runCOCOA for one permutation
+#' @return data.frame. The output of aggregateSignalGRList for one permutation
 #' @examples data("brcaMCoord1")
 #' data("brcaLoadings1")
 #' data("esr1_chr1")
 #' data("nrf1_chr1")
 #' data("brcaMethylData1")
 #' data("brcaPCScores657")
-#' sampleLabels <- brcaPCScores657[colnames(brcaMethylData1), ]
-#' sampleLabels$ER_Status <- scale(as.numeric(sampleLabels$ER_Status), 
+#' targetVar <- brcaPCScores657[colnames(brcaMethylData1), ]
+#' targetVar$ER_Status <- scale(as.numeric(targetVar$ER_Status), 
 #'                                center=TRUE, scale=FALSE)
 #' # shuffling sample labels
-#' randomInd <- sample(1:nrow(sampleLabels), nrow(sampleLabels))
-#' onePermResult <- corPerm(randomInd=randomInd, 
-#'                          genomicSignal=brcaMethylData1,
+#' sampleOrder <- sample(1:nrow(targetVar), nrow(targetVar))
+#' onePermResult <- runCOCOA(genomicSignal=brcaMethylData1,
 #'                          signalCoord=brcaMCoord1,
 #'                          GRList=GRangesList(esr1_chr1, nrf1_chr1),
 #'                          signalCol="ER_Status",
-#'                          sampleLabels=sampleLabels,
+#'                          targetVar=targetVar,
+#'                          sampleOrder=sampleOrder,
 #'                          variationMetric="cor")
 #' onePermResult
 #' @export
-corPerm <- function(randomInd, genomicSignal, 
+runCOCOA <- function(genomicSignal, 
                     signalCoord, GRList, signalCol,
-                    sampleLabels, variationMetric = "cor", 
+                    targetVar, 
+                    sampleOrder=1:nrow(targetVar),
+                    variationMetric = "cor", 
                     scoringMetric="default", verbose=TRUE,
                     absVal=TRUE, centerGenomicSignal=TRUE,
-                    centerSampleLabels=TRUE) {
+                    centerTargetVar=TRUE) {
     
     # if vector is given, return error
-    if (is.null(dim(sampleLabels))) {
-        stop("`sampleLabels` should be a matrix or data.frame")
+    if (is.null(dim(targetVar))) {
+        stop("`targetVar` should be a matrix or data.frame")
     }
     
-    if (any(!(signalCol %in% colnames(sampleLabels)))) {
-        stop("Not all specified columns are present in `sampleLabels`")
+    if (any(!(signalCol %in% colnames(targetVar)))) {
+        stop("Not all specified columns are present in `targetVar`")
     }
     
     
     # subset to only signalCol
-    sampleLabels <- sampleLabels[, signalCol, drop=FALSE]
+    targetVar <- targetVar[, signalCol, drop=FALSE]
     
     # because names are dropped for a single column data.frame when indexing
     # single col data.frame is automatically converted to numeric
-    featureNames <- colnames(sampleLabels)
+    featureNames <- colnames(targetVar)
     # reorder the sample labels
-    sampleLabels <- data.frame(sampleLabels[randomInd, ])
-    colnames(sampleLabels) <- featureNames
+    targetVar <- data.frame(targetVar[sampleOrder, ])
+    colnames(targetVar) <- featureNames
     
     # calculate correlation
     featureLabelCor <- createCorFeatureMat(dataMat = genomicSignal, 
-                                          featureMat = sampleLabels, 
+                                          featureMat = targetVar, 
                                           centerDataMat = centerGenomicSignal, 
-                                          centerFeatureMat = centerSampleLabels,
+                                          centerFeatureMat = centerTargetVar,
                                           testType = variationMetric)
     
     # more efficient to do only once instead of for each region set later on
@@ -411,7 +413,7 @@ corPerm <- function(randomInd, genomicSignal,
     
     
     # run COCOA
-    thisPermRes <- runCOCOA(signal=featureLabelCor, 
+    thisPermRes <- aggregateSignalGRList(signal=featureLabelCor, 
                            signalCoord=signalCoord, GRList=GRList, 
                            signalCol = signalCol, 
                            scoringMetric = scoringMetric, verbose = verbose,
@@ -774,7 +776,7 @@ getPermStatSingle <- function(rsScore, nullDist,
 # First, we shuffle the sample labels. Second, we calculate the association
 # between the epigenetic data and the shuffled sample labels using the 
 # chosen metric (e.g. correlation). Third, the resulting feature coefficients
-# are used as input to the runCOCOA function to score each region set.
+# are used as input to the aggregateSignalGRList function to score each region set.
 # This process is repeated `nPerm` times.
 # 
 # @param groupByRS logical

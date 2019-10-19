@@ -70,7 +70,7 @@ colnames(loadingMatW) <- c("PC2", "PC3")
 loadingMatW[7, "PC3"] <- 10
 dataDTW <- cbind(coordinateDTW, as.data.frame(loadingMatW))
 
-test_that("aggregateSignal, scoring metrics, and runCOCOA", {
+test_that("aggregateSignal, scoring metrics, and aggregateSignalGRList", {
     
 
     # # test wilcoxon rank sum scoring metric
@@ -156,7 +156,7 @@ test_that("aggregateSignal, scoring metrics, and runCOCOA", {
     #                mdRes$totalRegionNumber, 
     #                mdRes$meanRegionSize))
     
-    ################## test runCOCOA with meanDiff test data
+    ################## test aggregateSignalGRList with meanDiff test data
     
     coordinateDTW2 <- copy(coordinateDTW)
     coordinateDTW2$end <- coordinateDTW$end
@@ -164,7 +164,7 @@ test_that("aggregateSignal, scoring metrics, and runCOCOA", {
     # extraCol <- rep(0, nrow(coordinateDTW2))
     # signalCoordW2 <- COCOA:::dtToGr(coordinateDTW2)
     # mcols(signalCoordW2) <- data.frame(extraCol)
-    # twoResults <- runCOCOA(signal = loadingMatW, 
+    # twoResults <- aggregateSignalGRList(signal = loadingMatW, 
     #                       signalCoord = signalCoordW2, 
     #                       GRList = GRangesList(regionSetW, regionSetW), 
     #                       signalCol = c("PC2", "PC3"), 
@@ -317,12 +317,12 @@ test_that("getMetaRegionProfile", {
 #### take out these high level tests in order to save time
 test_that("Input formats", {
 
-    normalOut <- runCOCOA(signal = loadingMatW, 
+    normalOut <- aggregateSignalGRList(signal = loadingMatW, 
                                        signalCoord = coordinateDTW, 
                                        GRList = GRangesList(regionSetW), 
                                        signalCol = "PC2", 
                                        scoringMetric = "regionMean")
-    alterOut <- runCOCOA(signal = data.frame(loadingMatW), 
+    alterOut <- aggregateSignalGRList(signal = data.frame(loadingMatW), 
                                        signalCoord = COCOA:::dtToGr(coordinateDTW), 
                                        GRList = regionSetW, 
                                        signalCol = "PC2", 

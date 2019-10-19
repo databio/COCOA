@@ -95,11 +95,11 @@ GRList <- GRangesList(esr1_chr1, gata3_chr1, nrf1_chr1, atf3_chr1)
 regionSetName <- c("esr1_chr1", "gata3_chr1", "nrf1_chr1", "atf3_chr1")
 ```
 
-Now let's give each region set a score with `runCOCOA()` to quantify how much it is associated with each principal component:
+Now let's give each region set a score with `aggregateSignalGRList()` to quantify how much it is associated with each principal component:
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 PCsToAnnotate <- paste0("PC", 1:4)
-regionSetScores <- runCOCOA(signal=brcaLoadings1, 
+regionSetScores <- aggregateSignalGRList(signal=brcaLoadings1, 
                             signalCoord=brcaMCoord1, 
                             GRList=GRList, 
                             signalCol=PCsToAnnotate, 
@@ -298,15 +298,15 @@ data("atf3_chr1")
 data("brcaMCoord1")
 data("brcaMethylData1")
 data("brcaPCScores657")
-sampleLabels <- brcaPCScores657[colnames(brcaMethylData1), ]
+targetVar <- brcaPCScores657[colnames(brcaMethylData1), ]
 ```
 
 Let's convert estrogen receptor status to a number so we can do calculations with it. Then we will quantify the association between ER status and the DNA methylation level at each cytosine using Pearson correlation.
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
-sampleLabels$ER_Status <- scale(as.numeric(sampleLabels$ER_Status), 
+targetVar$ER_Status <- scale(as.numeric(targetVar$ER_Status), 
                                center=TRUE, scale=FALSE)
-methylCor <- cor(t(brcaMethylData1), sampleLabels$ER_Status)
+methylCor <- cor(t(brcaMethylData1), targetVar$ER_Status)
 # if the standard deviation of the methylation level 
 # for a CpG across samples is 0,
 # cor() will return NA, so manually set the correlation to 0 for these CpGs
@@ -314,14 +314,14 @@ methylCor[is.na(methylCor)] <- 0
 colnames(methylCor) <- "ER_Status"
 ```
 
-Now we have a feature contribution score (the correlation coefficient in this case) for each methylation site that represents how much the methylation at that site is associated with ER status. We can use those individual cytosine scores to score region sets. We'll score our region sets with the `runCOCOA` function.
+Now we have a feature contribution score (the correlation coefficient in this case) for each methylation site that represents how much the methylation at that site is associated with ER status. We can use those individual cytosine scores to score region sets. We'll score our region sets with the `aggregateSignalGRList` function.
 
 ### Score region sets
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 GRList <- GRangesList(esr1_chr1, gata3_chr1, atf3_chr1, nrf1_chr1)
 rsNames <- c("esr1", "gata3", "atf3", "nrf1")
-rsScores <- runCOCOA(signal=methylCor,
+rsScores <- aggregateSignalGRList(signal=methylCor,
                      signalCoord=brcaMCoord1,
                      GRList=GRList,
                      signalCol="ER_Status",
@@ -332,7 +332,7 @@ rsScores
 
 Now we have a score for each region set that represents how much epigenetic variation in that region set is associated with the phenotype of interest, ER status.
 
-Both the correlation and scoring steps can be combined into one step with the `corPerm` function as will be shown in the next section. 
+Both the correlation and scoring steps can be combined into one step with the `runCOCOA` function as will be shown in the next section. 
 
 ### Estimating statistical significance
 
@@ -350,13 +350,13 @@ permRSScores <- list()
 
 for (i in 1:nPerm) {
     # shuffling sample labels
-    randomInd <- sample(1:nrow(sampleLabels), nrow(sampleLabels))
-    permRSScores[[i]] <- corPerm(randomInd=randomInd, 
+    sampleOrder <- sample(1:nrow(targetVar), nrow(targetVar))
+    permRSScores[[i]] <- runCOCOA(sampleOrder=sampleOrder, 
                            genomicSignal=brcaMethylData1, 
                            signalCoord=brcaMCoord1, 
                            GRList=GRList,
                            signalCol="ER_Status", 
-                           sampleLabels=sampleLabels, 
+                           targetVar=targetVar, 
                            variationMetric="cor")
 }
 
@@ -364,7 +364,7 @@ permRSScores
 
 ```
 
-We now have a list where each item is a result of runCOCOA but we'll reformat it so that we have a list where each item is a null distribution for a single region set. We have `nPerm` list items in permRSScores.
+We now have a list where each item is a result of aggregateSignalGRList but we'll reformat it so that we have a list where each item is a null distribution for a single region set. We have `nPerm` list items in permRSScores.
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 nullDistList <- convertToFromNullDist(permRSScores)
@@ -441,10 +441,10 @@ COCOA should be done with many region sets (i.e. hundreds or > 1000). A region s
 
 ### Aggregating info from individual features
 
-Since differences between samples in individual features (nucleotides/regions) may be hard to interpret, COCOA uses region sets to aggregate nucleotide/region level info into a more condensed, interpretable form. As mentioned above, each feature has a "loading" for a given PC and the magnitude of the loading represents how much that feature contributes to that PC. We will use the absolute value of the loading since both a very positive and very negative loading reflect an association between that feature and the PC. Also, each original feature is associated with a genomic coordinate or a region. COCOA will use this information to give each region set in the region set database a score for each PC. For a given PC-region set combination (for example PC1 and the region set esr1_chr1), we first identify all the original features that overlap with the region set. Then the scoring of the region set depends on the scoring metric chosen. The "regionMean" method is described here although the other methods are described in function docs. For the "regionMean" method, we take the PC loadings (e.g. PC1 loadings) for the features that overlap the region set and average the absolute loadings by region (average loadings in each region to get one value per region of the region set). Then we average the region values to get a single average for that region set which is its score. We repeat this calculation for all PC-region set combinations. Now for a given PC, we can rank the region sets by their score/loading average to see which region sets are most associated with that PC (higher loading average means a greater association with the PC). Since the "regionMean" scoring method only tells you which region sets are *the most* associated with a PC out of those tested, it is important to use a large database of region sets and then to validate by looking at the raw data in these regions which can be done with COCOA visualization functions. Also, you can screen out region sets that have low coverage in your input data (the `region_coverage` column of `runCOCOA()` output) since high scores for these regions are more likely to have happened by chance. The biological annotation of the top ranked region sets for the top PCs can help you understand variation among your samples. 
+Since differences between samples in individual features (nucleotides/regions) may be hard to interpret, COCOA uses region sets to aggregate nucleotide/region level info into a more condensed, interpretable form. As mentioned above, each feature has a "loading" for a given PC and the magnitude of the loading represents how much that feature contributes to that PC. We will use the absolute value of the loading since both a very positive and very negative loading reflect an association between that feature and the PC. Also, each original feature is associated with a genomic coordinate or a region. COCOA will use this information to give each region set in the region set database a score for each PC. For a given PC-region set combination (for example PC1 and the region set esr1_chr1), we first identify all the original features that overlap with the region set. Then the scoring of the region set depends on the scoring metric chosen. The "regionMean" method is described here although the other methods are described in function docs. For the "regionMean" method, we take the PC loadings (e.g. PC1 loadings) for the features that overlap the region set and average the absolute loadings by region (average loadings in each region to get one value per region of the region set). Then we average the region values to get a single average for that region set which is its score. We repeat this calculation for all PC-region set combinations. Now for a given PC, we can rank the region sets by their score/loading average to see which region sets are most associated with that PC (higher loading average means a greater association with the PC). Since the "regionMean" scoring method only tells you which region sets are *the most* associated with a PC out of those tested, it is important to use a large database of region sets and then to validate by looking at the raw data in these regions which can be done with COCOA visualization functions. Also, you can screen out region sets that have low coverage in your input data (the `region_coverage` column of `aggregateSignalGRList()` output) since high scores for these regions are more likely to have happened by chance. The biological annotation of the top ranked region sets for the top PCs can help you understand variation among your samples. 
 
 ### Making a "meta-region" loading profile
-A "meta-region" loading profile is a summary of the loadings in the genome in and around the regions of a region set. This is created with the `getMetaRegionProfile` function. The calculations are similar to those of `runCOCOA` with a few major differences. Instead of using the region set as is, we will expand each region in the region set on both sides so we can also look at the surrounding genome. We will then split each region into the same number of bins (of approximately equal size). Then we average the magnitude of all loadings that overlap a bin to get a single average loading for each bin. We combine information from all the regions by averaging the corresponding bins from the different regions (all bin1's averaged together, all bin2's averaged together, etc.). Finally, we average the profile symmetrically over the center (the first bin becomes the average of the first and last bin, the second bin becomes the average of the second and second to last bin, etc.). We do this because the orientation of the regions in the genome is arbitrary: we did not use any strand information or relate the regions to any directional information. The "meta-region" profile gives a summary in a single profile of all the regions in a region set and allows you to compare the regions to the surrounding genome. 
+A "meta-region" loading profile is a summary of the loadings in the genome in and around the regions of a region set. This is created with the `getMetaRegionProfile` function. The calculations are similar to those of `aggregateSignalGRList` with a few major differences. Instead of using the region set as is, we will expand each region in the region set on both sides so we can also look at the surrounding genome. We will then split each region into the same number of bins (of approximately equal size). Then we average the magnitude of all loadings that overlap a bin to get a single average loading for each bin. We combine information from all the regions by averaging the corresponding bins from the different regions (all bin1's averaged together, all bin2's averaged together, etc.). Finally, we average the profile symmetrically over the center (the first bin becomes the average of the first and last bin, the second bin becomes the average of the second and second to last bin, etc.). We do this because the orientation of the regions in the genome is arbitrary: we did not use any strand information or relate the regions to any directional information. The "meta-region" profile gives a summary in a single profile of all the regions in a region set and allows you to compare the regions to the surrounding genome. 
 
 ## Q and A
 

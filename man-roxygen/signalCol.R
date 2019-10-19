@@ -3,9 +3,9 @@
 
 #' <%=ifelse(exists("usesRSScores") && usesRSScores, "Must be column names of rsScores.", "") %>
 
-#' <%=ifelse(exists("usesSampleLabels") && usesSampleLabels, "The columns in `sampleLabels` for which to calculate", "") %>
-#' <%=ifelse(exists("usesSampleLabels") && usesSampleLabels, "the variation related to the epigenetic data", "") %>
-#' <%=ifelse(exists("usesSampleLabels") && usesSampleLabels, "(e.g. correlation) and then to run COCOA on.", "") %>
+#' <%=ifelse(exists("usesTargetVar") && usesTargetVar, "The columns in `sampleLabels` for which to calculate", "") %>
+#' <%=ifelse(exists("usesTargetVar") && usesTargetVar, "the variation related to the epigenetic data", "") %>
+#' <%=ifelse(exists("usesTargetVar") && usesTargetVar, "(e.g. correlation) and then to run COCOA on.", "") %>
 
 #' <%=ifelse(exists("isRSRankingIndex") && isRSRankingIndex, "The columns in rsScores for which you want", "") %>
 #' <%=ifelse(exists("isRSRankingIndex") && isRSRankingIndex, "the indices of the original region sets.", "") %>
@@ -15,13 +15,13 @@
 
 
 # (aggregateSignal)
-# (runCOCOA)
+# (aggregateSignalGRList)
 # (getMetaRegionProfile)
 # (getTopRegions)
 # (rsScoreHeatmap) usesRSScores
 # (rsRankingIndex) usesRSScores isRSRankingIndex
 # (regionQuantileByTargetVar)
-# (runCOCOAPerm) usesSampleLabels
-# (corPerm) usesSampleLabels
+# (runCOCOAPerm) usesTargetVar
+# (corPerm) usesTargetVar
 # (getGammaPVal) usesRSScores
 # (getPermStat) usesRSScores

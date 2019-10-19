@@ -1,5 +1,5 @@
 #' @param rsScores data.frame. A data.frame with region set
-#' scores. The output of the 'runCOCOA' function.
+#' scores. The output of the 'aggregateSignalGRList' function.
 #' Each row is a region set. One column for each sample
 #' variable of interest (e.g. PC or sample phenotype).
 #' Also can have columns with info on the overlap between the 

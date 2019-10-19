@@ -1,5 +1,5 @@
 #' <%=ifelse(exists("usesAggrMethod") && usesAggrMethod, "@param aggrMethod character. A character object with the aggregation method.", "") %>
-#' <%=ifelse(exists("usesAggrMethod") && usesAggrMethod, "Similar to runCOCOA `scoringMetric` parameter.", "@param scoringMetric A character object with the scoring metric.") %>
+#' <%=ifelse(exists("usesAggrMethod") && usesAggrMethod, "Similar to aggregateSignalGRList `scoringMetric` parameter.", "@param scoringMetric A character object with the scoring metric.") %>
 #' There are different methods available for 
 #' signalCoordType="singleBase" vs  signalCoordType="multiBase".
 #' For "singleBase", the available methods are "regionMean" and 
