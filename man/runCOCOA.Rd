@@ -38,6 +38,11 @@ The columns in `sampleLabels` for which to calculate
 the variation related to the epigenetic data
 (e.g. correlation) and then to run COCOA on.}
 
+\item{targetVar}{Matrix or data.frame. Rows should be samples. 
+Columns should be the target variables 
+(whatever variable you want to test for association with
+the epigenetic signal: e.g. PC scores),}
+
 \item{sampleOrder}{numeric. A vector of 1:(number of samples) but shuffled in a
 random order. E.g. sampleOrder = sample(1:ncol(genomicSignal), ncol(genomicSignal))
 where ncol(genomicSignal) is the number of samples. 
@@ -98,11 +103,6 @@ their means? (subtracting row mean from each row)}
 \item{centerTargetVar}{Logical. Should columns in targetVar be 
 centered based
 on their means? (subtract column mean from each column)}
-
-\item{sampleLabels}{Matrix or data.frame. Rows should be samples. 
-Columns should be the target variables 
-(whatever variable you want to test for association with
-the epigenetic signal: e.g. PC scores),}
 }
 \value{
 data.frame. The output of aggregateSignalGRList for one permutation

@@ -43,6 +43,11 @@ region set and the epigenetic data.
 Rows should be in the same order as the region sets in GRList
 (the list of region sets used to create rsScores.)}
 
+\item{targetVar}{Matrix or data.frame. Rows should be samples. 
+Columns should be the target variables 
+(whatever variable you want to test for association with
+the epigenetic signal: e.g. PC scores),}
+
 \item{signalCol}{A character vector with the names of the sample variables
 of interest/target variables (e.g. PCs or sample phenotypes). 
 
@@ -141,11 +146,6 @@ of the function should be shown. One
 bar indicates the region set is completed.}
 
 \item{...}{Character. Optional additional arguments for simpleCache.}
-
-\item{sampleLabels}{Matrix or data.frame. Rows should be samples. 
-Columns should be the target variables 
-(whatever variable you want to test for association with
-the epigenetic signal: e.g. PC scores),}
 }
 \value{
 Returns a list where each item is a data.frame of COCOA results 

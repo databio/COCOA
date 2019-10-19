@@ -1,4 +1,4 @@
-#' @param sampleLabels Matrix or data.frame. Rows should be samples. 
+#' @param targetVar Matrix or data.frame. Rows should be samples. 
 #' Columns should be the target variables 
 #' (whatever variable you want to test for association with
 #' the epigenetic signal: e.g. PC scores),
