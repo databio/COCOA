@@ -75,11 +75,11 @@ Now we test how much each region set is associated with each principal component
     
 ```{r, eval=FALSE, message=FALSE, warning=FALSE}
 PCsToAnnotate <- paste0("PC", 1:6)
-regionSetScores <- runCOCOA(signal=mPCA$rotation, 
-                            signalCoord=signalCoord, 
-                            GRList=GRList, 
-                            signalCol=PCsToAnnotate, 
-                            scoringMetric="regionMean")
+regionSetScores <- aggregateSignalGRList(signal=mPCA$rotation, 
+                                         signalCoord=signalCoord, 
+                                         GRList=GRList, 
+                                         signalCol=PCsToAnnotate, 
+                                         scoringMetric="regionMean")
 regionSetScores$regionSetName <- regionSetName
 regionSetScores$regionSetDescription <- regionSetDescription
 ```

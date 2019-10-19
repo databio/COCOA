@@ -4,13 +4,13 @@
 \alias{runCOCOAPerm}
 \title{Run COCOA permutations to get p-values}
 \usage{
-runCOCOAPerm(genomicSignal, signalCoord, GRList, rsScores, sampleLabels,
+runCOCOAPerm(genomicSignal, signalCoord, GRList, rsScores, targetVar,
   signalCol = c("PC1", "PC2"), scoringMetric = "default",
-  absVal = TRUE, centerGenomicSignal = TRUE,
-  centerSampleLabels = TRUE, variationMetric = "cor", nPerm = 300,
-  useSimpleCache = TRUE, cacheDir = getwd(), dataID = "",
-  correctionMethod = "BH", gammaFitMethod = "mme",
-  realScoreInDist = TRUE, force = FALSE, verbose = TRUE, ...)
+  absVal = TRUE, centerGenomicSignal = TRUE, centerTargetVar = TRUE,
+  variationMetric = "cor", nPerm = 300, useSimpleCache = TRUE,
+  cacheDir = getwd(), dataID = "", correctionMethod = "BH",
+  gammaFitMethod = "mme", realScoreInDist = TRUE, force = FALSE,
+  verbose = TRUE, ...)
 }
 \arguments{
 \item{genomicSignal}{Matrix/data.frame. 
@@ -35,18 +35,13 @@ must be from the same reference genome
 as the coordinates for the actual data/samples (signalCoord).}
 
 \item{rsScores}{data.frame. A data.frame with region set
-scores. The output of the 'runCOCOA' function.
+scores. The output of the 'aggregateSignalGRList' function.
 Each row is a region set. One column for each sample
 variable of interest (e.g. PC or sample phenotype).
 Also can have columns with info on the overlap between the 
 region set and the epigenetic data. 
 Rows should be in the same order as the region sets in GRList
 (the list of region sets used to create rsScores.)}
-
-\item{sampleLabels}{Matrix or data.frame. Rows should be samples. 
-Columns should be the target variables 
-(whatever variable you want to test for association with
-the epigenetic signal: e.g. PC scores),}
 
 \item{signalCol}{A character vector with the names of the sample variables
 of interest/target variables (e.g. PCs or sample phenotypes). 
@@ -95,13 +90,15 @@ correlated with each other).}
 be centered based on
 their means? (subtracting row mean from each row)}
 
-\item{centerSampleLabels}{Logical. Should columns in sampleLabels be 
+\item{centerTargetVar}{Logical. Should columns in targetVar be 
 centered based
 on their means? (subtract column mean from each column)}
 
-\item{variationMetric}{Character. Either "cor" (Pearson correlation), 
-"pcor" (partial correlation), "spearmanCor (Spearman correlation) 
-or "cov" (covariation).}
+\item{variationMetric}{Character. The metric to use to quantify the
+association between each feature in genomicSignal and each target
+variable in sampleLabels.
+Either "cor" (Pearson correlation), 
+"cov" (covariation), or "spearmanCor" (Spearman correlation).}
 
 \item{nPerm}{Numeric. The number of permutations to do.}
 
@@ -144,6 +141,11 @@ of the function should be shown. One
 bar indicates the region set is completed.}
 
 \item{...}{Character. Optional additional arguments for simpleCache.}
+
+\item{sampleLabels}{Matrix or data.frame. Rows should be samples. 
+Columns should be the target variables 
+(whatever variable you want to test for association with
+the epigenetic signal: e.g. PC scores),}
 }
 \value{
 Returns a list where each item is a data.frame of COCOA results 
@@ -157,7 +159,7 @@ number of permutations), gets z scores, and fits a gamma distribution
 to each null distribution to estimate p values (not limited by the 
 number of permutations),
 Requires that the user has previously calculated the real COCOA scores. 
-See these individual functions for more info on each step: corPerm, 
+See these individual functions for more info on each step: runCOCOA, 
 convertToFromNullDist, getPermStat, and getGammaPVal.
 }
 \details{
@@ -170,38 +172,38 @@ data("esr1_chr1")
 data("nrf1_chr1")
 data("brcaMethylData1")
 data("brcaPCScores657")
-sampleLabels <- brcaPCScores657[colnames(brcaMethylData1), ]
-sampleLabels$ER_Status <- scale(as.numeric(sampleLabels$ER_Status), 
+targetVar <- brcaPCScores657[colnames(brcaMethylData1), ]
+targetVar$ER_Status <- scale(as.numeric(targetVar$ER_Status), 
                                center=TRUE, scale=FALSE)
-# give the actual order of samples to `corPerm` to get the real scores
-correctSampleOrder=1:nrow(sampleLabels)
-realRSScores <- corPerm(randomInd=correctSampleOrder,
-                        genomicSignal=brcaMethylData1,
+# give the actual order of samples to `runCOCOA` to get the real scores
+correctSampleOrder=1:nrow(targetVar)
+realRSScores <- runCOCOA(genomicSignal=brcaMethylData1,
                         signalCoord=brcaMCoord1,
                         GRList=GRangesList(esr1_chr1, nrf1_chr1),
                         signalCol=c("PC1", "PC2"),
-                        sampleLabels=sampleLabels,
+                        targetVar=targetVar,
+                        sampleOrder=correctSampleOrder,
                         variationMetric="cor")
         
 # give random order of samples to get random COCOA scores 
 # so you start building a null distribution for each region set 
-# (see vignette for example of building a null distribution with `corPerm`)
-randomOrder <- sample(1:nrow(sampleLabels), 
-                      size=nrow(sampleLabels),
+# (see vignette for example of building a null distribution with `runCOCOA`)
+randomOrder <- sample(1:nrow(targetVar), 
+                      size=nrow(targetVar),
                       replace=FALSE)
-randomRSScores <- corPerm(randomInd=randomOrder, 
-                          genomicSignal=brcaMethylData1,
+randomRSScores <- runCOCOA(genomicSignal=brcaMethylData1,
                           signalCoord=brcaMCoord1,
                           GRList=GRangesList(esr1_chr1, nrf1_chr1),
                           signalCol=c("PC1", "PC2"),
-                          sampleLabels=sampleLabels,
+                          targetVar=targetVar,
+                          sampleOrder=randomOrder,
                           variationMetric="cor")
 
 permResults <- runCOCOAPerm(genomicSignal=brcaMethylData1,
                            signalCoord=brcaMCoord1,
                            GRList=GRangesList(esr1_chr1, nrf1_chr1),
                            rsScores=realRSScores,
-                           sampleLabels=sampleLabels,
+                           targetVar=targetVar,
                            signalCol=c("PC1", "PC2"),
                            variationMetric="cor",
                            nPerm = 10,

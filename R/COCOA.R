@@ -493,7 +493,7 @@ aggregateSignal <- function(signal,
 #' data("brcaMCoord1")
 #' data("brcaLoadings1")
 #' data("esr1_chr1")
-#' rsScores <- runCOCOA(signal=brcaLoadings1, 
+#' rsScores <- aggregateSignalGRList(signal=brcaLoadings1, 
 #'                                  signalCoord=brcaMCoord1, 
 #'                                  GRList=GRangesList(esr1_chr1), 
 #'                                  signalCol=c("PC1", "PC2"), 
@@ -501,7 +501,7 @@ aggregateSignal <- function(signal,
 #' 
 #' @export
 
-runCOCOA <- function(signal,
+aggregateSignalGRList <- function(signal,
                      signalCoord,
                      GRList,
                      signalCol = c("PC1", "PC2"),
@@ -1609,7 +1609,8 @@ BSFilter <- function(BSDT, minReads = 10, excludeGR = NULL) {
 #' but ordered by rsScores
 #' ranking for each target variable. 
 #' The original index refers to that region set's position
-#' in the `GRList` param given to `runCOCOA` which is also that region set's
+#' in the `GRList` param given to `aggregateSignalGRList` which is 
+#' also that region set's
 #' row index in the COCOA output. The first number in a given column 
 #' of this function's output will be the
 #' original index of the region set ranked first for that target variable.
