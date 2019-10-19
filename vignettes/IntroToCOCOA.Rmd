@@ -15,22 +15,20 @@ vignette: >
 # The COCOA Bioconductor package
 
 
-**Coordinate Covariation Analysis (COCOA) is a method to understand epigenetic variation among samples** 
-
-Epigenetic differences between samples can be hard to interpret because epigenetic data is high dimensional. 
-Grouping high dimensional data into functional categories helps to interpret data. 
-An effective grouping method for epigenetic data is to group by related genomic regions which are called a region set. 
-A region set is a set of genomic regions that share the same biological annotation. 
-Examples of region sets are ... Region sets are used by COCOA to annotate inter-sample epigenetic variation. Epigenetic variation can be annotated by COCOA in a supervised or unsupervised analysis. A supervised COCOA analysis annotates epigenetic variation that is related to a specific sample phenotype of interest (whether a molecular or higher-level phenotype). An unsupervised COCOA analysis annotates inter-sample epigenetic variation without requiring a sample phenotype. Often, unsupervised analyses will look at the major sources of inter-sample variation by using a dimensionality reduction technique such as principal component analysis (PCA). COCOA can annotate those major sources of inter-sample variation for linear dimensionality reduction methods like PCA.  
+**Coordinate Covariation Analysis (COCOA) is a method to understand epigenetic variation among samples for epigenetic data that includes genomic coordinates such as DNA methylation and chromatin accessibility data.** 
 
 
-and can be used with data that includes genomic coordinates such as DNA methylation and chromatin accessibility data. To describe the method on a high level, COCOA quantifies inter-sample variation with either a supervised or unsupervised technique then uses a database of "region sets" to annotate the variation among samples. A region set is a set of genomic regions that share a biological annotation, for instance transcription factor (TF) binding regions, histone modification regions, or open chromatin regions. COCOA can identify region sets where there is inter-sample variation, giving you biologically meaningful insight into variation in your data. For a more in-depth description of the method, see the "Method details" section of this vignette. In contrast to some other common techniques, COCOA offers both supervised (known groups/phenotype) and unsupervised (no known groups/phenotype) analyses. Also, COCOA focuses on continuous variation between samples instead of having cutoffs. Because of this, COCOA can be used as a complementary method alongside "differential" methods that find discrete differences between groups of samples and it can also be used in situations where there are no groups.  
+Epigenetic differences between samples can be hard to interpret because epigenetic data is high dimensional. Grouping high dimensional data into functional categories helps to interpret data. An effective grouping method for epigenetic data is to group by related genomic regions, which collectively are called a region set. A region set is a set of genomic regions that share the same biological annotation. A few examples of region sets are binding regions for a certain transcription factor, cell-type specific open chromatin or enhancer regions, or regions with a certain histone modification. Reference region sets derived from public data are used by COCOA to annotate inter-sample epigenetic variation. Epigenetic variation can be annotated by COCOA in a supervised or unsupervised analysis. A supervised COCOA analysis annotates epigenetic variation that is related to a specific sample phenotype of interest (whether a molecular or higher-level phenotype). For example, we might want to see what epigenetic variation is associated with disease status, disease severity, survival, a certain mutation, or the expression of a certain gene transcript or protein. In contrast, an unsupervised COCOA analysis annotates inter-sample epigenetic variation without requiring a sample phenotype. Often, unsupervised analyses will look at the major sources of inter-sample variation by using a dimensionality reduction technique such as principal component analysis (PCA). COCOA can annotate those major sources of inter-sample variation (e.g. the principal components) for linear dimensionality reduction methods like PCA. To annotate the epigenetic variation of interest, whether supervised or unsupervised, COCOA finds reference region sets that are most associated with that variation, giving you biologically meaningful insight into variation in your data. 
 
-supervised/unsupervised
+For a more in-depth description of the method, see the "Method details" section of this vignette. 
 
 # Basic workflow
 
 ## Quantify inter-sample epigenetic variation
+
+The first step in COCOA is to quantify the association between your epigenetic data and the target variable/s (i.e. sample phenotype for supervised analysis or principal component for unsupervised analysis). 
+
+For an unsupervised analysis, you must first do dimensionality reduction on your epigenetic data. Then, you take the principal component/latent factor sample scores and treat them as your variable of interest for COCOA.
 
 feature contribution scores.
 
