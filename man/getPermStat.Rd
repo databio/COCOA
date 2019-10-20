@@ -19,9 +19,10 @@ Rows should be in the same order as the region sets in GRList
 
 \item{nullDistList}{List. one item per region set. Each item is a 
 data.frame with the 
-null distribution for a single region set. Each column in the data.frame
+null distribution/s for a single region set. Each column in the data.frame
 is for a target variable (e.g. PC or phenotype), which is given
-by the `signalCol` parameter.}
+by the `signalCol` parameter (each target variable has a different
+null distribution for a given region set).}
 
 \item{signalCol}{A character vector with the names of the sample variables
 of interest/target variables (e.g. PCs or sample phenotypes).}
@@ -31,6 +32,15 @@ create p values based on one sided test or not. Only applies when
 whichMetric="pval".}
 
 \item{whichMetric}{Character. Can be "pval" or "zscore"}
+}
+\value{
+. If whichMetric="pval", returns the empirical p-value for
+each region set in `rsScores`. If the region set score is more extreme
+than all scores in the null distribution, a p-value of 0 is returned but
+this simply means the p-value is the minimum detectable p-value with
+the given number of permutations used to make the null distributions. If
+whichMetric="zscore", the function returns a z-score for each region set
+score: ((region set score) - mean(null distribution)) / sd(null distribution)
 }
 \description{
 This function starts with real COCOA scores for each

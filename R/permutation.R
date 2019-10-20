@@ -44,9 +44,12 @@
 #' as a cache. See simpleCache package for more details.
 #' @param cacheDir Character. The path for the directory in which the
 #' caches should be saved. 
-#' @param correctionMethod Character. P value correction method. Default
-#' is "BH" for Benjamini and Hochberg false discovery rate. For acceptable 
-#' arguments and more info see ?stats::p.adjust() (method parameter) 
+# @param correctionMethod Character. P value correction method. Default
+# is "BH" for Benjamini and Hochberg false discovery rate. For acceptable 
+# arguments and more info see ?stats::p.adjust() (method parameter) 
+#' @param testType Character. Parameter for `getPermStat`. Whether to
+#' create p values based on one a two sided test or a lesser/greater one
+#' sided test. Options are: "greater", "lesser", "two-sided" 
 #' @param gammaFitMethod Character. method to use for fitting the gamma
 #' distribution to null distribution. Options are 
 #' "mme" (moment matching estimation), "mle" (maximum likelihood estimation), 
@@ -131,7 +134,7 @@ runCOCOAPerm <- function(genomicSignal,
                          useSimpleCache=TRUE,
                          cacheDir=getwd(),
                          dataID="",
-                         correctionMethod="BH",
+                         testType="greater",
                          gammaFitMethod="mme",
                          realScoreInDist=TRUE,
                          force=FALSE,
@@ -242,7 +245,8 @@ runCOCOAPerm <- function(genomicSignal,
 
         simpleCache(paste0("empiricalPValsUncorrected", .analysisID), {
             rsPVals <- getPermStat(rsScores=rsScores, nullDistList=nullDistList,
-                                  signalCol=colsToAnnotate, whichMetric = "pval")
+                                  signalCol=colsToAnnotate, whichMetric = "pval",
+                                  testType=testType)
             rsPVals
         }, assignToVariable=rsPVals, cacheDir=cacheDir, ...)
         
@@ -271,7 +275,8 @@ runCOCOAPerm <- function(genomicSignal,
         
     } else {
         rsPVals <- getPermStat(rsScores=rsScores, nullDistList=nullDistList,
-                              signalCol=colsToAnnotate, whichMetric = "pval")
+                              signalCol=colsToAnnotate, whichMetric = "pval",
+                              testType = testType)
         
         rsZScores <- getPermStat(rsScores=rsScores, nullDistList=nullDistList,
                                 signalCol=colsToAnnotate, whichMetric = "zscore")
@@ -303,7 +308,7 @@ runCOCOAPerm <- function(genomicSignal,
     # zscores
 }
 
-#' Run COCOA with shuffled samples
+#' Run COCOA: quantify inter-sample variation, score region sets
 #' 
 #' This is a convenience function that does the two steps of COCOA: 
 #' quantifying the epigenetic variation and scoring the region sets. This
@@ -658,15 +663,23 @@ pGammaList <- function(scoreVec, fitDistrList) {
 #' @template rsScores 
 #' @param nullDistList List. one item per region set. Each item is a 
 #' data.frame with the 
-#' null distribution for a single region set. Each column in the data.frame
+#' null distribution/s for a single region set. Each column in the data.frame
 #' is for a target variable (e.g. PC or phenotype), which is given
-#' by the `signalCol` parameter.
+#' by the `signalCol` parameter (each target variable has a different
+#' null distribution for a given region set).
 #' @templateVar usesRSScores
 #' @template signalCol 
 #' @param testType Character. "greater", "lesser", "two-sided" Whether to
 #' create p values based on one sided test or not. Only applies when
 #' whichMetric="pval".
 #' @param whichMetric Character. Can be "pval" or "zscore"
+#' @return . If whichMetric="pval", returns the empirical p-value for
+#' each region set in `rsScores`. If the region set score is more extreme
+#' than all scores in the null distribution, a p-value of 0 is returned but
+#' this simply means the p-value is the minimum detectable p-value with
+#' the given number of permutations used to make the null distributions. If
+#' whichMetric="zscore", the function returns a z-score for each region set
+#' score: ((region set score) - mean(null distribution)) / sd(null distribution)
 #' @examples 
 #' fakeOriginalScores <- data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
 #' fakePermScores <- data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
