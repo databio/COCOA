@@ -8,7 +8,7 @@ runCOCOAPerm(genomicSignal, signalCoord, GRList, rsScores, targetVar,
   signalCol = c("PC1", "PC2"), scoringMetric = "default",
   absVal = TRUE, centerGenomicSignal = TRUE, centerTargetVar = TRUE,
   variationMetric = "cor", nPerm = 300, useSimpleCache = TRUE,
-  cacheDir = getwd(), dataID = "", correctionMethod = "BH",
+  cacheDir = getwd(), dataID = "", testType = "greater",
   gammaFitMethod = "mme", realScoreInDist = TRUE, force = FALSE,
   verbose = TRUE, ...)
 }
@@ -118,9 +118,9 @@ caches should be saved.}
 \item{dataID}{Character. A unique identifier for this dataset 
 (for saving results with simpleCache)}
 
-\item{correctionMethod}{Character. P value correction method. Default
-is "BH" for Benjamini and Hochberg false discovery rate. For acceptable 
-arguments and more info see ?stats::p.adjust() (method parameter)}
+\item{testType}{Character. Parameter for `getPermStat`. Whether to
+create p values based on one a two sided test or a lesser/greater one
+sided test. Options are: "greater", "lesser", "two-sided"}
 
 \item{gammaFitMethod}{Character. method to use for fitting the gamma
 distribution to null distribution. Options are 

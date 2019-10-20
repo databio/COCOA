@@ -24,13 +24,15 @@ For a more in-depth description of the method, see the "Method details" section 
 
 # Basic workflow
 
+We start off with a matrix of epigenetic data in which rows correspond to the epigenetic features (e.g. CpG or accessible chromatin region) and columns correspond to samples. Each epigenetic feature must have genomic coordinates, which are stored in a separate object.   
+
 ## Quantify inter-sample epigenetic variation
 
-The first step in COCOA is to quantify the association between your epigenetic data and the target variable/s (i.e. sample phenotype for supervised analysis or principal component for unsupervised analysis). 
+The first step in COCOA is to quantify the association between your epigenetic data and the target variable/s (i.e. sample phenotype for supervised analysis or principal component for unsupervised analysis). The goal of this step is to get a score for each epigenetic feature that represents how much it contributes to the target variable. We'll refer to these scores as feature contribution scores. 
 
-For an unsupervised analysis, you must first do dimensionality reduction on your epigenetic data. Then, you take the principal component/latent factor sample scores and treat them as your variable of interest for COCOA.
+For a supervised analysis, we quantify the association between each epigenetic feature and the target variable using a metric such as correlation. For correlation, we take the correlation coefficient as the feature contribution score for each epigenetic feature. The metrics that are built in to COCOA are covariation, Pearson correlation, and Spearman correlation but you could also use another metric of your choice that results in a score for each epigenetic feature representing its association with the target variable. 
 
-feature contribution scores.
+For an unsupervised analysis, you must first do dimensionality reduction on your epigenetic data. Then, you take the principal component/latent factor sample scores for the principal components you are interested in and treat them as your target variables for COCOA. As described for a supervised analysis above, you will use a metric such as correlation to quantify the association between the epigenetic features and the target variables (principal component scores). The correlation coefficient for each epigenetic feature represents how much it is associated with a given principal component. (For those familiar with PCA, you might wonder why we are using correlation instead of taking the PC loadings as the feature contribution scores. There is a reason, which will be explained in the section about permutation testing for statistical significance.) 
 
 ## Annotate variation with region sets
 

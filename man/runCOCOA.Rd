@@ -2,7 +2,7 @@
 % Please edit documentation in R/permutation.R
 \name{runCOCOA}
 \alias{runCOCOA}
-\title{Run COCOA with shuffled samples}
+\title{Run COCOA: quantify inter-sample variation, score region sets}
 \usage{
 runCOCOA(genomicSignal, signalCoord, GRList, signalCol, targetVar,
   sampleOrder = 1:nrow(targetVar), variationMetric = "cor",
