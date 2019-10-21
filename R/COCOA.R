@@ -552,10 +552,10 @@ aggregateSignalGRList <- function(signal,
     # what happens if there are NAs or Inf in `signal`?
     # any NAs that overlap the regionSet will cause the score to be NA
     if (is(signal, "data.table")) {
-        naRows = apply(X = signal[, signalCol, with=FALSE], 
+        naRows = apply(X = signal[, signalCol, with=FALSE, drop=FALSE], 
                        MARGIN = 1, FUN = function(x) any(is.na(x)))
     } else {
-        naRows = apply(X = signal[, signalCol], 
+        naRows = apply(X = signal[, signalCol, drop=FALSE], 
                        MARGIN = 1, FUN = function(x) any(is.na(x)))    
     }
     
@@ -597,7 +597,15 @@ aggregateSignalGRList <- function(signal,
         signal <- as.matrix(signal)
     }
     
-    
+    # take absolute value outside aggregateSignal to prevent extra copying
+    if (absVal) {
+        if (is(signal, "data.table")) {
+            signal[, signalCol] <- abs(signal[, signalCol, with=FALSE])
+        } else {
+            signal[, signalCol] <- abs(signal[, signalCol])    
+        }
+        absVal <- FALSE
+    }
     
     # apply over the list of region sets
     resultsList <- lapplyAlias(GRList,

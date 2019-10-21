@@ -20,7 +20,7 @@ vignette: >
 
 Epigenetic differences between samples can be hard to interpret because epigenetic data is high dimensional. Grouping high dimensional data into functional categories helps to interpret data. An effective grouping method for epigenetic data is to group by related genomic regions, which collectively are called a region set. A region set is a set of genomic regions that share the same biological annotation. A few examples of region sets are binding regions for a certain transcription factor, cell-type specific open chromatin or enhancer regions, or regions with a certain histone modification. Reference region sets derived from public data are used by COCOA to annotate inter-sample epigenetic variation. Epigenetic variation can be annotated by COCOA in a supervised or unsupervised analysis. A supervised COCOA analysis annotates epigenetic variation that is related to a specific sample phenotype of interest (whether a molecular or higher-level phenotype). For example, we might want to see what epigenetic variation is associated with disease status, disease severity, survival, a certain mutation, or the expression of a certain gene transcript or protein. In contrast, an unsupervised COCOA analysis annotates inter-sample epigenetic variation without requiring a sample phenotype. Often, unsupervised analyses will look at the major sources of inter-sample variation by using a dimensionality reduction technique such as principal component analysis (PCA). COCOA can annotate those major sources of inter-sample variation (e.g. the principal components) for linear dimensionality reduction methods like PCA. To annotate the epigenetic variation of interest, whether supervised or unsupervised, COCOA finds reference region sets that are most associated with that variation, giving you biologically meaningful insight into variation in your data. 
 
-For a more in-depth description of the method, see the "Method details" section of this vignette. 
+For a more in-depth description of the method, see the "[Basic workflow]" and "[Method details]" sections of this vignette. 
 
 # Basic workflow
 
@@ -32,23 +32,32 @@ The first step in COCOA is to quantify the association between your epigenetic d
 
 For a supervised analysis, we quantify the association between each epigenetic feature and the target variable using a metric such as correlation. For correlation, we take the correlation coefficient as the feature contribution score for each epigenetic feature. The metrics that are built in to COCOA are covariation, Pearson correlation, and Spearman correlation but you could also use another metric of your choice that results in a score for each epigenetic feature representing its association with the target variable. 
 
-For an unsupervised analysis, you must first do dimensionality reduction on your epigenetic data. Then, you take the principal component/latent factor sample scores for the principal components you are interested in and treat them as your target variables for COCOA. As described for a supervised analysis above, you will use a metric such as correlation to quantify the association between the epigenetic features and the target variables (principal component scores). The correlation coefficient for each epigenetic feature represents how much it is associated with a given principal component. (For those familiar with PCA, you might wonder why we are using correlation instead of taking the PC loadings as the feature contribution scores. There is a reason, which will be explained in the section about permutation testing for statistical significance.) 
+For an unsupervised analysis, you must first do dimensionality reduction on your epigenetic data. Then, you take the principal component/latent factor sample scores for the principal components you are interested in and treat them as your target variables for COCOA. As described for a supervised analysis above, you will use a metric such as correlation to quantify the association between the epigenetic features and the target variables (principal component scores). For example, the correlation coefficient for each epigenetic feature represents how much it is associated with a given principal component. (For those familiar with PCA, you might wonder why we are using correlation instead of taking the PC loadings as the feature contribution scores. There is a reason, which will be explained in the section about permutation testing for statistical significance.) 
 
 ## Annotate variation with region sets
+
+The second step in COCOA is use the feature contribution scores from step 1 to find out which reference region sets are most associated with variation in the target variable. To do this, we use the COCOA algorithm to score each reference region set based on the epigenetic features from your data that it overlaps. Check out the `scoringMetric` parameter in ?runCOCOA but essentially, the score for a region set is the average of the scores of the epigenetic features that it overlaps. The region sets can be ranked according to their score to see which region sets are most associated with the target variable (although small. This can give biological insight into the epigenetic variation. 
+
+### Permutation test
+
+To account for the different sizes of region sets and to assess statistical significance of the results, we can do a permutation test to estimate p-values.
 
 score region sets. Top scoring region sets give insight into variation.
 
 
 # COCOA for DNA methylation data
 
+... what is COCOA for DNAm, supervised, unsupervised 
+
+In this vignette, we will see how COCOA can find meaningful sources of inter-sample variation in breast cancer patients. We will use data from The Cancer Genome Atlas: 450k DNA methylation microarrays for 657 breast cancer patients (TCGA-BRCA, https://portal.gdc.cancer.gov/).
 
 ## Unsupervised COCOA 
 
-
+Goal of unsupervised COCOA
 
 ### Our test case
 
-In this vignette, we will see how COCOA can find meaningful sources of inter-sample variation in breast cancer patients. We will use data from The Cancer Genome Atlas: 450k DNA methylation microarrays for 657 breast cancer patients (TCGA-BRCA, https://portal.gdc.cancer.gov/). This vignette begins after principal component analysis (PCA) has been performed on the DNA methylation data. As you can see below, PC1 and PC4 cluster patients based on estrogen receptor status which is an important prognostic marker for breast cancer: 
+ This vignette begins after principal component analysis (PCA) has been performed on the DNA methylation data. As you can see below, PC1 and PC4 cluster patients based on estrogen receptor status which is an important prognostic marker for breast cancer: 
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
 library(COCOA)
@@ -59,9 +68,9 @@ ggplot(data = brcaPCScores657, mapping = aes(x=PC1, y=PC4, col=ER_Status)) + geo
 
 Based on this, we might expect that the variation captured by these PCs would be associated with estrogen receptor (consistent with interpatient variation in estrogen receptor status). We are using an easy example for this vignette but COCOA will still work even if there are not distinct clusters in your PCA plot and if you do not have known groups of samples. Outside of this vignette, COCOA was run with a region set database of over 2000 region sets. To keep things simple for this vignette, we will only use two of the highest scoring region sets and two of the lowest scoring region sets from that analysis to demonstrate how COCOA works.
 
-## Inputs
+### Inputs
 
-There are three main inputs for COCOA:
+There are three main inputs for unsupervised COCOA:
 
 1. PCA loadings (`prcomp()$rotation`).
 2. Genomic coordinates associated with the raw data used for the PCA and with the PCA loadings.
@@ -69,7 +78,7 @@ There are three main inputs for COCOA:
 
 We did PCA with DNA methylation data for all autosomal chromosomes but only the data for chromosome 1 are included in this vignette to minimize memory requirements. `brcaLoadings1` has the chr1 loadings. `brcaMCoord1` has the coordinates for the chr1 DNA methylation data, which are also the coordinates for the chr1 loadings. For more on the relationship between the loadings and the original data see the "Method details" section. In this vignette, we will use only a few region sets to demonstrate how to use the COCOA functions. For actual use, COCOA should be done with many region sets (i.e. hundreds or > 1000). Publicly available collections of region sets can be found online (e.g. http://databio.org/regiondb).
 
-## Running COCOA
+### Running COCOA
 
 First, we load the example data and required packages:
 
@@ -127,7 +136,7 @@ rsScoreHeatmap(regionSetScores,
                column_title = "Region sets ordered by score for PC2")
 ```
 
-## Understanding the results
+### Understanding the results
 
 We can further understand the variability in these region sets in several ways:
 
@@ -135,7 +144,7 @@ We can further understand the variability in these region sets in several ways:
 2. Look at the genomic signal in these regions, in our case DNA methylation, and whether it follows the same trends as the PC scores.
 3. Look at the loadings in each region of a given region set to see whether all regions have high loadings or just a subset the regions. Also we can see if the same regions have high loadings for multiple PCs.
 
-### Specificity of variation to the regions of interest
+#### Specificity of variation to the regions of interest
 
 We can see whether variability along the PC is specific to the region of interest by comparing the region of interest to the surrounding genome. To do this, we will calculate the average loadings of a wide area surrounding the regions of interest.
 
@@ -205,7 +214,7 @@ These plots show the average magnitude of the loadings in the genome around and 
 
 These plots show that Esr1 and Gata3 binding regions demonstrate higher covariation along the PC axes than the surrounding genome (because they have a peak in the middle) while Nrf1 and Atf3 do not. So for example, if you line up samples by their PC1 score, then as you go from low to high PC1 score, the DNA methylation of ESR1 binding regions will generally change in a coordinated way across samples but the DNA methylation in the surrounding genome would not change as much or would not change in a coordinated way. The results from our four region sets suggest that Esr1 and Gata3 regions specifically contribute to the variation along the PCs 1 and 3 (as well as perhaps 4), helping us understand the biological meaning of the variation captured by those PCs: at least in part related to estrogen receptor.
 
-### The raw data
+#### The raw data
 
 If a region set has a high score for a PC, we would expect that DNA methylation in at least some of those regions would correlate with PC score. In other words, as you go from high PC score to low PC score along the PC axis, DNA methylation will either go up or down. Let's look at DNA methylation at CpGs in Esr1 regions. In the following plot, each column is a CpG in an Esr1 region and each row is a patient. Patients are ordered by their PC score for PC1.
 
@@ -238,7 +247,7 @@ When patients are ordered according to PC1 score, we can see that there is very 
 
 Since COCOA ranks region sets based on their relative scores in comparison to other region sets tested, there will always be a region set with a best score. Therefore, it is always a good idea to check the raw genomic signal in your top region sets to make sure that there really is variation along the PC.
 
-### Loadings of individual regions
+#### Loadings of individual regions
 
 This plot can help you learn more about the contribution of individual regions to the region set score for each PC. For example, if the estrogen receptor region set was associated with PCs 1, 3, and 4, we might wonder whether the same regions are causing the association with these PCs or whether different regions are associated with each PC. To do this, we will first calculate the average absolute loading value for each region in a region set (obtained by averaging a given PC's loadings for CpGs within that region). Then we can use the distribution of loadings for each PC to convert each region's loading to a percentile to see how extreme/high that region is for each PC. Let's look at the plot for estrogen receptor: 
 
