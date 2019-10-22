@@ -51,8 +51,10 @@
 #' @importFrom methods hasArg
 #' @importFrom fitdistrplus fitdist
 #' @importFrom simpleCache simpleCache
-#' @importFrom ppcor pcor.test
 NULL
+
+# @importFrom ppcor pcor.test
+
 
 # now package lists GenomicRanges in "Depends" instead of "Imports" in 
 # DESCRIPTION, still import package with @import though
@@ -697,14 +699,14 @@ createCorFeatureMat <- function(dataMat, featureMat,
         # xtfrm(x) ranking
         featurePCCor <- cor(dataMat, featureMat, use="pairwise.complete.obs", method="spearman")
 
-    } else if (testType == "pcor") {
-        # partial correlation (account for covariates), ppcor package
-        
-        featurePCCor <- apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 2, 
-                                                                           FUN = function(x) pcor.test(x = x, y=y,
-                                                                                                       z=covariate,
-                                                                                                       method="pearson")$estimate))
-        
+    # } else if (testType == "pcor") {
+    #     # partial correlation (account for covariates), ppcor package
+    #     
+    #     featurePCCor <- apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 2, 
+    #                                                                        FUN = function(x) pcor.test(x = x, y=y,
+    #                                                                                                    z=covariate,
+    #                                                                                                    method="pearson")$estimate))
+    #     
     } else if (testType == "cov") {
         featurePCCor <- cov(dataMat, featureMat, use="pairwise.complete.obs")
 
