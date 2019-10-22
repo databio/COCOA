@@ -7,7 +7,7 @@
 \title{Coordinate Covariation Analysis (COCOA)}
 \description{
 COCOA is a method for understanding epigenetic variation among samples.
-COCOA can be used with data that includes 
+COCOA can be used with epigenetic data that includes 
 genomic coordinates and an epigenetic signal,
 such as DNA methylation and chromatin accessibility 
 data. 
