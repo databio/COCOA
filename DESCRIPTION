@@ -2,20 +2,19 @@ Package: COCOA
 Version: 1.3.0
 Date: 2019-3-06
 Title: Coordinate Covariation Analysis
-Description: COCOA is a method for understanding epigenetic 
-    variation among samples
-    and can be used with data that includes genomic coordinates
-    such as DNA methylation and chromatin accessibility data. 
-    On a high level, COCOA uses a database
-    of "region sets" and principal component analysis (PCA) of your data
-    to identify sources of variation among samples. A region set is a
-    set of genomic regions that share a biological annotation, for instance,
-    transcription factor binding regions, histone modification regions,
-    or open chromatin regions. COCOA works in both supervised
-    (known groups of samples) and unsupervised (no groups) situations
-    and can be used as a complement to "differential" methods that find
-    discrete differences between groups. COCOA can identify biologically
-    meaningful sources of variation between samples and
+Description: COCOA is a method for understanding epigenetic variation among samples.
+    COCOA can be used with epigenetic data that includes
+    genomic coordinates and an epigenetic signal,
+    such as DNA methylation and chromatin accessibility data.
+    To describe the method on a high level, COCOA quantifies
+    inter-sample variation with either a supervised or unsupervised
+    technique then uses a database of "region sets" to
+    annotate the variation among samples. A region set is a set of
+    genomic regions that share a biological annotation,
+    for instance transcription factor (TF) binding regions,
+    histone modification regions, or open chromatin regions.
+    COCOA can identify region sets that are associated with 
+    epigenetic variation between samples and
     increase understanding of variation in your data.
 Authors@R: c(person("John", "Lawson", email="jtl2hk@virginia.edu", role=c("aut", "cre")), person("Nathan", "Sheffield", role=c("aut"), comment="http://www.databio.org"), person("Jason", "Smith", role=c("ctb")))
 Depends: R (>= 3.5), GenomicRanges
