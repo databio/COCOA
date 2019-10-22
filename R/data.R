@@ -191,6 +191,75 @@ NULL
 #' @format A data.frame object
 NULL
 
+#' This object contains loadings
+#' for PCA of ATAC-seq data.
+#' 
+#' From breast cancer
+#' patients from The Cancer Genome Atlas
+#' (TCGA-BRCA, ATAC-seq data from 
+#' Corces et. al, 2018, doi: 10.1126/science.aav1898).
+#' Each row corresponds to one region and
+#' the coordinates for these regions are
+#' in the object brcaATACCoord1, (data("brcaATACCoord1"),
+#' hg38 genome). 
+#' Only regions on chr1 are included to keep
+#' the example data small.
+#'
+#'
+#' @docType data
+#' @keywords datasets
+#' @name brcaATACLoadings1
+#' @usage data(brcaATACLoadings1)
+#' @format A matrix object
+NULL
+
+#' A data.frame object with coordinates for BRCA ATAC-seq peak regions
+#' from chr1. 
+#' 
+#' Corresponds to 
+#' the rows of brcaATACLoadings1 and brcaATACData1.
+#' The ATAC-seq data is from breast cancer
+#' patients from The Cancer Genome Atlas
+#' (TCGA-BRCA, Corces et. al, 2018, doi: 10.1126/science.aav1898,
+#' https://atacseq.xenahubs.net/download/brca/brca_peak_Log2Counts_dedup).
+#' Coordinates correspond to the hg38 genome version.
+#' Only regions on chr1 are included to keep
+#' the example data small.
+#'
+#'
+#' @docType data
+#' @keywords datasets
+#' @name brcaATACCoord1
+#' @usage data(brcaATACCoord1)
+#' @format A data.frame object 
+NULL
+
+#' A matrix with ATAC-seq counts in peak regions 
+#' from chromosome 1 for four patients.
+#' 
+#' Each row corresponds to one region and
+#' the coordinates for these regions are
+#' in the object brcaATACCoord1, (data("brcaATACCoord1"), hg38 genome). 
+#' Only regions on chr1 are included to keep
+#' the example data small. Columns are patients,
+#' with TCGA patient identifiers as column names. 
+# The patients with the two highest PC1 scores and
+# the two lowest PC1 scores are included
+# (see data("brcaPCScores") for the actual scores).
+#' ATAC-seq data is from breast cancer
+#' patients from The Cancer Genome Atlas
+#' (TCGA-BRCA, Corces et. al, 2018, doi: 10.1126/science.aav1898,
+#' https://atacseq.xenahubs.net/download/brca/brca_peak_Log2Counts_dedup).
+#'
+#'
+#' @docType data
+#' @keywords datasets
+#' @name brcaATACData1
+#' @usage data(brcaATACData1)
+#' @format A matrix object
+NULL
+
+
 # # script for generating package data
 # # restricting data to reduce how much memory the package takes up
 # # first run part of 02-brca_PCRSA to get brcaMList and filteredMData
@@ -321,3 +390,45 @@ NULL
 # row.names(patientMetadata) <- patientMetadata$subject_ID
 # brcaPCScores657 <- cbind(brcaPCScores657, ER_Status = patientMetadata[row.names(brcaPCScores657), "ER_status"])
 # save(brcaPCScores657, file="brcaPCScores657.RData", compress = "xz")
+
+########### BRCA ATAC-seq data
+# # first load BRCA ATAC-seq data from Corces et al. (signalMat, signalCoord)
+# loadBRCAatac(signalMat = TRUE, signalCoord = TRUE, 
+#              loadingMat = TRUE, pcScores = TRUE)
+# 
+# # subset to only ATAC regions that are on chr1 and also
+# # overlap with the package's existing region sets 
+# chr1Ind <- as.logical(seqnames(signalCoord) == "chr1")
+# 
+# data("esr1_chr1")
+# data("gata3_chr1")
+# data("atf3_chr1")
+# data("nrf1_chr1")
+# allTfs <- c(esr1_chr1, gata3_chr1, atf3_chr1, nrf1_chr1)
+# allTfs <- reduce(allTfs)
+# length(unique(queryHits(findOverlaps(query = brcaATACCoord1, subject = allTfs))))
+# overlapsRegionSets <- rep(FALSE, length(signalCoord))
+# overlapsRegionSets[unique(queryHits(findOverlaps(query = signalCoord, 
+#                                                  subject = allTfs)))] <- TRUE
+# keepInd <- chr1Ind & overlapsRegionSets
+# 
+# brcaATACLoadings1 <- loadingMat[keepInd, paste0("PC", 1:4)]
+# brcaATACCoord1 <- signalCoord[keepInd]
+# brcaATACData1 <- signalMat[keepInd, ]
+# save("brcaATACLoadings1", file = "brcaATACLoadings1.RData", compress = "xz")
+# save("brcaATACCoord1", file = "brcaATACCoord1.RData", compress = "xz")
+# save("brcaATACData1", file = "brcaATACData1.RData", compress = "xz")
+# 
+# # select 4 samples
+# # brcaATACPCScores <- pcScores[c(), paste0("PC", 1:4)]
+# save("brcaATACPCScores", file = "brcaATACPCScores", compress = "xz")
+# sampleNames <- colnames(brcaATACData1)
+# a = prcomp(t(brcaATACData1))
+# plot(a$x[, 1:2])
+# patientMetadata <- as.data.frame(patientMetadata)
+# row.names(patientMetadata) <- patientMetadata$subject_ID
+# annoScores <- cbind(data.frame(a$x), 
+#                     ER_status=as.factor(patientMetadata[sampleNames, "ER_status"]))
+# ggplot(data = a, mapping = aes(x=PC1, y=PC2)) + geom_point(aes(color=ER_status))
+# sampleInd = ((annoScores$PC1 > 12) | (annoScores$PC1 < -15)) & !is.na(annoScores$ER_status)
+
