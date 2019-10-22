@@ -1,6 +1,6 @@
 Package: COCOA
-Version: 1.3.0
-Date: 2019-3-06
+Version: 1.99.0
+Date: 2019-10-22
 Title: Coordinate Covariation Analysis
 Description: COCOA is a method for understanding epigenetic variation among samples.
     COCOA can be used with epigenetic data that includes
@@ -33,8 +33,7 @@ Imports:
     grid,
     grDevices,
     simpleCache,
-    fitdistrplus,
-    ppcor
+    fitdistrplus
 Suggests:
     knitr,
     parallel,
