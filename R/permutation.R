@@ -311,8 +311,10 @@ runCOCOAPerm <- function(genomicSignal,
 #' Run COCOA: quantify inter-sample variation, score region sets
 #' 
 #' This is a convenience function that does the two steps of COCOA: 
-#' quantifying the epigenetic variation and scoring the region sets. This
-#' function makes it easy to generate null distributions in order to
+#' quantifying the epigenetic variation and scoring the region sets. 
+#' This function will return the real COCOA scores if using the default
+#' `sampleOrder` parameter values. This
+#' function also makes it easy to generate null distributions in order to
 #' evaluate the statistical significance of the real COCOA results.
 #' You can use the sampleOrder parameter to shuffle the samples,
 #' then run COCOA to get fake scores for each region set. By doing 
@@ -331,12 +333,14 @@ runCOCOAPerm <- function(genomicSignal,
 #' the target variables/phenotypes are the targetVar.
 #' See the vignettes for examples.  
 #' 
-#' @param sampleOrder numeric. A vector of 1:(number of samples) but shuffled in a
-#' random order. E.g. sampleOrder = sample(1:ncol(genomicSignal), ncol(genomicSignal))
+#' @param sampleOrder numeric. A vector of length (number of samples). If
+#' sampleOrder is 1:(number of samples) then this function will return the
+#' real COCOA scores.
+#' To generate random COCOA scores in order to make 
+#' null distributions, shuffle the samples in a random order.
+#' E.g. sampleOrder = sample(1:ncol(genomicSignal), ncol(genomicSignal))
 #' where ncol(genomicSignal) is the number of samples. 
 #' Set the seed with set.seed() before making sampleOrder to ensure reproducibility.
-#' If the vector is unshuffled,
-#' this will give the real COCOA results.
 #' @template genomicSignal
 #' @template signalCoord
 #' @template GRList
