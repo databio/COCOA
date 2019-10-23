@@ -75,7 +75,7 @@ targetVar <- brcaPCScores657[colnames(brcaMethylData1), ]
 Let's convert estrogen receptor status to a number so we can do calculations with it. Then we will quantify the association between ER status and the DNA methylation level at each cytosine using Pearson correlation.
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
-targetVar$ER_Status <- scale(as.numeric(targetVar$ER_Status), 
+targetVar$ER_Status <- scale(as.numeric(as.factor(targetVar$ER_Status)), 
                                center=TRUE, scale=FALSE)
 methylCor <- cor(t(brcaMethylData1), targetVar$ER_Status, 
                  use = "pairwise.complete.obs")
@@ -133,7 +133,6 @@ for (i in 1:nPerm) {
 }
 
 permRSScores
-
 ```
 
 We now have a list where each item is a result of `aggregateSignalGRList`. We have `nPerm` list items in permRSScores. We'll reformat it so that we have a list where each item is a null distribution for a single region set: 
@@ -173,6 +172,72 @@ getPermStat(rsScores = rsScores,
 ```
 
 The empirical p-values are limited by the number of permutations done so the gamma distribution approximation is recommended to allow the possibility of lower p-values.
+
+
+```{r, eval=FALSE}
+PCsToAnnotate <- c("PC1", "PC2")
+targetVar = data.frame(PC1=aPCA$x[, "PC1"], PC2=aPCA$x[, "PC2"])
+targetVar <- as.data.frame(scale(targetVar, 
+                               center=TRUE, scale=FALSE))
+methylCor <- cor(t(brcaMethylData1), targetVar, 
+                 use = "pairwise.complete.obs")
+# if the standard deviation of the methylation level 
+# for a CpG across samples is 0,
+# cor() will return NA, so manually set the correlation to 0 for these CpGs
+methylCor[is.na(methylCor)] <- 0
+
+
+GRList <- GRangesList(esr1_chr1, gata3_chr1, atf3_chr1, nrf1_chr1)
+rsNames <- c("esr1", "gata3", "atf3", "nrf1")
+rsScores <- aggregateSignalGRList(signal=methylCor,
+                     signalCoord=brcaMCoord1,
+                     GRList=GRList,
+                     signalCol=c("PC1", "PC2"),
+                     scoringMetric="default",
+                     absVal=TRUE)
+rsScores
+
+
+set.seed(100)
+
+nPerm <- 100
+permRSScores <- list()
+
+for (i in 1:nPerm) {
+    # shuffling sample labels
+    sampleOrder <- sample(1:nrow(targetVar), nrow(targetVar))
+    permRSScores[[i]] <- runCOCOA(sampleOrder=sampleOrder, 
+                           genomicSignal=brcaMethylData1, 
+                           signalCoord=brcaMCoord1, 
+                           GRList=GRList,
+                           signalCol=c("PC1", "PC2"), 
+                           targetVar=targetVar, 
+                           variationMetric="cor")
+}
+
+permRSScores
+
+nullDistList <- convertToFromNullDist(permRSScores)
+nullDistList
+
+# p-values based on fitted gamma distributions
+gPValDF <- getGammaPVal(rsScores = rsScores, 
+                        nullDistList = nullDistList, 
+                        signalCol = PCsToAnnotate, 
+                        method = "mme", realScoreInDist = TRUE)
+gPValDF <- cbind(gPValDF, 
+                 rsScores[, colnames(rsScores)[!(colnames(rsScores) 
+                                                 %in% "ER_Status")]])
+gPValDF <- cbind(gPValDF, rsNames)
+gPValDF
+
+
+getPermStat(rsScores = rsScores, 
+            nullDistList = nullDistList, 
+            signalCol = PCsToAnnotate)
+
+```
+
 
 ## Unsupervised COCOA 
 
@@ -217,11 +282,30 @@ data("esr1_chr1")
 data("gata3_chr1")
 data("nrf1_chr1")
 data("atf3_chr1")
-data("brcaLoadings1")
 data("brcaMCoord1")
 data("brcaPCScores")
 data("brcaMethylData1")
 ```
+
+
+```{r, eval=TRUE, message=FALSE, warning=FALSE}
+mPCA <- prcomp(t(brcaMethylData1))
+
+PCsToAnnotate <- paste0("PC", 1:4)
+targetVar <- mPCA$x[, PCsToAnnotate]
+targetVar <- as.matrix(scale(targetVar, 
+                               center=TRUE, scale=FALSE))
+methylCor <- cor(t(brcaMethylData1), targetVar, 
+                 use = "pairwise.complete.obs")
+# if the standard deviation of the methylation level 
+# for a CpG across samples is 0,
+# cor() will return NA, so manually set the correlation to 0 for these CpGs
+methylCor[is.na(methylCor)] <- 0
+colnames(methylCor) <- PCsToAnnotate
+```
+
+
+
 
 We have region sets for four transcription factors from ChIP-seq experiments (with the same reference genome as our breast cancer data): Esr1 in MCF-7 cells, Gata3 in MCF-7 cells, Nrf1 in HepG2 cells, and Atf1 in K562 cells. 
 
@@ -235,7 +319,7 @@ Now let's give each region set a score with `aggregateSignalGRList()` to quantif
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 PCsToAnnotate <- paste0("PC", 1:4)
-regionSetScores <- aggregateSignalGRList(signal=brcaLoadings1, 
+regionSetScores <- aggregateSignalGRList(signal=methylCor, 
                             signalCoord=brcaMCoord1, 
                             GRList=GRList, 
                             signalCol=PCsToAnnotate, 
@@ -277,7 +361,7 @@ We can see whether variability along the PC is specific to the region of interes
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 wideGRList <- lapply(GRList, resize, width=14000, fix="center")
-loadProfile <- lapply(wideGRList, function(x) getMetaRegionProfile(signal=brcaLoadings1,
+loadProfile <- lapply(wideGRList, function(x) getMetaRegionProfile(signal=methylCor,
                                                                 signalCoord=brcaMCoord1,
                                                                 regionSet=x, 
                                                                 signalCol=PCsToAnnotate,
@@ -288,7 +372,7 @@ We will normalize the result for each PC so we can better compare them. Here we 
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 # average loading value from each PC to normalize so PCs can be compared with each other
-avLoad <- apply(X=brcaLoadings1[, PCsToAnnotate], 
+avLoad <- apply(X=methylCor[, PCsToAnnotate], 
                 MARGIN=2, 
                 FUN=function(x) mean(abs(x)))
 
@@ -379,7 +463,7 @@ Since COCOA ranks region sets based on their relative scores in comparison to ot
 This plot can help you learn more about the contribution of individual regions to the region set score for each PC. For example, if the estrogen receptor region set was associated with PCs 1, 3, and 4, we might wonder whether the same regions are causing the association with these PCs or whether different regions are associated with each PC. To do this, we will first calculate the average absolute loading value for each region in a region set (obtained by averaging a given PC's loadings for CpGs within that region). Then we can use the distribution of loadings for each PC to convert each region's loading to a percentile to see how extreme/high that region is for each PC. Let's look at the plot for estrogen receptor: 
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
-regionQuantileByTargetVar(signal = brcaLoadings1,
+regionQuantileByTargetVar(signal = methylCor,
                                 signalCoord = brcaMCoord1,
                                 regionSet = esr1_chr1,
                                 rsName = "Estrogen receptor (chr1)",
@@ -396,7 +480,7 @@ We can see that some of the same regions have high loadings for multiple PCs (i.
 For contrast, we can look at the regions of Nrf1:
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
-regionQuantileByTargetVar(signal = brcaLoadings1,
+regionQuantileByTargetVar(signal = methylCor,
                                 signalCoord = brcaMCoord1,
                                 regionSet = nrf1_chr1,
                                 rsName = "Nrf1 (chr1)",
@@ -536,7 +620,7 @@ In the big picture, COCOA can help you understand sources of variation in your d
 When using COCOA with the "regionMean" scoring method (preferred), a database of 2000 region sets, and 450,000 cytosines in the DNA methylation data, it is estimated that COCOA will take between 30 minutes and 1.5 hours. The computer will need enough memory for the large objects used although some memory could be saved by splitting the region set database into parts, running separately on each part, and then combining the results.  
 
 
-#############################################################################
+# Edit section below
 
 ### Aggregating info from individual features
 

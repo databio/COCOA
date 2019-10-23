@@ -166,15 +166,14 @@ convertToFromNullDist, getPermStat, and getGammaPVal.
 For reproducibility, set seed with 'set.seed()' function before running.
 }
 \examples{
-data("brcaMCoord1")
-data("brcaLoadings1")
 data("esr1_chr1")
 data("nrf1_chr1")
 data("brcaMethylData1")
-data("brcaPCScores657")
-targetVar <- brcaPCScores657[colnames(brcaMethylData1), ]
-targetVar$ER_Status <- scale(as.numeric(targetVar$ER_Status), 
-                               center=TRUE, scale=FALSE)
+data("brcaMCoord1")
+pcScores <- prcomp(t(brcaMethylData1))$x
+targetVarCols <- c("PC1", "PC2")
+targetVar <- pcScores[, targetVarCols]
+
 # give the actual order of samples to `runCOCOA` to get the real scores
 correctSampleOrder=1:nrow(targetVar)
 realRSScores <- runCOCOA(genomicSignal=brcaMethylData1,
@@ -199,6 +198,7 @@ randomRSScores <- runCOCOA(genomicSignal=brcaMethylData1,
                           sampleOrder=randomOrder,
                           variationMetric="cor")
 
+# runCOCOAPerm
 permResults <- runCOCOAPerm(genomicSignal=brcaMethylData1,
                            signalCoord=brcaMCoord1,
                            GRList=GRangesList(esr1_chr1, nrf1_chr1),

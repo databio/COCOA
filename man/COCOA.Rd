@@ -18,16 +18,9 @@ annotate the variation among samples. A region set is a set of
 genomic regions that share a biological annotation, 
 for instance transcription factor (TF) binding regions, 
 histone modification regions, or open chromatin regions. 
-In contrast to some other common techniques, COCOA offers both
-supervised (known groups/phenotype) and unsupervised (no known groups/
-phenotype) analyses. Also, COCOA focuses on continuous variation 
-between samples instead of having cutoffs. Because of this, COCOA can 
-be used as a complementary method alongside "differential" methods 
-that find discrete differences between groups of samples and 
-it can also be used in situations where there are no groups.  
-COCOA can identify biologically meaningful 
-sources of variation between samples and increase understanding of 
-epigenetic variation in your data.
+COCOA can identify region sets that are associated with
+epigenetic variation between samples and
+increase understanding of variation in your data.
 }
 \references{
 \url{http://github.com/databio}

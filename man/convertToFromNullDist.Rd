@@ -4,10 +4,10 @@
 \alias{convertToFromNullDist}
 \title{Converts COCOA permutation results to null distributions and vice versa}
 \usage{
-convertToFromNullDist(resultsList)
+convertToFromNullDist(rsScoresList)
 }
 \arguments{
-\item{resultsList}{each item in the list is a data.frame, one item for
+\item{rsScoresList}{each item in the list is a data.frame, one item for
 each permutation with the results of that permutation. Each row in the 
 data.frame is a region set. All data.frames should be the same size and
 each data.frame's rows should be in the same order}

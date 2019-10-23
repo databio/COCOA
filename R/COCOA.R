@@ -14,16 +14,18 @@
 #' genomic regions that share a biological annotation, 
 #' for instance transcription factor (TF) binding regions, 
 #' histone modification regions, or open chromatin regions. 
-#' In contrast to some other common techniques, COCOA offers both
-#' supervised (known groups/phenotype) and unsupervised (no known groups/
-#' phenotype) analyses. Also, COCOA focuses on continuous variation 
-#' between samples instead of having cutoffs. Because of this, COCOA can 
-#' be used as a complementary method alongside "differential" methods 
-#' that find discrete differences between groups of samples and 
-#' it can also be used in situations where there are no groups.  
-#' COCOA can identify biologically meaningful 
-#' sources of variation between samples and increase understanding of 
-#' epigenetic variation in your data. 
+#' COCOA can identify region sets that are associated with
+#' epigenetic variation between samples and
+#' increase understanding of variation in your data. 
+# In contrast to some other common techniques, COCOA offers both
+# supervised (known groups/phenotype) and unsupervised (no known groups/
+# phenotype) analyses. Also, COCOA focuses on continuous variation 
+# between samples instead of having cutoffs. Because of this, COCOA can 
+# be used as a complementary method alongside "differential" methods 
+# that find discrete differences between groups of samples and 
+# it can also be used in situations where there are no groups.  
+# COCOA can identify biologically meaningful 
+# sources of variation between samples and 
 #'
 #' @docType package
 #' @name COCOA
@@ -120,14 +122,15 @@ if (getRversion() >= "2.15.1") {
 #' coverage of regionSet in addition to regionSetCoverage.
 #' 
 #' @examples
-#' data("brcaMCoord1")
-#' data("brcaLoadings1")
+#' data("brcaATACCoord1")
+#' data("brcaATACData1")
 #' data("esr1_chr1")
-#' rsScores <- aggregateSignal(signal=brcaLoadings1, 
-#'                                  signalCoord=brcaMCoord1, 
+#' featureContributionScores <- prcomp(t(brcaATACData1))$rotation
+#' rsScores <- aggregateSignal(signal=featureContributionScores, 
+#'                                  signalCoord=brcaATACCoord1, 
 #'                                  regionSet=esr1_chr1, 
 #'                                  signalCol=c("PC1", "PC2"), 
-#'                                  scoringMetric="regionMean")
+#'                                  scoringMetric="default")
 #' @export
 
 aggregateSignal <- function(signal,
@@ -490,14 +493,17 @@ aggregateSignal <- function(signal,
 #' 
 #' 
 #' @examples 
-#' data("brcaMCoord1")
-#' data("brcaLoadings1")
+#' data("brcaATACCoord1")
+#' data("brcaATACData1")
 #' data("esr1_chr1")
-#' rsScores <- aggregateSignalGRList(signal=brcaLoadings1, 
-#'                                  signalCoord=brcaMCoord1, 
-#'                                  GRList=GRangesList(esr1_chr1), 
+#' data("nrf1_chr1")
+#' featureContributionScores <- prcomp(t(brcaATACData1))$rotation
+#' GRList <- GRangesList(esr1_chr1, nrf1_chr1)
+#' rsScores <- aggregateSignalGRList(signal=featureContributionScores, 
+#'                                  signalCoord=brcaATACCoord1, 
+#'                                  GRList= GRList,
 #'                                  signalCol=c("PC1", "PC2"), 
-#'                                  scoringMetric="regionMean")
+#'                                  scoringMetric="default")
 #' 
 #' @export
 
@@ -775,15 +781,16 @@ createCorFeatureMat <- function(dataMat, featureMat,
 #' NULL returned).
 #' 
 #' @examples 
-#' data("brcaMCoord1")
-#' data("brcaLoadings1")
+#' data("brcaATACCoord1")
+#' data("brcaATACData1")
 #' data("esr1_chr1")
-#' esr1_chr1_expanded <- resize(esr1_chr1, 14000, fix="center")
-#' getMetaRegionProfile(signal=brcaLoadings1, 
-#'                     signalCoord=brcaMCoord1, 
-#'                     regionSet=esr1_chr1_expanded, 
-#'                     signalCol=c("PC1", "PC2"), 
-#'                     binNum=21)
+#' featureContributionScores <- prcomp(t(brcaATACData1))$rotation
+#' esr1_chr1_expanded <- resize(esr1_chr1, 12000, fix="center")
+#' mrProfile <- getMetaRegionProfile(signal=featureContributionScores,
+#'                                   signalCoord=brcaATACCoord1,
+#'                                   regionSet=esr1_chr1_expanded,
+#'                                   signalCol=c("PC1", "PC2"),
+#'                                   binNum=21)
 #' @export
 
 getMetaRegionProfile <- function(signal, signalCoord, regionSet,
@@ -1017,6 +1024,11 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount,
                                                rep("mean", length(signalCol))),
                                   byRegionGroup = byRegionGroup,
                                   splitFactor = splitFactor)
+        
+        # if any bins had no data
+        if (nrow(binnedBSDT) < binCount) {
+            return(NULL)
+        }
     }
     # RGenomeUtils::BSAggregate
 
@@ -1236,11 +1248,14 @@ weightedAvePerRegion <- function(signalDT,
 # Are regions in order along the rows of the data.table?
 #
 #' @examples 
-#' data("brcaLoadings1")
-#' data("brcaMCoord1")
+#' data("brcaATACCoord1")
+#' data("brcaATACData1")
 #' data("esr1_chr1")
-#' getTopRegions(signal=brcaLoadings1,
-#' signalCoord=brcaMCoord1, regionSet=esr1_chr1, returnQuantile = TRUE)
+#' featureContributionScores <- prcomp(t(brcaATACData1))$rotation
+#' topRegions <- getTopRegions(signal=featureContributionScores,
+#'                             signalCoord=brcaATACCoord1,
+#'                             regionSet=esr1_chr1,
+#'                             returnQuantile = TRUE)
 #' @export
 
 getTopRegions <- function(signal, 
@@ -1959,7 +1974,7 @@ regionOLWeightedMean <- function(signalMat, signalGR,
     # weighted average
     denom <- sum(polap)
     weightedAve <- as.data.frame(weightedSum / denom)
-    # names(weightedAve) <- colsOfInterest
+    colnames(weightedAve) <- calcCols
     
     # add columns for coverage info
     weightedAve$signalCoverage = length(unique(queryHits(hits)))

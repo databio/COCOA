@@ -129,13 +129,14 @@ histone modification region sets may be in large genomic blocks
 and not show a peak, despite having variation across samples.
 }
 \examples{
-data("brcaMCoord1")
-data("brcaLoadings1")
+data("brcaATACCoord1")
+data("brcaATACData1")
 data("esr1_chr1")
-esr1_chr1_expanded <- resize(esr1_chr1, 14000, fix="center")
-getMetaRegionProfile(signal=brcaLoadings1, 
-                    signalCoord=brcaMCoord1, 
-                    regionSet=esr1_chr1_expanded, 
-                    signalCol=c("PC1", "PC2"), 
-                    binNum=21)
+featureContributionScores <- prcomp(t(brcaATACData1))$rotation
+esr1_chr1_expanded <- resize(esr1_chr1, 12000, fix="center")
+mrProfile <- getMetaRegionProfile(signal=featureContributionScores,
+                                  signalCoord=brcaATACCoord1,
+                                  regionSet=esr1_chr1_expanded,
+                                  signalCol=c("PC1", "PC2"),
+                                  binNum=21)
 }

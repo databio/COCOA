@@ -1,25 +1,25 @@
-#' A matrix with loadings
-#' 
-#' This object contains loadings
-#' for PCA of DNA methylation data.
-#' DNA methlyation data is Illumina 450k 
-#' microarray data from breast cancer
-#' patients from The Cancer Genome Atlas
-#' (TCGA-BRCA, https://portal.gdc.cancer.gov/).
-#' Each row corresponds to one cytosine and
-#' the coordinates for these cytosines are
-#' in the object brcaMCoord1, (data("brcaMCoord1"),
-#' hg38 genome). 
-#' Only cytosines on chr1 are included to keep
-#' the example data small.
-#'
-#'
-#' @docType data
-#' @keywords datasets
-#' @name brcaLoadings1
-#' @usage data(brcaLoadings1)
-#' @format A matrix object
-NULL
+# A matrix with loadings
+# 
+# This object contains loadings
+# for PCA of DNA methylation data.
+# DNA methlyation data is Illumina 450k 
+# microarray data from breast cancer
+# patients from The Cancer Genome Atlas
+# (TCGA-BRCA, https://portal.gdc.cancer.gov/).
+# Each row corresponds to one cytosine and
+# the coordinates for these cytosines are
+# in the object brcaMCoord1, (data("brcaMCoord1"),
+# hg38 genome). 
+# Only cytosines on chr1 are included to keep
+# the example data small.
+#
+#
+# @docType data
+# @keywords datasets
+# @name brcaLoadings1
+# @usage data(brcaLoadings1)
+# @format A matrix object
+
 
 #' A data.frame object with coordinates for cytosines
 #' from chr1 included in the PCA. 
@@ -191,33 +191,11 @@ NULL
 #' @format A data.frame object
 NULL
 
-#' This object contains loadings
-#' for PCA of ATAC-seq data.
-#' 
-#' From breast cancer
-#' patients from The Cancer Genome Atlas
-#' (TCGA-BRCA, ATAC-seq data from 
-#' Corces et. al, 2018, doi: 10.1126/science.aav1898).
-#' Each row corresponds to one region and
-#' the coordinates for these regions are
-#' in the object brcaATACCoord1, (data("brcaATACCoord1"),
-#' hg38 genome). 
-#' Only regions on chr1 are included to keep
-#' the example data small.
-#'
-#'
-#' @docType data
-#' @keywords datasets
-#' @name brcaATACLoadings1
-#' @usage data(brcaATACLoadings1)
-#' @format A matrix object
-NULL
-
 #' A data.frame object with coordinates for BRCA ATAC-seq peak regions
 #' from chr1. 
 #' 
 #' Corresponds to 
-#' the rows of brcaATACLoadings1 and brcaATACData1.
+#' the rows of brcaATACData1.
 #' The ATAC-seq data is from breast cancer
 #' patients from The Cancer Genome Atlas
 #' (TCGA-BRCA, Corces et. al, 2018, doi: 10.1126/science.aav1898,
@@ -259,6 +237,25 @@ NULL
 #' @format A matrix object
 NULL
 
+#' A data.frame with patient metadata for breast 
+#' cancer patients.
+#' 
+#' Has metadata for patients for which DNA methylation
+#' or chromatin accessibility data was included as package data.
+#' Rows are patients,
+#' with TCGA patient identifiers as row names and the column "subject_ID". 
+#' Also includes columns: ER_status, ER_percent, age_diagnosis, days_to_death,
+#' and days_to_last_follow_up.
+#' Metadata is from The Cancer Genome Atlas
+#' (TCGA-BRCA, https://portal.gdc.cancer.gov/).
+#'
+#'
+#' @docType data
+#' @keywords datasets
+#' @name brcaMetadata
+#' @usage data(brcaMetadata)
+#' @format A data.frame object
+NULL
 
 # # script for generating package data
 # # restricting data to reduce how much memory the package takes up
@@ -373,6 +370,51 @@ NULL
 # ## also getting PC scores for PC 1-4 for these patients
 # brcaPCScores <- mPCA$x[c(lowScore, highScore), paste0("PC", 1:4)]
 # save("brcaPCScores", file="brcaPCScores.RData", compress="xz")
+##################
+# # signalMat, signalCoord, patientMetadata
+# source(paste0(Sys.getenv("CODE"), "COCOA_paper/src/00-init.R"))
+# loadBRCADNAm(loadingMat = FALSE, pcScores = FALSE)
+# # making second round of BRCA DNAm data
+# 
+# signalCoord <- COCOA:::dtToGr(signalCoord)
+# data("brcaMethylData1")
+# 
+# data("esr1_chr1")
+# data("gata3_chr1")
+# data("atf3_chr1")
+# data("nrf1_chr1")
+# 
+# allTfs <- c(esr1_chr1, gata3_chr1, atf3_chr1, nrf1_chr1)
+# 
+# # expand regions so meta region profile can be created
+# allTfs <- resize(allTfs, width=12000, fix="center")
+# 
+# # regions that are covered by any TF
+# allTfs <- reduce(allTfs)
+# # length(unique(queryHits(findOverlaps(query = brcaATACCoord1, subject = allTfs))))
+# overlapsRegionSets <- rep(FALSE, length(signalCoord))
+# overlapsRegionSets[unique(queryHits(findOverlaps(query = signalCoord,
+#                                                  subject = allTfs)))] <- TRUE
+# 
+# 
+# brcaMCoord1 <- signalCoord[overlapsRegionSets]
+# 
+# # select samples, try to get a somewhat even distribution across PC's 1 and 4
+# data("brcaPCScores657")
+# 
+# set.seed(1234)
+# PC1Vec <- brcaPCScores657[, c("PC1", "PC4")]
+# PC1Dist <- as.matrix(dist(PC1Vec))
+# neighbor3Dist <- apply(X = PC1Dist, 2, function(x) mean(sort(x)[2:4]))
+# 
+# sampleInd <- sample(1:nrow(brcaPCScores657), size = 300, replace = FALSE, prob = neighbor3Dist)
+# plot(brcaPCScores657[sampleInd, c("PC1", "PC4")])
+# sampleNames <- row.names(brcaPCScores657)[sampleInd]
+# sampleNamesDNAM <- sampleNames
+# 
+# brcaMethylData1 <- signalMat[overlapsRegionSets, sampleNames]
+# save(brcaMethylData1, file="brcaMethylData1.RData", compress="xz")
+# save(brcaMCoord1, file="brcaMCoord1.RData", compress="xz")
 
 ############ data for rsRankingIndex
 # setwd("/data")
@@ -384,20 +426,20 @@ NULL
 # rsRankingIndex(rsScores = rsScores, PCsToAnnotate = c("PC1", "PC2"))
 
 ############ brcaPCScores657
-# # first load patient metadata and PCA for the 657 patients
-# brcaPCScores657 <- as.data.frame(allMPCA$x[, c("PC1", "PC2", "PC3", "PC4")])
-# patientMetadata <- as.data.frame(patientMetadata)
-# row.names(patientMetadata) <- patientMetadata$subject_ID
-# brcaPCScores657 <- cbind(brcaPCScores657, ER_Status = patientMetadata[row.names(brcaPCScores657), "ER_status"])
-# save(brcaPCScores657, file="brcaPCScores657.RData", compress = "xz")
-
+# # # first load patient metadata and PCA for the 657 patients
+# # brcaPCScores657 <- as.data.frame(allMPCA$x[, c("PC1", "PC2", "PC3", "PC4")])
+# # patientMetadata <- as.data.frame(patientMetadata)
+# # row.names(patientMetadata) <- patientMetadata$subject_ID
+# # brcaPCScores657 <- cbind(brcaPCScores657, ER_Status = patientMetadata[row.names(brcaPCScores657), "ER_status"])
+# # save(brcaPCScores657, file="brcaPCScores657.RData", compress = "xz")
+# 
 ########### BRCA ATAC-seq data
 # # first load BRCA ATAC-seq data from Corces et al. (signalMat, signalCoord)
-# loadBRCAatac(signalMat = TRUE, signalCoord = TRUE, 
+# loadBRCAatac(signalMat = TRUE, signalCoord = TRUE,
 #              loadingMat = TRUE, pcScores = TRUE)
 # 
 # # subset to only ATAC regions that are on chr1 and also
-# # overlap with the package's existing region sets 
+# # overlap with the package's existing region sets
 # chr1Ind <- as.logical(seqnames(signalCoord) == "chr1")
 # 
 # data("esr1_chr1")
@@ -405,30 +447,73 @@ NULL
 # data("atf3_chr1")
 # data("nrf1_chr1")
 # allTfs <- c(esr1_chr1, gata3_chr1, atf3_chr1, nrf1_chr1)
+# # expand regions so meta region profile can be created
+# allTfs <- resize(allTfs, width=12000, fix="center")
 # allTfs <- reduce(allTfs)
-# length(unique(queryHits(findOverlaps(query = brcaATACCoord1, subject = allTfs))))
+# # length(unique(queryHits(findOverlaps(query = brcaATACCoord1, subject = allTfs))))
 # overlapsRegionSets <- rep(FALSE, length(signalCoord))
-# overlapsRegionSets[unique(queryHits(findOverlaps(query = signalCoord, 
+# overlapsRegionSets[unique(queryHits(findOverlaps(query = signalCoord,
 #                                                  subject = allTfs)))] <- TRUE
 # keepInd <- chr1Ind & overlapsRegionSets
 # 
-# brcaATACLoadings1 <- loadingMat[keepInd, paste0("PC", 1:4)]
 # brcaATACCoord1 <- signalCoord[keepInd]
 # brcaATACData1 <- signalMat[keepInd, ]
-# save("brcaATACLoadings1", file = "brcaATACLoadings1.RData", compress = "xz")
-# save("brcaATACCoord1", file = "brcaATACCoord1.RData", compress = "xz")
-# save("brcaATACData1", file = "brcaATACData1.RData", compress = "xz")
 # 
-# # select 4 samples
-# # brcaATACPCScores <- pcScores[c(), paste0("PC", 1:4)]
-# save("brcaATACPCScores", file = "brcaATACPCScores", compress = "xz")
+# save("brcaATACCoord1", file = "brcaATACCoord1.RData", compress = "xz")
+# 
 # sampleNames <- colnames(brcaATACData1)
-# a = prcomp(t(brcaATACData1))
+# # pca of all the data
+# a = prcomp(t(signalMat))
 # plot(a$x[, 1:2])
 # patientMetadata <- as.data.frame(patientMetadata)
 # row.names(patientMetadata) <- patientMetadata$subject_ID
-# annoScores <- cbind(data.frame(a$x), 
+# annoScores <- cbind(data.frame(a$x),
 #                     ER_status=as.factor(patientMetadata[sampleNames, "ER_status"]))
-# ggplot(data = a, mapping = aes(x=PC1, y=PC2)) + geom_point(aes(color=ER_status))
+# ggplot(data = annoScores, mapping = aes(x=PC1, y=PC2)) + geom_point(aes(color=ER_status))
 # sampleInd = ((annoScores$PC1 > 12) | (annoScores$PC1 < -15)) & !is.na(annoScores$ER_status)
-
+# 
+# # take out samples without ER status
+# brcaATACData1 <- brcaATACData1[, !is.na(annoScores$ER_status)]
+# sampleNames <- colnames(brcaATACData1)
+# 
+# # trying to get a somewhat even distribution across PC1
+# set.seed(1234)
+# PC1Vec <- a$x[sampleNames, "PC1"]
+# PC1Dist <- as.matrix(dist(PC1Vec))
+# neighbor3Dist <- apply(X = PC1Dist, 2, function(x) mean(sort(x)[2:4]))
+# sampleInd <- sample(1:ncol(brcaATACData1), size = 37, replace = FALSE, prob = neighbor3Dist)
+# 
+# sampleNames <- sampleNames[sampleInd]
+# sampleNamesATAC <- sampleNames
+# a = prcomp(t(brcaATACData1[, sampleInd]))
+# plot(a$x[, 1:2])
+# patientMetadata <- as.data.frame(patientMetadata)
+# row.names(patientMetadata) <- patientMetadata$subject_ID
+# annoScores <- cbind(data.frame(a$x),
+#                     ER_status=as.factor(patientMetadata[sampleNames, "ER_status"]))
+# ggplot(data = annoScores, mapping = aes(x=PC1, y=PC2)) + geom_point(aes(color=ER_status))
+# 
+# brcaATACData1 <- brcaATACData1[, sampleInd]
+# 
+# # only keep 3 sig figs
+# brcaATACData1 <- round(brcaATACData1, 2)
+# 
+# save("brcaATACData1", file = "brcaATACData1.RData", compress = "xz")
+# 
+# # we no longer need to include the loadings or PC scores because we can
+# # do PCA to generate them in the vignette
+# # brcaATACLoadings1 <- loadingMat[keepInd, paste0("PC", 1:4)]
+# # save("brcaATACLoadings1", file = "brcaATACLoadings1.RData", compress = "xz")
+# # brcaATACPCScores <- pcScores[c(), paste0("PC", 1:4)]
+# # save("brcaATACPCScores", file = "brcaATACPCScores", compress = "xz")
+# # 
+# ###########################################
+# # get brcaMetadata
+# sampleNames <- unique(c(sampleNamesDNAM, sampleNamesATAC))
+# patientMetadata <- as.data.frame(patientMetadata)
+# row.names(patientMetadata) <- patientMetadata$subject_ID
+# brcaMetadata <- patientMetadata[sampleNames, c("subject_ID", "ER_status", "ER_percent",
+#                                                "age_diagnosis", "days_to_death",
+#                                                "days_to_last_follow_up")]
+# brcaMetadata$ER_status = as.factor(brcaMetadata$ER_status)
+# save(brcaMetadata, file = "brcaMetadata.RData", compress="xz")

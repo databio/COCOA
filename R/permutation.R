@@ -72,15 +72,15 @@
 #' 
 #' @return Returns a list where each item is a data.frame of COCOA results 
 #' from a separate permutation
-#' @examples data("brcaMCoord1")
-#' data("brcaLoadings1")
+#' @examples 
 #' data("esr1_chr1")
 #' data("nrf1_chr1")
 #' data("brcaMethylData1")
-#' data("brcaPCScores657")
-#' targetVar <- brcaPCScores657[colnames(brcaMethylData1), ]
-#' targetVar$ER_Status <- scale(as.numeric(targetVar$ER_Status), 
-#'                                center=TRUE, scale=FALSE)
+#' data("brcaMCoord1")
+#' pcScores <- prcomp(t(brcaMethylData1))$x
+#' targetVarCols <- c("PC1", "PC2")
+#' targetVar <- pcScores[, targetVarCols]
+#' 
 #' # give the actual order of samples to `runCOCOA` to get the real scores
 #' correctSampleOrder=1:nrow(targetVar)
 #' realRSScores <- runCOCOA(genomicSignal=brcaMethylData1,
@@ -105,6 +105,7 @@
 #'                           sampleOrder=randomOrder,
 #'                           variationMetric="cor")
 #' 
+#' # runCOCOAPerm
 #' permResults <- runCOCOAPerm(genomicSignal=brcaMethylData1,
 #'                            signalCoord=brcaMCoord1,
 #'                            GRList=GRangesList(esr1_chr1, nrf1_chr1),
@@ -240,7 +241,7 @@ runCOCOAPerm <- function(genomicSignal,
     # nullDistList <- nullDistList[keepInd]
     # rsScores <- rsScores[keepInd, ]
     
-    nullDistList <- convertToFromNullDist(resultsList=rsPermScores)
+    nullDistList <- convertToFromNullDist(rsPermScores)
     if (useSimpleCache) {
 
         simpleCache(paste0("empiricalPValsUncorrected", .analysisID), {
@@ -358,25 +359,40 @@ runCOCOAPerm <- function(genomicSignal,
 #' centered based
 #' on their means? (subtract column mean from each column)
 #' @return data.frame. The output of aggregateSignalGRList for one permutation
-#' @examples data("brcaMCoord1")
-#' data("brcaLoadings1")
+#' @examples
 #' data("esr1_chr1")
 #' data("nrf1_chr1")
 #' data("brcaMethylData1")
-#' data("brcaPCScores657")
-#' targetVar <- brcaPCScores657[colnames(brcaMethylData1), ]
-#' targetVar$ER_Status <- scale(as.numeric(targetVar$ER_Status), 
-#'                                center=TRUE, scale=FALSE)
-#' # shuffling sample labels
-#' sampleOrder <- sample(1:nrow(targetVar), nrow(targetVar))
-#' onePermResult <- runCOCOA(genomicSignal=brcaMethylData1,
-#'                          signalCoord=brcaMCoord1,
-#'                          GRList=GRangesList(esr1_chr1, nrf1_chr1),
-#'                          signalCol="ER_Status",
-#'                          targetVar=targetVar,
-#'                          sampleOrder=sampleOrder,
-#'                          variationMetric="cor")
-#' onePermResult
+#' data("brcaMCoord1")
+#' pcScores <- prcomp(t(brcaMethylData1))$x
+#' targetVarCols <- c("PC1", "PC2")
+#' targetVar <- pcScores[, targetVarCols]
+#' 
+#' # give the actual order of samples to `runCOCOA` to get the real scores
+#' correctSampleOrder=1:nrow(targetVar)
+#' realRSScores <- runCOCOA(genomicSignal=brcaMethylData1,
+#'                         signalCoord=brcaMCoord1,
+#'                         GRList=GRangesList(esr1_chr1, nrf1_chr1),
+#'                         signalCol=c("PC1", "PC2"),
+#'                         targetVar=targetVar,
+#'                         sampleOrder=correctSampleOrder,
+#'                         variationMetric="cor")
+#' realRSScores
+#'         
+#' # give random order of samples to get random COCOA scores 
+#' # so you start building a null distribution for each region set 
+#' # (see vignette for example of building a null distribution with `runCOCOA`)
+#' randomOrder <- sample(1:nrow(targetVar), 
+#'                       size=nrow(targetVar),
+#'                       replace=FALSE)
+#' randomRSScores <- runCOCOA(genomicSignal=brcaMethylData1,
+#'                           signalCoord=brcaMCoord1,
+#'                           GRList=GRangesList(esr1_chr1, nrf1_chr1),
+#'                           signalCol=c("PC1", "PC2"),
+#'                           targetVar=targetVar,
+#'                           sampleOrder=randomOrder,
+#'                           variationMetric="cor")
+#' randomRSScores
 #' @export
 runCOCOA <- function(genomicSignal, 
                     signalCoord, GRList, signalCol,
@@ -442,7 +458,7 @@ runCOCOA <- function(genomicSignal,
 #' The function can 
 #' also convert in the reverse order from a list of null distributions to a 
 #' list of COCOA results. 
-#' @param resultsList each item in the list is a data.frame, one item for
+#' @param rsScoresList each item in the list is a data.frame, one item for
 #' each permutation with the results of that permutation. Each row in the 
 #' data.frame is a region set. All data.frames should be the same size and
 #' each data.frame's rows should be in the same order
@@ -466,10 +482,10 @@ runCOCOA <- function(genomicSignal,
 #' 
 #' @export
 
-convertToFromNullDist <- function(resultsList) {
+convertToFromNullDist <- function(rsScoresList) {
 
-    nullDistList <- lapply(X = 1:nrow(resultsList[[1]]),
-                          FUN = function(x) permListToOneNullDist(resultsList=resultsList, 
+    nullDistList <- lapply(X = 1:nrow(rsScoresList[[1]]),
+                          FUN = function(x) permListToOneNullDist(resultsList=rsScoresList, 
                                                                   rsInd = x))
     return(nullDistList)
 }

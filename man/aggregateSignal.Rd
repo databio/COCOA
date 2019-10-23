@@ -113,12 +113,13 @@ Then the region set is scored using the feature contribution scores
 according to the `scoringMetric` parameter.
 }
 \examples{
-data("brcaMCoord1")
-data("brcaLoadings1")
+data("brcaATACCoord1")
+data("brcaATACData1")
 data("esr1_chr1")
-rsScores <- aggregateSignal(signal=brcaLoadings1, 
-                                 signalCoord=brcaMCoord1, 
+featureContributionScores <- prcomp(t(brcaATACData1))$rotation
+rsScores <- aggregateSignal(signal=featureContributionScores, 
+                                 signalCoord=brcaATACCoord1, 
                                  regionSet=esr1_chr1, 
                                  signalCol=c("PC1", "PC2"), 
-                                 scoringMetric="regionMean")
+                                 scoringMetric="default")
 }

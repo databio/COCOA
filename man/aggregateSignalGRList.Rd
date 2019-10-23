@@ -118,13 +118,16 @@ to Coordinate Covariation Analysis" for help interpreting your
 results.
 }
 \examples{
-data("brcaMCoord1")
-data("brcaLoadings1")
+data("brcaATACCoord1")
+data("brcaATACData1")
 data("esr1_chr1")
-rsScores <- aggregateSignalGRList(signal=brcaLoadings1, 
-                                 signalCoord=brcaMCoord1, 
-                                 GRList=GRangesList(esr1_chr1), 
+data("nrf1_chr1")
+featureContributionScores <- prcomp(t(brcaATACData1))$rotation
+GRList <- GRangesList(esr1_chr1, nrf1_chr1)
+rsScores <- aggregateSignalGRList(signal=featureContributionScores, 
+                                 signalCoord=brcaATACCoord1, 
+                                 GRList= GRList,
                                  signalCol=c("PC1", "PC2"), 
-                                 scoringMetric="regionMean")
+                                 scoringMetric="default")
 
 }

@@ -110,12 +110,12 @@ for that target variable. These values are
 plotted in a heatmap.
 }
 \examples{
-data("brcaLoadings1")
-data("brcaMCoord1")
+data("brcaATACCoord1")
+data("brcaATACData1")
 data("esr1_chr1")
-data("brcaPCScores")
-regionByPCHM <- regionQuantileByTargetVar(signal = brcaLoadings1, 
-                                   signalCoord = brcaMCoord1, 
+featureContributionScores <- prcomp(t(brcaATACData1))$rotation
+regionByPCHM <- regionQuantileByTargetVar(signal = featureContributionScores, 
+                                   signalCoord = brcaATACCoord1, 
                                    regionSet = esr1_chr1, 
                                    rsName = "Estrogen Receptor Chr1", 
                                    signalCol=paste0("PC", 1:2),

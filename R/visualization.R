@@ -386,12 +386,13 @@ rsScoreHeatmap <- function(rsScores, signalCol=paste0("PC", 1:5),
 #' for that region. Colors are based on this quantile/percentile. 
 #' The output is a Heatmap object (ComplexHeatmap package).
 #' 
-#' @examples data("brcaLoadings1")
-#' data("brcaMCoord1")
+#' @examples
+#' data("brcaATACCoord1")
+#' data("brcaATACData1")
 #' data("esr1_chr1")
-#' data("brcaPCScores")
-#' regionByPCHM <- regionQuantileByTargetVar(signal = brcaLoadings1, 
-#'                                    signalCoord = brcaMCoord1, 
+#' featureContributionScores <- prcomp(t(brcaATACData1))$rotation
+#' regionByPCHM <- regionQuantileByTargetVar(signal = featureContributionScores, 
+#'                                    signalCoord = brcaATACCoord1, 
 #'                                    regionSet = esr1_chr1, 
 #'                                    rsName = "Estrogen Receptor Chr1", 
 #'                                    signalCol=paste0("PC", 1:2),

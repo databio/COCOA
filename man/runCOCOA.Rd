@@ -134,23 +134,37 @@ the target variables/phenotypes are the targetVar.
 See the vignettes for examples.
 }
 \examples{
-data("brcaMCoord1")
-data("brcaLoadings1")
 data("esr1_chr1")
 data("nrf1_chr1")
 data("brcaMethylData1")
-data("brcaPCScores657")
-targetVar <- brcaPCScores657[colnames(brcaMethylData1), ]
-targetVar$ER_Status <- scale(as.numeric(targetVar$ER_Status), 
-                               center=TRUE, scale=FALSE)
-# shuffling sample labels
-sampleOrder <- sample(1:nrow(targetVar), nrow(targetVar))
-onePermResult <- runCOCOA(genomicSignal=brcaMethylData1,
-                         signalCoord=brcaMCoord1,
-                         GRList=GRangesList(esr1_chr1, nrf1_chr1),
-                         signalCol="ER_Status",
-                         targetVar=targetVar,
-                         sampleOrder=sampleOrder,
-                         variationMetric="cor")
-onePermResult
+data("brcaMCoord1")
+pcScores <- prcomp(t(brcaMethylData1))$x
+targetVarCols <- c("PC1", "PC2")
+targetVar <- pcScores[, targetVarCols]
+
+# give the actual order of samples to `runCOCOA` to get the real scores
+correctSampleOrder=1:nrow(targetVar)
+realRSScores <- runCOCOA(genomicSignal=brcaMethylData1,
+                        signalCoord=brcaMCoord1,
+                        GRList=GRangesList(esr1_chr1, nrf1_chr1),
+                        signalCol=c("PC1", "PC2"),
+                        targetVar=targetVar,
+                        sampleOrder=correctSampleOrder,
+                        variationMetric="cor")
+realRSScores
+        
+# give random order of samples to get random COCOA scores 
+# so you start building a null distribution for each region set 
+# (see vignette for example of building a null distribution with `runCOCOA`)
+randomOrder <- sample(1:nrow(targetVar), 
+                      size=nrow(targetVar),
+                      replace=FALSE)
+randomRSScores <- runCOCOA(genomicSignal=brcaMethylData1,
+                          signalCoord=brcaMCoord1,
+                          GRList=GRangesList(esr1_chr1, nrf1_chr1),
+                          signalCol=c("PC1", "PC2"),
+                          targetVar=targetVar,
+                          sampleOrder=randomOrder,
+                          variationMetric="cor")
+randomRSScores
 }

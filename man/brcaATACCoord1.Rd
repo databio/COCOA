@@ -11,7 +11,7 @@ data(brcaATACCoord1)
 }
 \description{
 Corresponds to 
-the rows of brcaATACLoadings1 and brcaATACData1.
+the rows of brcaATACData1.
 The ATAC-seq data is from breast cancer
 patients from The Cancer Genome Atlas
 (TCGA-BRCA, Corces et. al, 2018, doi: 10.1126/science.aav1898,
