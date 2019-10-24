@@ -20,7 +20,7 @@ vignette: >
 
 Epigenetic differences between samples can be hard to interpret because epigenetic data is high dimensional. Grouping high dimensional data into functional categories helps to interpret data. An effective grouping method for epigenetic data is to group by related genomic regions, which collectively are called a region set. A region set is a set of genomic regions that share the same biological annotation. A few examples of region sets are binding regions for a certain transcription factor, cell-type specific open chromatin or enhancer regions, or regions with a certain histone modification. Reference region sets derived from public data are used by COCOA to annotate inter-sample epigenetic variation. Epigenetic variation can be annotated by COCOA in a supervised or unsupervised analysis. A supervised COCOA analysis annotates epigenetic variation that is related to a specific sample phenotype of interest (whether a molecular or higher-level phenotype). For example, we might want to see what epigenetic variation is associated with disease status, disease severity, survival, a certain mutation, or the expression of a certain gene transcript or protein. In contrast, an unsupervised COCOA analysis annotates inter-sample epigenetic variation without requiring a sample phenotype. Often, unsupervised analyses will look at the major sources of inter-sample variation by using a dimensionality reduction technique such as principal component analysis (PCA). COCOA can annotate those major sources of inter-sample variation (e.g. the principal components) for linear dimensionality reduction methods like PCA. To annotate the epigenetic variation of interest, whether supervised or unsupervised, COCOA finds reference region sets that are most associated with that variation, giving you biologically meaningful insight into variation in your data. 
 
-For a more in-depth description of the method, see the "[Basic workflow]" and "[Method details]" sections of this vignette. 
+COCOA can be used in many different contexts so feel free to skip around to the section that is most relevant to you although you might also want to read the [Basic workflow] section for a high level overview of the COCOA workflow. We'll show COCOA workflows with [DNA methylation](#DNAm) and [chromatin accessibility](#ATAC) data and for each of those we will demonstrate a supervised and unsupervised analysis. For a more in-depth description of the method, see the "[Method details]" section. 
 
 # Basic workflow
 
@@ -42,13 +42,13 @@ The second step in COCOA is use the feature contribution scores from step 1 to f
 
 To account for the different sizes of region sets and to assess statistical significance of the results, we can do a permutation test to estimate p-values. We run COCOA on shuffled data to get null distributions for each region set. More specifically, we shuffle the samples' values for the target variable and recompute COCOA scores as described above. After doing this many times, the permutation COCOA scores for a given region set make up a region set-specific null distribution. This null distribution accounts for the size of the region set. If multiple target variables are used, each target variable, region set combination will have its own unique null distribution. To avoid the need to run a large number of permutations, we can run a small number of permutations (a few hundred) and then fit a gamma distribution to each null distribution. We use the gamma distribution to estimate a p-value for the real COCOA score for each region set. As mentioned before, the unsupervised COCOA test does not use PCA loadings as the feature contribution scores. This is done so that PCA, a time-consuming computation, does not have to be recomputed for every permutation. Instead, the PC sample scores are treated as the target variable and shuffled so that the feature contribution scores can be recalculated.  
 
-# COCOA for DNA methylation data
+# COCOA for DNA methylation data {#DNAm}
 
-COCOA uses a database of region sets to annotate inter-sample DNA methylation variation in your data. In this vignette, we will see how COCOA can find meaningful sources of DNA methylation variation in breast cancer patients. We will use data from The Cancer Genome Atlas: 450k DNA methylation microarrays for 657 breast cancer patients (TCGA-BRCA, https://portal.gdc.cancer.gov/).
+COCOA uses a database of region sets to annotate inter-sample DNA methylation variation in your data. In this vignette, we will see how COCOA can find meaningful sources of DNA methylation variation in breast cancer patients. We will use data from The Cancer Genome Atlas: 450k DNA methylation microarrays for 657 breast cancer patients (TCGA-BRCA, https://portal.gdc.cancer.gov/). We (the authors) have subsetted the DNA methylation data to a small number of CpGs that we previously determined were necessary for the vignette in order to keep the vignette data small. In your real analysis, we recommend using as many CpGs as possible. For this vignette, our region set database has four transcription factor region sets (which were filtered to include only relevant regions for our package). For a real analysis, we recommend using hundreds or thousands of region sets. For sources of region sets, see the "[Region set database]" section. 
 
-First, we will show how to use COCOA to find region sets where DNA methylation variation is associated with variation in some phenotype of interest (the target variable) ([Supervised COCOA]). Then, we will show how to find region sets that are associated with the principle components of PCA of our DNA methylation data ([Unsupervised COCOA]). 
+First, we will show how to use COCOA to find region sets where DNA methylation variation is associated with variation in a phenotype of interest (the target variable) ([Supervised COCOA](#sCOCOADNAm)). Then, we will show how to find region sets that are associated with the principal components of PCA of our DNA methylation data ([Unsupervised COCOA](#uCOCOADNAm)). 
 
-## Supervised COCOA
+## Supervised COCOA {#sCOCOADNAm}
 
 Goal: Understand epigenetic variation related to a specific phenotype
 
@@ -58,7 +58,7 @@ Vignette analysis goal: As mentioned previously, we are looking at DNA methylati
 
 ### Quantify relationship between chosen sample phenotype and epigenetic data
 
-First we will load the necessary data: region sets to test, BRCA DNA methylation data with genomic coordinates, and our phenotype of interest, ER status (part of `brcaPCScores657`)
+First we will load the necessary data: region sets to test, BRCA DNA methylation data with genomic coordinates, and our phenotype of interest, ER status (part of `brcaMetadata`)
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 library(COCOA)
@@ -68,22 +68,28 @@ data("nrf1_chr1")
 data("atf3_chr1")
 data("brcaMCoord1")
 data("brcaMethylData1")
-data("brcaPCScores657")
-targetVar <- brcaPCScores657[colnames(brcaMethylData1), ]
+data("brcaMetadata")
 ```
 
-Let's convert estrogen receptor status to a number so we can do calculations with it. Then we will quantify the association between ER status and the DNA methylation level at each cytosine using Pearson correlation.
+As mentioned, ER status is our target phenotype so we'll pull that info out of the patient metadata. Since we only have one target variable, we are keeping the data as a data.frame object using drop=FALSE (instead of targetVarDF becoming a vector).
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
-targetVar$ER_Status <- scale(as.numeric(as.factor(targetVar$ER_Status)), 
+myPhen <- "ER_status"
+targetVarDF <- brcaMetadata[colnames(brcaMethylData1), myPhen, drop=FALSE]
+```
+
+Let's convert estrogen receptor status to a number so we can do calculations with it. Then we will quantify the association between ER status and the DNA methylation level at each cytosine using Pearson correlation. If NA's are present for any samples for a given CpG, the default correlation parameters will return NA. The parameter "pairwise.complete.obs" can be used to get correlation values even if some samples have NAs/missing data for a CpG (we use this in our code as an example even though our data does not have NAs). Whether to use this parameter is up to the judgment of the user, which could be decided based on what percent of samples have no data for a given CpG (filter out CpGs missing data for a certain percent of samples, use the rest).  
+
+```{r, eval=TRUE, message=FALSE, warning=FALSE}
+targetVarDF$ER_status <- scale(as.numeric(as.factor(targetVarDF$ER_status)), 
                                center=TRUE, scale=FALSE)
-methylCor <- cor(t(brcaMethylData1), targetVar$ER_Status, 
+methylCor <- cor(t(brcaMethylData1), targetVarDF$ER_status, 
                  use = "pairwise.complete.obs")
 # if the standard deviation of the methylation level 
 # for a CpG across samples is 0,
 # cor() will return NA, so manually set the correlation to 0 for these CpGs
 methylCor[is.na(methylCor)] <- 0
-colnames(methylCor) <- "ER_Status"
+colnames(methylCor) <- myPhen
 ```
 
 Now we have a feature contribution score (the correlation coefficient in this case) for each methylation site that represents how much the methylation at that site is associated with ER status. We can use those individual cytosine scores to score region sets. We'll score our region sets with the `aggregateSignalGRList` function.
@@ -92,27 +98,28 @@ Now we have a feature contribution score (the correlation coefficient in this ca
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 GRList <- GRangesList(esr1_chr1, gata3_chr1, atf3_chr1, nrf1_chr1)
-rsNames <- c("esr1", "gata3", "atf3", "nrf1")
+regionSetNames <- c("esr1", "gata3", "atf3", "nrf1")
 rsScores <- aggregateSignalGRList(signal=methylCor,
                      signalCoord=brcaMCoord1,
                      GRList=GRList,
-                     signalCol="ER_Status",
+                     signalCol=myPhen,
                      scoringMetric="regionMean",
                      absVal=TRUE)
+rsScores$regionSetName <- regionSetNames
 rsScores
 ```
 
-Now we have a score for each region set that represents how much epigenetic variation in that region set is associated with the phenotype of interest, ER status. While this vignette is limited by having four samples (only one of which is ER-), if more samples were included, it would become clear that the ER and GATA3 region sets are much more highly associated with ER status than the NRF1 and ATF3 region sets.
+Now we have a score for each region set that represents how much epigenetic variation in that region set is associated with the phenotype of interest, ER status. Since we are using the absolute value of the correlation coefficient for each CpG to score our region sets, the possible region set scores range from 0 to 1, with 0 representing no correlation and 1 representing complete correlation. From our initial results, it appears that the ER and GATA3 region sets are much more highly associated with ER status than the NRF1 and ATF3 region sets.
 
 Both the correlation and scoring steps can be combined into one step with the `runCOCOA` function as will be shown in the next section. 
 
 ### Estimating statistical significance
 
-Now that we have a score for each region set, we can to get an idea of the statistical significance of these results. We will do this using a permutation test. The permutation test is computationally expensive but, in some cases, may not be needed since the COCOA scores by themselves might be enough to gain insight your data. However, if a p-value estimate is desired, the permutation test can return that.
+Now that we have a score for each region set, we can to get an idea of the statistical significance of these results. We will do this using a permutation test. The permutation test is computationally expensive and, in some cases, may not be needed since the COCOA scores by themselves might be enough to gain insight your data. However, if a p-value estimate is desired, the permutation test can return that.
 
 #### Permutations
 
-We need to set the seed for reproducible results since we are doing random shuffling of the sample phenotypes. By shuffling the sample phenotypes and calculating COCOA scores, we can create a null distribution for each region set. The `runCOCOA` function does the two main COCOA steps: quantifying the variation and scoring the region sets. If the samples were in the correct order, `runCOCOA` would return the real COCOA scores but since we are giving a shuffled sample order (`sampleOrder` parameter), we will be correlating the epigenetic data with the shuffled sample phenotypes to create null distribution COCOA scores. We will be running five permutations for the vignette but many more should be done for a real analysis.
+By shuffling the sample phenotypes and calculating COCOA scores, we can create a null distribution for each region set. The `runCOCOA` function does the two main COCOA steps: quantifying the variation and scoring the region sets. If the samples were in the correct order, `runCOCOA` would return the real COCOA scores but since we are giving a shuffled sample order (`sampleOrder` parameter), we will be correlating the epigenetic data with the shuffled sample phenotypes to create null distribution COCOA scores. We will be running five permutations for the vignette but many more should be done for a real analysis (probably at least a few hundred). We need to set the seed for reproducible results since we are doing random shuffling of the sample phenotypes.
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 set.seed(100)
@@ -122,23 +129,25 @@ permRSScores <- list()
 
 for (i in 1:nPerm) {
     # shuffling sample labels
-    sampleOrder <- sample(1:nrow(targetVar), nrow(targetVar))
+    sampleOrder <- sample(1:nrow(targetVarDF), nrow(targetVarDF))
     permRSScores[[i]] <- runCOCOA(sampleOrder=sampleOrder, 
                            genomicSignal=brcaMethylData1, 
                            signalCoord=brcaMCoord1, 
                            GRList=GRList,
-                           signalCol="ER_Status", 
-                           targetVar=targetVar, 
+                           signalCol=myPhen, 
+                           targetVar=targetVarDF, 
                            variationMetric="cor")
+    permRSScores[[i]]$regionSetName <- regionSetNames
 }
 
-permRSScores
+permRSScores[1:3]
 ```
 
-We now have a list where each item is a result of `aggregateSignalGRList`. We have `nPerm` list items in permRSScores. We'll reformat it so that we have a list where each item is a null distribution for a single region set: 
+We now have a list where each item is a result of `aggregateSignalGRList`. We have `nPerm` list items in permRSScores (only showing 3 above). We'll reformat it so that we have a list where each item is a null distribution for a single region set: 
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 nullDistList <- convertToFromNullDist(permRSScores)
+names(nullDistList) <- regionSetNames
 nullDistList
 ```
 
@@ -152,34 +161,36 @@ To reduce the number of permutations (and the run time for COCOA), we will appro
 # p-values based on fitted gamma distributions
 gPValDF <- getGammaPVal(rsScores = rsScores, 
                         nullDistList = nullDistList, 
-                        signalCol = "ER_Status", 
+                        signalCol = myPhen, 
                         method = "mme", realScoreInDist = TRUE)
 gPValDF <- cbind(gPValDF, 
                  rsScores[, colnames(rsScores)[!(colnames(rsScores) 
-                                                 %in% "ER_Status")]])
-gPValDF <- cbind(gPValDF, rsNames)
+                                                 %in% myPhen)]])
+gPValDF <- cbind(gPValDF, regionSetNames)
 gPValDF
 ```
 
-Fitting a gamma distribution to only 5 values does not really make sense so that could be one reason the p-values for ER and GATA3, which have been associated with DNA methylation) are not significant. Also, with only 4 samples, shuffling the sample phenotypes is not as effective since there is a limited number of unique permutations.
+Fitting a gamma distribution to only 5 values does not really make sense so that is one reason the p-values for ER and GATA3 (which have been associated with DNA methylation in breast cancer) are higher than those of NRF1 and ATF3. If you increase the number of permutations to 50, you will see that ER and GATA3 have lower p-values than ATF3 and NRF1 in that more realistic scenario.
 
-We can also use the null distribution to directly calculate empirical p-values:
+We can also use the null distributions to directly calculate empirical p-values:
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 getPermStat(rsScores = rsScores, 
             nullDistList = nullDistList, 
-            signalCol = "ER_Status")
+            signalCol = myPhen)
 ```
 
-The empirical p-values are limited by the number of permutations done so the gamma distribution approximation is recommended to allow the possibility of lower p-values.
+An empirical p-value of zero is returned when the real region set score was more extreme than any scores in its null distribution. What this really suggests is that the true p-value is less than ( 1/nPerm ) although it is unclear how much less.
+
+The empirical p-values are limited by the number of permutations done. When multiple testing correction is done to correct for testing many region sets in a large region set database, the empirical test normally cannot achieve significant p-values with a reasonable number of permutations. For that reason, the gamma distribution approximation is recommended to allow the possibility of lower p-values.
 
 
 ```{r, eval=FALSE}
 PCsToAnnotate <- c("PC1", "PC2")
-targetVar = data.frame(PC1=aPCA$x[, "PC1"], PC2=aPCA$x[, "PC2"])
-targetVar <- as.data.frame(scale(targetVar, 
+targetVarDF <- data.frame(PC1=aPCA$x[, "PC1"], PC2=aPCA$x[, "PC2"])
+targetVarDF <- as.data.frame(scale(targetVarDF, 
                                center=TRUE, scale=FALSE))
-methylCor <- cor(t(brcaMethylData1), targetVar, 
+methylCor <- cor(t(brcaMethylData1), targetVarDF, 
                  use = "pairwise.complete.obs")
 # if the standard deviation of the methylation level 
 # for a CpG across samples is 0,
@@ -188,7 +199,7 @@ methylCor[is.na(methylCor)] <- 0
 
 
 GRList <- GRangesList(esr1_chr1, gata3_chr1, atf3_chr1, nrf1_chr1)
-rsNames <- c("esr1", "gata3", "atf3", "nrf1")
+regionSetNames <- c("esr1", "gata3", "atf3", "nrf1")
 rsScores <- aggregateSignalGRList(signal=methylCor,
                      signalCoord=brcaMCoord1,
                      GRList=GRList,
@@ -205,13 +216,13 @@ permRSScores <- list()
 
 for (i in 1:nPerm) {
     # shuffling sample labels
-    sampleOrder <- sample(1:nrow(targetVar), nrow(targetVar))
+    sampleOrder <- sample(1:nrow(targetVarDF), nrow(targetVarDF))
     permRSScores[[i]] <- runCOCOA(sampleOrder=sampleOrder, 
                            genomicSignal=brcaMethylData1, 
                            signalCoord=brcaMCoord1, 
                            GRList=GRList,
                            signalCol=c("PC1", "PC2"), 
-                           targetVar=targetVar, 
+                           targetVar=targetVarDF, 
                            variationMetric="cor")
 }
 
@@ -227,8 +238,8 @@ gPValDF <- getGammaPVal(rsScores = rsScores,
                         method = "mme", realScoreInDist = TRUE)
 gPValDF <- cbind(gPValDF, 
                  rsScores[, colnames(rsScores)[!(colnames(rsScores) 
-                                                 %in% "ER_Status")]])
-gPValDF <- cbind(gPValDF, rsNames)
+                                                 %in% myPhen)]])
+gPValDF <- cbind(gPValDF, regionSetNames)
 gPValDF
 
 
@@ -239,7 +250,7 @@ getPermStat(rsScores = rsScores,
 ```
 
 
-## Unsupervised COCOA 
+## Unsupervised COCOA {#uCOCOADNAm}
 
 Goal of unsupervised COCOA
 
@@ -247,28 +258,8 @@ Goal: Understand major sources of epigenetic variation present in data without k
 
 In an unsupervised COCOA analysis, we normally begin with a dimensionality reduction technique such as PCA that identifies major sources/axes of inter-sample variation. Then the PC/latent factors are treated as the target variables for COCOA and a workflow similar to the supervised COCOA analysis is used.  
 
-### Our data
 
-This section of the vignette begins after principal component analysis (PCA) has been performed on the DNA methylation data. As you can see below, PC1 and PC4 cluster patients based on estrogen receptor status which is an important prognostic marker for breast cancer: 
 
-```{r, eval=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
-library(COCOA)
-library(ggplot2)
-data("brcaPCScores657")
-ggplot(data = brcaPCScores657, mapping = aes(x=PC1, y=PC4, col=ER_Status)) + geom_point() + ggtitle("PCA of DNA methylation data from breast cancer patients") + theme_classic()
-```
-
-Based on this, we might expect that the variation captured by these PCs would be associated with estrogen receptor (consistent with interpatient variation in estrogen receptor status). We are using an easy example for this vignette but COCOA will still work even if there are not distinct clusters in your PCA plot and if you do not have known groups of samples. Outside of this vignette, COCOA was run with a region set database of over 2000 region sets. To keep things simple for this vignette, we will only use two of the highest scoring region sets and two of the lowest scoring region sets from that analysis to demonstrate how COCOA works.
-
-### Inputs
-
-There are three main inputs for unsupervised COCOA:
-
-1. PCA loadings (`prcomp()$rotation`).
-2. Genomic coordinates associated with the raw data used for the PCA and with the PCA loadings.
-3. Region sets (normally a database of region sets).
-
-We did PCA with DNA methylation data for all autosomal chromosomes but only the data for chromosome 1 are included in this vignette to minimize memory requirements. `brcaLoadings1` has the chr1 loadings. `brcaMCoord1` has the coordinates for the chr1 DNA methylation data, which are also the coordinates for the chr1 loadings. For more on the relationship between the loadings and the original data see the "Method details" section. In this vignette, we will use only a few region sets to demonstrate how to use the COCOA functions. For actual use, COCOA should be done with many region sets (i.e. hundreds or > 1000). Publicly available collections of region sets can be found online (e.g. http://databio.org/regiondb).
 
 ### Running COCOA
 
@@ -283,16 +274,24 @@ data("gata3_chr1")
 data("nrf1_chr1")
 data("atf3_chr1")
 data("brcaMCoord1")
-data("brcaPCScores")
 data("brcaMethylData1")
 ```
 
+Then we will do PCA on our breast cancer data.
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
-mPCA <- prcomp(t(brcaMethylData1))
+pca <- prcomp(t(brcaMethylData1))
+pcScores <- pca$x
 
+plot(pcScores[, c("PC1", "PC2")])
+```
+
+COCOA will still work even if there are not distinct clusters of samples in your PCA plot and if you do not have known groups of samples. In this vignette, we will look at principal components 1-4 but this choice depends on the context of your analysis. 
+
+
+```{r, eval=TRUE, message=FALSE, warning=FALSE}
 PCsToAnnotate <- paste0("PC", 1:4)
-targetVar <- mPCA$x[, PCsToAnnotate]
+targetVar <- pcScores[, PCsToAnnotate]
 targetVar <- as.matrix(scale(targetVar, 
                                center=TRUE, scale=FALSE))
 methylCor <- cor(t(brcaMethylData1), targetVar, 
@@ -301,30 +300,26 @@ methylCor <- cor(t(brcaMethylData1), targetVar,
 # for a CpG across samples is 0,
 # cor() will return NA, so manually set the correlation to 0 for these CpGs
 methylCor[is.na(methylCor)] <- 0
-colnames(methylCor) <- PCsToAnnotate
 ```
 
 
 
-
-We have region sets for four transcription factors from ChIP-seq experiments (with the same reference genome as our breast cancer data): Esr1 in MCF-7 cells, Gata3 in MCF-7 cells, Nrf1 in HepG2 cells, and Atf1 in K562 cells. 
-
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 # prepare data
 GRList <- GRangesList(esr1_chr1, gata3_chr1, nrf1_chr1, atf3_chr1) 
-regionSetName <- c("esr1_chr1", "gata3_chr1", "nrf1_chr1", "atf3_chr1")
+regionSetNames <- c("esr1_chr1", "gata3_chr1", "nrf1_chr1", "atf3_chr1")
 ```
 
 Now let's give each region set a score with `aggregateSignalGRList()` to quantify how much it is associated with each principal component:
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
-PCsToAnnotate <- paste0("PC", 1:4)
 regionSetScores <- aggregateSignalGRList(signal=methylCor, 
                             signalCoord=brcaMCoord1, 
                             GRList=GRList, 
                             signalCol=PCsToAnnotate, 
                             scoringMetric="regionMean")
-regionSetScores$regionSetName <- regionSetName
+regionSetScores$regionSetName <- regionSetNames
+regionSetScores
 ```
 
 As an easy way to visualize the results, we can see how the region sets are ranked for each PC:
@@ -337,7 +332,7 @@ rsScoreHeatmap(regionSetScores,
                column_title = "Region sets ordered by score for PC1")
 ```
 
-We can see that Gata3 had the highest score for PCs 1, 3, and 4 but that Esr1 had a higher score for PC2. While you might expect that Esr1 would be ranked first for all PCs, Gata3 is known to be associated with breast cancer and Esr1 activity so these results still make sense. As mentioned before, this vignette is showing two of the top scoring and bottom scoring region sets from a previous COCOA analysis with over 2200 region sets. So despite Esr1 being ranked second out of four for some PCs in this vignette which may not seem very impressive, it had one of the best scores in the previous larger analysis. On a practical note, if you want to arrange the heatmap by region set scores for another PC, just change the orderByCol parameter like so:
+We can see that Gata3 had the highest score for PC 1 but that Esr1 had a higher score for PCs 2, 3, and 4. If you want to arrange the heatmap by region set scores for another PC, just change the orderByCol parameter like so:
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 rsScoreHeatmap(regionSetScores, 
@@ -346,6 +341,78 @@ rsScoreHeatmap(regionSetScores,
                orderByCol = "PC2", 
                column_title = "Region sets ordered by score for PC2")
 ```
+
+### Estimating statistical significance
+
+Now that we have a score for each region set for each PC, we can to get an idea of the statistical significance of these results. We will do this using a permutation test. The permutation test is computationally expensive and, in some cases, may not be needed since the COCOA scores by themselves might be enough to gain insight your data. However, if a p-value estimate is desired, the permutation test can return that.
+
+#### Permutations
+
+By shuffling the target variable and calculating COCOA scores, we can create a null distribution for each region set. The `runCOCOA` function does the two main COCOA steps: quantifying the variation and scoring the region sets. If the samples were in the correct order, `runCOCOA` would return the real COCOA scores but since we are giving a shuffled sample order (`sampleOrder` parameter), we will be correlating the epigenetic data with the shuffled sample target variables to create null distribution COCOA scores. We will be running five permutations for the vignette but many more should be done for a real analysis (probably at least a few hundred). We need to set the seed for reproducible results since we are doing random shuffling of the sample phenotypes.
+
+```{r, eval=TRUE, message=FALSE, warning=FALSE}
+set.seed(100)
+
+nPerm <- 100
+permRSScores <- list()
+
+for (i in 1:nPerm) {
+    # shuffling sample labels
+    sampleOrder <- sample(1:nrow(targetVar), nrow(targetVar))
+    permRSScores[[i]] <- runCOCOA(sampleOrder=sampleOrder, 
+                           genomicSignal=brcaMethylData1, 
+                           signalCoord=brcaMCoord1, 
+                           GRList=GRList,
+                           signalCol=PCsToAnnotate, 
+                           targetVar=targetVar, 
+                           variationMetric="cor")
+    permRSScores[[i]]$regionSetName <- regionSetNames
+}
+
+permRSScores[1:3]
+```
+
+We now have a list where each item is a result of `aggregateSignalGRList`. We have `nPerm` list items in permRSScores (only showing 3 above). We'll reformat it so that we have a list where each item is a null distribution for a single region set: 
+
+```{r, eval=TRUE, message=FALSE, warning=FALSE}
+nullDistList <- convertToFromNullDist(permRSScores)
+names(nullDistList) <- regionSetNames
+nullDistList
+```
+
+We have four null distributions, one for each region set in `GRList`.
+
+#### Fit gamma distribution to null distributions and get p-values
+
+To reduce the number of permutations (and the run time for COCOA), we will approximate each null distribution with a gamma distribution [(Winkler et al., 2016)](#refs). After fitting the gamma distribution to each null distribution, we can use the gamma distributions to get p-values. We fit the gamma distribution and get the p-value with `getGammaPVal`.
+
+```{r, eval=TRUE, message=FALSE, warning=FALSE}
+# p-values based on fitted gamma distributions
+gPValDF <- getGammaPVal(rsScores = regionSetScores, 
+                        nullDistList = nullDistList, 
+                        signalCol = PCsToAnnotate, 
+                        method = "mme", realScoreInDist = TRUE)
+gPValDF <- cbind(gPValDF, 
+                 regionSetScores[, colnames(regionSetScores)[!(colnames(regionSetScores) 
+                                                 %in% PCsToAnnotate)]])
+gPValDF <- cbind(gPValDF, regionSetNames)
+gPValDF
+```
+
+Fitting a gamma distribution to only 5 values does not really make sense so that is one reason the p-values for ER and GATA3 (which have been associated with DNA methylation in breast cancer) are higher than those of NRF1 and ATF3. If you increase the number of permutations to 50, you will see that ER and GATA3 have lower p-values than ATF3 and NRF1 in that more realistic scenario.
+
+We can also use the null distributions to directly calculate empirical p-values:
+
+```{r, eval=TRUE, message=FALSE, warning=FALSE}
+getPermStat(rsScores = regionSetScores, 
+            nullDistList = nullDistList, 
+            signalCol = PCsToAnnotate)
+```
+
+An empirical p-value of zero is returned when the real region set score was more extreme than any scores in its null distribution. What this really suggests is that the true p-value is less than ( 1/nPerm ) although it is unclear how much less.
+
+The empirical p-values are limited by the number of permutations done. When multiple testing correction is done to correct for testing many region sets in a large region set database, the empirical test normally cannot achieve significant p-values with a reasonable number of permutations. For that reason, the gamma distribution approximation is recommended to allow the possibility of lower p-values.
+
 
 ### Understanding the results
 
@@ -405,7 +472,7 @@ for (i in seq_along(loadProfile)) {
     profilePList[[i]] <- ggplot(data=thisRS, 
                                 mapping=aes(x=binID , y=loading_value)) + 
         geom_line() + ylim(c(minVal, maxVal)) + facet_wrap(facets="PC") + 
-        ggtitle(label=wrapper(regionSetName[i], width=30)) + 
+        ggtitle(label=wrapper(regionSetNames[i], width=30)) + 
         xlab("Genome around region set, 14 kb") + 
         ylab("Normalized loading value") + 
         theme(panel.grid.major.x=element_blank(), 
@@ -433,10 +500,11 @@ If a region set has a high score for a PC, we would expect that DNA methylation 
 signalAlongAxis(genomicSignal=brcaMethylData1,
                 signalCoord=brcaMCoord1,
                 regionSet=esr1_chr1,
-                sampleScores=brcaPCScores,
+                sampleScores=pcScores,
                 orderByCol="PC1", cluster_columns=TRUE,
                 column_title = "Individual cytosine/CpG",
-                name = "DNA methylation level")
+                name = "DNA methylation level",
+                show_row_names=FALSE)
 ```
 
 It appears that some but not all CpGs vary greatly along the PC axis. The CpGs that show high variation along the PC axis are the ones that contribute to the Esr1 region set being ranked highly in our analysis. Looking at the raw data confirms that DNA methylation is in fact varying along the PC axis, which gives us more confidence in our results.
@@ -447,16 +515,17 @@ Now let's look at one of the region sets, Nrf1, that had a low score for PC1:
 signalAlongAxis(genomicSignal=brcaMethylData1,
               signalCoord=brcaMCoord1,
               regionSet=nrf1_chr1,
-              sampleScores=brcaPCScores,
+              sampleScores=pcScores,
               orderByCol="PC1", 
               cluster_columns=TRUE, 
               column_title = "Individual cytosine/CpG",
-              name = "DNA methylation level")
+              name = "DNA methylation level",
+              show_row_names=FALSE)
 ```
 
 When patients are ordered according to PC1 score, we can see that there is very little covariation in DNA methylation in these regions. Therefore, it is not surprising that the Nrf1 region set had a low score for this PC.
 
-Since COCOA ranks region sets based on their relative scores in comparison to other region sets tested, there will always be a region set with a best score. Therefore, it is always a good idea to check the raw genomic signal in your top region sets to make sure that there really is variation along the PC.
+Since COCOA ranks region sets based on their relative scores in comparison to other region sets tested, there will always be a region set with a best score. The permutation test gives an idea of statistical significance but not necessarily effect size. Therefore, it is a good idea to check the raw genomic signal in your top region sets to see how great the extent of variation is along the PC.
 
 #### Loadings of individual regions
 
@@ -493,54 +562,26 @@ regionQuantileByTargetVar(signal = methylCor,
 ```
 
 
-We can see that only a very small proportion of regions in the Nrf1 region set have high loadings for PCs 1-4. This is consistent with this region set being ranked low by COCOA for association with these PCs.
+We can see that fewer regions in the Nrf1 region set have high loadings for PCs 1-4. This is consistent with this region set being ranked low by COCOA for association with these PCs.
 
 These visualization functions can help you explore your data and understand its variation. In conclusion, COCOA can help you identify biologically meaningful sources of variation that contribute to each PC, giving you insight into variability in your data. 
 
 
 
-### How to choose a metric?
 
 
-# COCOA for chromatin accessibility data (ATAC-seq)
+
+# COCOA for chromatin accessibility data (ATAC-seq) {#ATAC}
 
 ## Supervised COCOA
 
 ## Unsupervised COCOA
 
-
 # Additional details
 
 ## Method details
 
-There are two main conceptual steps: 
-
-1. Quantify how each individual genomic feature/signal contributes to inter-sample variation using PCA. 
-2. Aggregate information from individual genomic features to identify biologically meaningful sources of inter-sample variation using a region set database and COCOA functions.
-
-### PCA
-
-PCA is a common dimensionality reduction method that produces new (orthogonal) dimensions in the directions of highest inter-sample variation. Each new dimension (principal component) is a linear combination of the original dimensions/features. For the linear combination for a given principal component (PC), each original feature has a coefficient called a "loading" which quantifies how much that feature contributes to that PC. To run PCA and get the loadings, first you need a matrix with features that all samples share (samples as rows, features as columns). Then run PCA on the data with the `prcomp()` function. The loadings can be found in the `prcomp()$rotation` output. Here is a small toy example with made up data, where the columns F1, F2, and F3 represent three original features and the five rows represent five samples:
-
-```{r, eval=TRUE, message=FALSE, warning=FALSE}
-toyData = data.frame(F1 = 1:5, F2 = c(2, 0, 6, 4, 3), F3 = c(1, 3, 2, 10, 5))
-```
-
-Let's look at the loading matrix:
-
-```{r, eval=TRUE, message=FALSE, warning=FALSE}
-prcomp(toyData)$rotation
-```
-
-The values in this loading matrix are the coefficients of the linear combination for each PC as we see below (each column in the loading matrix corresponds to an equation below):
-
-```{r, eval=FALSE, message=FALSE, warning=FALSE}
-PC1 = 0.319 * F1 + 0.201 * F2 + 0.926 * F3
-PC2 = -0.178 * F1 + -0.947 * F2 + 0.267 * F3
-PC3 = -0.931 * F1 + 0.250 * F2 + 0.267 * F3
-```
-
-COCOA will use these loadings as feature level information which will be aggregated to gain insight into the broader sources of variation in the data.  
+The overall conceptual steps are described in the [Basic workflow] section. In this section, we give more details about some of the individual parts of that workflow.
 
 ### Region set database
 
@@ -548,31 +589,12 @@ COCOA uses a database of region sets to gain biological insight into sources of 
 
 COCOA should be done with many region sets (i.e. hundreds or > 1000). A region set can be a simple ".bed"" file with three columns containing the genomic locations of the regions: chr (for chromosome), start, and end. In R, this data can be represented as a data.frame or as a GRanges object. Publicly available collections of region sets can be found online (e.g. http://databio.org/regiondb) and region sets can be accessed through Bioconductor packages (e.g. LOLA  and AnnotationHub). The region sets must be from the same reference genome as your sample data (although you could use [the liftOver tool](https://genome.ucsc.edu/cgi-bin/hgLiftOver) to convert from one genome version to another). The region sets can come from anywhere so if you experimentally or computationally generate your own region sets, you can just include those with the others when running the COCOA analysis. For an example of working with a region set database, see the 'COCOA_Workflow' vignette.
 
-To begin, let's load the necessary packages:
-    
-```{r, eval=FALSE, message=FALSE, warning=FALSE}
-library(LOLA)
-library(COCOA)
-```
-
-### Inputs 1 and 2: PCA loadings and genomic coordinates
-
-First, we need the results from PCA of the DNA methylation data, obtained with `prcomp()`. `prcomp` could take a while for large datasets (e.g. longer than 30 minutes). We will also need the genomic coordinates for each cytosine in the DNA methylation data. As one way of doing this, we could store the methlylation level matrix and the coordinates as items in a named list called "methylData". The first item in the list -- "coordinates" -- would be a GRanges object with coordinates for the cytosines (or alternatively a data.frame with "chr" and "start" columns). The second item in the list -- "methylProp" -- would be a matrix of the methylation levels, with cytosines as rows (same order as "coordinates") and samples as columns. We will assume that structure for the following code.   
-
-```{r, eval=FALSE, message=FALSE, warning=FALSE}
-# the genomic coordinates
-signalCoord <- methylData$coordinates
-# consider whether centering or scaling is needed
-mPCA <- prcomp(x=t(methylData$methylProp), center=TRUE, scale.=FALSE)
-```
-
-After the PCA, you might want to look at plots of the first few PCs and consider removing extreme outliers and rerunning the PCA.
-
-### Input 3: Large collection of region sets
 
 Besides the PCA results, we need region sets. Normally we should use COCOA with a large collection of region sets. The collection of region sets can come from anywhere but in this vignette, we will use the LOLA Core region set database which includes region sets from public sources such as the ENCODE, CODEX, and Cistrome Projects. Documentation on LOLA is [here](http://bioconductor.org/packages/release/bioc/html/LOLA.html) and you can check out LOLA region set databases [here](http://databio.org/regiondb). The AnnotationHub package also contains region sets and may be of interest. In this vignette, we are only using the LOLA Core database. Let's load the database (this may take a few minutes): 
     
 ```{r, eval=FALSE, message=FALSE, warning=FALSE}
+library(LOLA)
+
 # reading in the region sets
 # load LOLA database
 lolaPath <- paste0("path/to/LOLACore/genomeVersion/") 
@@ -595,30 +617,6 @@ GRList <- GRangesList(regionSetDB$regionGRL[collectionInd])
 rm("regionSetDB")
 ```
 
-## Running COCOA
-
-Now we test how much each region set is associated with each principal component:
-    
-```{r, eval=FALSE, message=FALSE, warning=FALSE}
-PCsToAnnotate <- paste0("PC", 1:6)
-regionSetScores <- aggregateSignalGRList(signal=mPCA$rotation, 
-                                         signalCoord=signalCoord, 
-                                         GRList=GRList, 
-                                         signalCol=PCsToAnnotate, 
-                                         scoringMetric="regionMean")
-regionSetScores$regionSetName <- regionSetName
-regionSetScores$regionSetDescription <- regionSetDescription
-```
-
-
-## Interpretation
-
-In the big picture, COCOA can help you understand sources of variation in your data. For COCOA with DNA methylation data, top region sets should have DNA methylation changes among samples along the PC axis. You can screen out region sets that have a low number of regions/cytosines covered in the DNA methylation data since these are more likely to be ranked highly by chance. Top region sets may capture some of the DNA methylation changes happening along the PC axes. However, they probably just capture a small window of the broader changes taking place and so it is likely that many other changes are taking place as well. Therefore, top region sets can be interpreted as reflecting broader changes but not necessarily defining a given PC. As further confirmation of your COCOA results, you can look at the DNA methylation in the regions of your top region sets that have the highest loading values. These regions should show changes in DNA methylation along the PC axis. By identifying region sets where DNA methylation varies along the PC axis, you can understand variation in the data better and this can inspire further directions of research.
-
-## Computational requirements
-
-When using COCOA with the "regionMean" scoring method (preferred), a database of 2000 region sets, and 450,000 cytosines in the DNA methylation data, it is estimated that COCOA will take between 30 minutes and 1.5 hours. The computer will need enough memory for the large objects used although some memory could be saved by splitting the region set database into parts, running separately on each part, and then combining the results.  
-
 
 # Edit section below
 
@@ -628,6 +626,18 @@ Since differences between samples in individual features (nucleotides/regions) m
 
 ### Making a "meta-region" loading profile
 A "meta-region" loading profile is a summary of the loadings in the genome in and around the regions of a region set. This is created with the `getMetaRegionProfile` function. The calculations are similar to those of `aggregateSignalGRList` with a few major differences. Instead of using the region set as is, we will expand each region in the region set on both sides so we can also look at the surrounding genome. We will then split each region into the same number of bins (of approximately equal size). Then we average the magnitude of all loadings that overlap a bin to get a single average loading for each bin. We combine information from all the regions by averaging the corresponding bins from the different regions (all bin1's averaged together, all bin2's averaged together, etc.). Finally, we average the profile symmetrically over the center (the first bin becomes the average of the first and last bin, the second bin becomes the average of the second and second to last bin, etc.). We do this because the orientation of the regions in the genome is arbitrary: we did not use any strand information or relate the regions to any directional information. The "meta-region" profile gives a summary in a single profile of all the regions in a region set and allows you to compare the regions to the surrounding genome. 
+
+### How to choose a metric?
+
+## Interpretation
+
+In the big picture, COCOA can help you understand sources of variation in your data. For COCOA with DNA methylation data, top region sets should have DNA methylation changes among samples along the PC axis. You can screen out region sets that have a low number of regions/cytosines covered in the DNA methylation data since these are more likely to be ranked highly by chance. Top region sets may capture some of the DNA methylation changes happening along the PC axes. However, they probably just capture a small window of the broader changes taking place and so it is likely that many other changes are taking place as well. Therefore, top region sets can be interpreted as reflecting broader changes but not necessarily defining a given PC. As further confirmation of your COCOA results, you can look at the DNA methylation in the regions of your top region sets that have the highest loading values. These regions should show changes in DNA methylation along the PC axis. By identifying region sets where DNA methylation varies along the PC axis, you can understand variation in the data better and this can inspire further directions of research.
+
+## Computational requirements
+
+When using COCOA with the "regionMean" scoring method, a database of 2000 region sets, and 450,000 cytosines in the DNA methylation data, it is estimated that COCOA will take between 30 minutes and 1.5 hours. The computer will need enough memory for the large objects used although some memory could be saved by splitting the region set database into parts, running separately on each part, and then combining the results.  
+
+
 
 ## Q and A
 
@@ -659,3 +669,26 @@ Frost HR, Li Z, Moore JH. Principal component gene set enrichment (PCGSE). BioDa
 Winkler AM, Ridgway GR, Douaud G, Nichols TE, Smith SM. Faster permutation inference in brain imaging. Neuroimage. 2016;141:502-516. doi:10.1016/j.neuroimage.2016.05.068
 
 
+### Our data
+
+As you can see below, PC1 and PC4 cluster patients based on estrogen receptor status which is an important prognostic marker for breast cancer: 
+
+```{r, eval=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
+library(COCOA)
+library(ggplot2)
+data("brcaPCScores657")
+ggplot(data = brcaPCScores657, mapping = aes(x=PC1, y=PC4, col=ER_Status)) + geom_point() + ggtitle("PCA of DNA methylation data from breast cancer patients") + theme_classic()
+```
+
+Based on this, it is not surprising that the variation captured by these PCs would be associated with estrogen receptor (consistent with interpatient variation in estrogen receptor status). Outside of this vignette, COCOA was run with a region set database of over 2000 region sets. To keep things simple for this vignette, we only used two of the highest scoring region sets and two of the lowest scoring region sets from that analysis to demonstrate how COCOA works.
+
+We have region sets for four transcription factors from ChIP-seq experiments (with the same reference genome as our breast cancer data): Esr1 in MCF-7 cells, Gata3 in MCF-7 cells, Nrf1 in HepG2 cells, and Atf1 in K562 cells. 
+
+As mentioned before, this vignette is showing two of the top scoring and bottom scoring region sets from a previous COCOA analysis with over 2200 region sets.
+
+
+
+
+First, we need the results from PCA of the DNA methylation data, obtained with `prcomp()`. `prcomp` could take a while for large datasets (e.g. longer than 30 minutes). We will also need the genomic coordinates for each cytosine in the DNA methylation data. As one way of doing this, we could store the methlylation level matrix and the coordinates as items in a named list called "methylData". The first item in the list -- "coordinates" -- would be a GRanges object with coordinates for the cytosines (or alternatively a data.frame with "chr" and "start" columns). The second item in the list -- "methylProp" -- would be a matrix of the methylation levels, with cytosines as rows (same order as "coordinates") and samples as columns. We will assume that structure for the following code.  
+
+After the PCA, you might want to look at plots of the first few PCs and consider removing extreme outliers and rerunning the PCA.
