@@ -163,8 +163,8 @@ signalAlongAxis <- function(genomicSignal, signalCoord, regionSet,
     thisRSMData <- thisRSMData[names(sort(sampleScores[, orderByCol], 
                                           decreasing = decreasing)), ]
     
-    message(paste0("Number of cytosines: ", length(cytosineHitInd)))
-    message(paste0("Number of regions: ", nRegion))
+    # message(paste0("Number of epigenetic features: ", length(cytosineHitInd)))
+    # message(paste0("Number of region set regions: ", nRegion))
     
     
     
