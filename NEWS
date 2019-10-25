@@ -1,9 +1,12 @@
 # Change log
 Notable changes to this project will be documented in this file.
 
-## [2.0.0] -- Unreleased
+## [2.0.0] -- 2019-10-30
 
+    - Supervised analysis functionality added
+    - Permutation testing for statistical significance
     - Major changes to user interface: parameter/function/output column name changes
+        - runCOCOA => aggregateSignalGRList
         - loadingMat => signal
         - PCsToAnnotate => signalCol
         - orderByPC => orderByCol
@@ -16,16 +19,30 @@ Notable changes to this project will be documented in this file.
         - getLoadingProfile => getMetaRegionProfile
         - total_region_number => totalRegionNumber
         - mean_region_size => meanRegionSize
+        - regionQuantileByPC => regionQuantileByTargetVar
         - new column added to output of runCOCOA (only for multi-base data): sumProportionOverlap
+        - for getMetaRegionProfile, scoringMetric => aggrMethod
+        - for signalAlongAxis, pcScores => sampleScores
     - Addition of functionality for region-based data such as ATAC-seq
         - default setting automatically detects whether data is single base(e.g. DNA methylation or multiple bases like ATAC-seq.
         - different scoring method for single base vs multiple base data
-    - New functions that enable supervised (and unsupervised) analysis
-	- 
+    - Improved memory use/efficiency
+    - Changed package data
+        - Removed brcaLoadings1 object
+        - Added DNA methylation data for more samples
+        - Added ATAC-seq counts and associated coordinates
+        - Added patient metadata for BRCA patients
+    - Major changes to vignettes
+        - reorganized vignettes into one long vignette
+        - added ATAC-seq section
+        - added supervised COCOA section
+        - modified unsupervised DNA methylation section
     - Other changes
         - absVal parameter added for several functions (aggregateLoadings, getLoadingProfile, runCOCOA)
         - getMetaRegionProfile: default binNum changed from 25 to 21
-	- wilcoxon rank sum scoring method deprecated
+        - new function: getTopRegions()
+        - add fitdistrplus and simpleCache dependencies
+        - wilcoxon rank sum scoring method deprecated
 
 ## [1.0.2] -- 2019-03-06
 

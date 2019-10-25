@@ -12,11 +12,7 @@ data(brcaPCScores)
 \description{
 This object contains PC scores for four patients
 for PCs 1-4. Columns are PCs. Rows are patients,
-with TCGA patient identifiers as row names. The patients
-were selected based on their PC1 score from
-the PCA of DNA methylation on all chromosomes. The
-patients with the two highest PC1 scores and 
-the two lowest PC1 scores are included.
+with TCGA patient identifiers as row names.
 DNA methlyation data is Illumina 450k 
 microarray data from breast cancer
 patients from The Cancer Genome Atlas

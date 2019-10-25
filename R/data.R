@@ -1,37 +1,14 @@
-# A matrix with loadings
-# 
-# This object contains loadings
-# for PCA of DNA methylation data.
-# DNA methlyation data is Illumina 450k 
-# microarray data from breast cancer
-# patients from The Cancer Genome Atlas
-# (TCGA-BRCA, https://portal.gdc.cancer.gov/).
-# Each row corresponds to one cytosine and
-# the coordinates for these cytosines are
-# in the object brcaMCoord1, (data("brcaMCoord1"),
-# hg38 genome). 
-# Only cytosines on chr1 are included to keep
-# the example data small.
-#
-#
-# @docType data
-# @keywords datasets
-# @name brcaLoadings1
-# @usage data(brcaLoadings1)
-# @format A matrix object
-
-
-#' A data.frame object with coordinates for cytosines
-#' from chr1 included in the PCA. 
+#' A GRanges object with genomic coordinates for cytosines
+#' from chr1 for the package's built-in DNA methylation data 
 #' 
 #' Corresponds to 
-#' the rows of brcaLoadings1 and brcaMethylData1.
+#' the rows of brcaMethylData1.
 #' DNA methlyation data is Illumina 450k 
 #' microarray data from breast cancer
 #' patients from The Cancer Genome Atlas
 #' (TCGA-BRCA, https://portal.gdc.cancer.gov/).
 #' Coordinates correspond to the hg38 genome version.
-#' Only cytosines on chr1 are included to keep
+#' Only selected cytosines on chr1 are included to keep
 #' the example data small.
 #'
 #'
@@ -39,26 +16,23 @@
 #' @keywords datasets
 #' @name brcaMCoord1
 #' @usage data(brcaMCoord1)
-#' @format A data.frame object
+#' @format A GRanges object
 NULL
 
 #' A matrix with DNA methylation levels 
-#' from chromosome 1 for four patients.
+#' from some CpGs on chromosome 1
 #' 
 #' This object contains methylation levels (0 to 1)
-#' for cytosines in chromosome 1 that were covered by
-#' the DNA methylation microarray (Illumina 450k microarray).
+#' for select cytosines in chromosome 1 
+#' for TCGA breast cancer patients from
+#' a DNA methylation microarray (Illumina 450k microarray).
 #' Each row corresponds to one cytosine and
 #' the coordinates for these cytosines are
 #' in the object brcaMCoord1, (data("brcaMCoord1"), hg38 genome). 
-#' Only cytosines on chr1 are included to keep
+#' Only select cytosines on chr1 are included to keep
 #' the example data small. Columns are patients,
-#' with TCGA patient identifiers as column names. The patients
-#' were selected based on their PC1 score from
-#' the PCA of DNA methylation on all chromosomes. The
-#' patients with the two highest PC1 scores and 
-#' the two lowest PC1 scores are included 
-#' (see data("brcaPCScores") for the actual scores).
+#' with TCGA patient identifiers as column names.
+#' 6004 CpGs and 300 patients are included.
 #' DNA methlyation data is Illumina 450k 
 #' microarray data from breast cancer
 #' patients from The Cancer Genome Atlas
@@ -77,11 +51,7 @@ NULL
 #' 
 #' This object contains PC scores for four patients
 #' for PCs 1-4. Columns are PCs. Rows are patients,
-#' with TCGA patient identifiers as row names. The patients
-#' were selected based on their PC1 score from
-#' the PCA of DNA methylation on all chromosomes. The
-#' patients with the two highest PC1 scores and 
-#' the two lowest PC1 scores are included.
+#' with TCGA patient identifiers as row names.
 #' DNA methlyation data is Illumina 450k 
 #' microarray data from breast cancer
 #' patients from The Cancer Genome Atlas
@@ -191,8 +161,8 @@ NULL
 #' @format A data.frame object
 NULL
 
-#' A data.frame object with coordinates for BRCA ATAC-seq peak regions
-#' from chr1. 
+#' A GRanges object with coordinates for select 
+#' BRCA ATAC-seq peak regions from chr1. 
 #' 
 #' Corresponds to 
 #' the rows of brcaATACData1.
@@ -201,7 +171,7 @@ NULL
 #' (TCGA-BRCA, Corces et. al, 2018, doi: 10.1126/science.aav1898,
 #' https://atacseq.xenahubs.net/download/brca/brca_peak_Log2Counts_dedup).
 #' Coordinates correspond to the hg38 genome version.
-#' Only regions on chr1 are included to keep
+#' Only select regions on chr1 are included to keep
 #' the example data small.
 #'
 #'
@@ -209,21 +179,19 @@ NULL
 #' @keywords datasets
 #' @name brcaATACCoord1
 #' @usage data(brcaATACCoord1)
-#' @format A data.frame object 
+#' @format A GRanges object 
 NULL
 
-#' A matrix with ATAC-seq counts in peak regions 
-#' from chromosome 1 for four patients.
+#' A matrix with ATAC-seq counts in select peak regions 
+#' from chromosome 1 for 37 patients.
 #' 
 #' Each row corresponds to one region and
 #' the coordinates for these regions are
 #' in the object brcaATACCoord1, (data("brcaATACCoord1"), hg38 genome). 
-#' Only regions on chr1 are included to keep
+#' Only select regions on chr1 are included to keep
 #' the example data small. Columns are patients,
 #' with TCGA patient identifiers as column names. 
-# The patients with the two highest PC1 scores and
-# the two lowest PC1 scores are included
-# (see data("brcaPCScores") for the actual scores).
+#' 4053 regions are included.
 #' ATAC-seq data is from breast cancer
 #' patients from The Cancer Genome Atlas
 #' (TCGA-BRCA, Corces et. al, 2018, doi: 10.1126/science.aav1898,
@@ -241,7 +209,7 @@ NULL
 #' cancer patients.
 #' 
 #' Has metadata for patients for which DNA methylation
-#' or chromatin accessibility data was included as package data.
+#' or chromatin accessibility data was included as package data (329 patients).
 #' Rows are patients,
 #' with TCGA patient identifiers as row names and the column "subject_ID". 
 #' Also includes columns: ER_status, ER_percent, age_diagnosis, days_to_death,

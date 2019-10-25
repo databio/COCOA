@@ -3,9 +3,9 @@
 \docType{data}
 \name{brcaATACCoord1}
 \alias{brcaATACCoord1}
-\title{A data.frame object with coordinates for BRCA ATAC-seq peak regions
-from chr1.}
-\format{A data.frame object}
+\title{A GRanges object with coordinates for select 
+BRCA ATAC-seq peak regions from chr1.}
+\format{A GRanges object}
 \usage{
 data(brcaATACCoord1)
 }
@@ -17,7 +17,7 @@ patients from The Cancer Genome Atlas
 (TCGA-BRCA, Corces et. al, 2018, doi: 10.1126/science.aav1898,
 https://atacseq.xenahubs.net/download/brca/brca_peak_Log2Counts_dedup).
 Coordinates correspond to the hg38 genome version.
-Only regions on chr1 are included to keep
+Only select regions on chr1 are included to keep
 the example data small.
 }
 \keyword{datasets}

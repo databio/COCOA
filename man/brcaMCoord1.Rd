@@ -3,21 +3,21 @@
 \docType{data}
 \name{brcaMCoord1}
 \alias{brcaMCoord1}
-\title{A data.frame object with coordinates for cytosines
-from chr1 included in the PCA.}
-\format{A data.frame object}
+\title{A GRanges object with genomic coordinates for cytosines
+from chr1 for the package's built-in DNA methylation data}
+\format{A GRanges object}
 \usage{
 data(brcaMCoord1)
 }
 \description{
 Corresponds to 
-the rows of brcaLoadings1 and brcaMethylData1.
+the rows of brcaMethylData1.
 DNA methlyation data is Illumina 450k 
 microarray data from breast cancer
 patients from The Cancer Genome Atlas
 (TCGA-BRCA, https://portal.gdc.cancer.gov/).
 Coordinates correspond to the hg38 genome version.
-Only cytosines on chr1 are included to keep
+Only selected cytosines on chr1 are included to keep
 the example data small.
 }
 \keyword{datasets}

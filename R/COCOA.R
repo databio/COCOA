@@ -16,7 +16,8 @@
 #' histone modification regions, or open chromatin regions. 
 #' COCOA can identify region sets that are associated with
 #' epigenetic variation between samples and
-#' increase understanding of variation in your data. 
+#' increase understanding of variation in your data.
+# 
 # In contrast to some other common techniques, COCOA offers both
 # supervised (known groups/phenotype) and unsupervised (no known groups/
 # phenotype) analyses. Also, COCOA focuses on continuous variation 
@@ -183,6 +184,22 @@ aggregateSignal <- function(signal,
     
     #######
     # what happens if there are NAs or Inf in `signal`?
+    # any NAs that overlap the regionSet will cause the score to be NA
+    if (is(signal, "data.table")) {
+        naRows = apply(X = signal[, signalCol, with=FALSE, drop=FALSE], 
+                       MARGIN = 1, FUN = function(x) any(is.na(x)))
+    } else {
+        naRows = apply(X = signal[, signalCol, drop=FALSE], 
+                       MARGIN = 1, FUN = function(x) any(is.na(x)))    
+    }
+    
+    if (any(naRows)) {
+        signal <- signal[!naRows, ]
+        signalCoord <- signalCoord[!naRows, ]
+        warning("Removing rows with NA from `signal`")
+    }
+    
+    #################################################################
     
     #################################################################
     
@@ -1097,6 +1114,22 @@ averagePerRegion <- function(signal,
     
     #######
     # what happens if there are NAs or Inf in `signal`?
+    # any NAs that overlap the regionSet will cause the score to be NA
+    if (is(signal, "data.table")) {
+        naRows = apply(X = signal[, signalCol, with=FALSE, drop=FALSE], 
+                       MARGIN = 1, FUN = function(x) any(is.na(x)))
+    } else {
+        naRows = apply(X = signal[, signalCol, drop=FALSE], 
+                       MARGIN = 1, FUN = function(x) any(is.na(x)))    
+    }
+    
+    if (any(naRows)) {
+        signal <- signal[!naRows, ]
+        signalCoord <- signalCoord[!naRows, ]
+        warning("Removing rows with NA from `signal`")
+    }
+    
+    #################################################################
     
     #################################################################
 
@@ -1264,6 +1297,9 @@ getTopRegions <- function(signal,
                           signalCol = c("PC1", "PC2"), 
                           cutoff = 0.8, 
                           returnQuantile=TRUE) {
+    
+    
+    
     
     regionLoadDT <- averagePerRegion(signal=signal,
                             signalCoord=signalCoord, regionSet=regionSet, 

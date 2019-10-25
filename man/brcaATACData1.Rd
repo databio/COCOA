@@ -3,8 +3,8 @@
 \docType{data}
 \name{brcaATACData1}
 \alias{brcaATACData1}
-\title{A matrix with ATAC-seq counts in peak regions 
-from chromosome 1 for four patients.}
+\title{A matrix with ATAC-seq counts in select peak regions 
+from chromosome 1 for 37 patients.}
 \format{A matrix object}
 \usage{
 data(brcaATACData1)
@@ -13,9 +13,10 @@ data(brcaATACData1)
 Each row corresponds to one region and
 the coordinates for these regions are
 in the object brcaATACCoord1, (data("brcaATACCoord1"), hg38 genome). 
-Only regions on chr1 are included to keep
+Only select regions on chr1 are included to keep
 the example data small. Columns are patients,
 with TCGA patient identifiers as column names. 
+4053 regions are included.
 ATAC-seq data is from breast cancer
 patients from The Cancer Genome Atlas
 (TCGA-BRCA, Corces et. al, 2018, doi: 10.1126/science.aav1898,
