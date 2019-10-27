@@ -148,8 +148,14 @@ bar indicates the region set is completed.}
 \item{...}{Character. Optional additional arguments for simpleCache.}
 }
 \value{
-Returns a list where each item is a data.frame of COCOA results 
-from a separate permutation
+Returns a list with the following 4 items: 1. a list of length nPerm
+where each item is a data.frame of the COCOA scores from a single 
+permutation. Each data.frame is the output of `runCOCOA()` 
+2. a data.table/data.frame of empirical p-values (the
+output of `getPermStat`) 3. a 
+data.table/data.frame of z-scores (the output of `getPermStat`. 
+4. a data.frame of p-values based on
+the gamma approximation (the output of getGammaPVal().
 }
 \description{
 This is a convenience function that runs multiple steps of the 

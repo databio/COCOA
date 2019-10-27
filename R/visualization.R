@@ -53,7 +53,7 @@
 #' decreasing order of `orderByCol` or not (FALSE is increasing order).
 #' @param cluster_rows Logical. Whether rows should be clustered. 
 #' This should be kept as FALSE to keep the correct ranking of 
-#' samples/observations according to their PC score.
+#' samples/observations according to their target variable score.
 #' @param cluster_columns Logical. Whether to cluster columns 
 #' (the genomic signal, e.g. DNA methylation values for each CpG).
 #' @param row_title Character object, row title
@@ -344,8 +344,8 @@ rsScoreHeatmap <- function(rsScores, signalCol=paste0("PC", 1:5),
 #' @templateVar refGenomeWarning TRUE
 #' @templateVar rsVisualization TRUE
 #' @template regionSet
-#' @param rsName Character vector. Names of the region sets in the same
-#' order as GRList. For use as a title for each heatmap.
+#' @param rsName Character. Name of the region set. 
+#' For use as a title for the heatmap.
 #' @template signalCol
 #' @param maxRegionsToPlot How many top regions from region set to include
 #' in heatmap. Including too many may slow down computation and increase memory
@@ -362,7 +362,8 @@ rsScoreHeatmap <- function(rsScores, signalCol=paste0("PC", 1:5),
 #' increase computation time significantly for large number of rows)
 #' @param cluster_columns Logical object, whether to cluster columns. 
 #' It is recommended
-#' to keep this as FALSE so it will be easier to compare PCs 
+#' to keep this as FALSE so it will be easier to compare target
+#' variables that have a certain order such as PCs 
 #' (with cluster_columns = FALSE, they will be in the same specified
 #' order in different heatmaps)
 #' @param name Character object, legend title

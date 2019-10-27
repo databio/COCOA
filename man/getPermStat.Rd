@@ -34,7 +34,8 @@ whichMetric="pval".}
 \item{whichMetric}{Character. Can be "pval" or "zscore"}
 }
 \value{
-. If whichMetric="pval", returns the empirical p-value for
+A data.table/data.frame. 
+If whichMetric="pval", returns the empirical p-value for
 each region set in `rsScores`. If the region set score is more extreme
 than all scores in the null distribution, a p-value of 0 is returned but
 this simply means the p-value is the minimum detectable p-value with

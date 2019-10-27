@@ -22,7 +22,8 @@ has null distributions for a single
 region set (list items should be in the same order as rows of rsScores). 
 Has same score columns as rsScores. 
 Each column corresponds to a null distribution for that 
-region set for a given sample variable of interest (e.g. PC or sample phenotype).}
+region set for a given sample variable of interest/target variable
+(e.g. PC or sample phenotype).}
 
 \item{signalCol}{A character vector with the names of the sample variables
 of interest/target variables (e.g. PCs or sample phenotypes). 
@@ -49,7 +50,7 @@ instead use the "mme" method
 for fitting that specific gamma distribution.}
 }
 \value{
-Returns a data.frame with p values, one column for each col in
+Returns a data.frame with p values, one column for each signalCol in
 rsScores
 }
 \description{

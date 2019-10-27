@@ -70,8 +70,14 @@
 #' @param ... Character. Optional additional arguments for simpleCache.
 #'
 #' 
-#' @return Returns a list where each item is a data.frame of COCOA results 
-#' from a separate permutation
+#' @return Returns a list with the following 4 items: 1. a list of length nPerm
+#' where each item is a data.frame of the COCOA scores from a single 
+#' permutation. Each data.frame is the output of `runCOCOA()` 
+#' 2. a data.table/data.frame of empirical p-values (the
+#' output of `getPermStat`) 3. a 
+#' data.table/data.frame of z-scores (the output of `getPermStat`. 
+#' 4. a data.frame of p-values based on
+#' the gamma approximation (the output of getGammaPVal(). 
 #' @examples 
 #' data("esr1_chr1")
 #' data("nrf1_chr1")
@@ -358,7 +364,7 @@ runCOCOAPerm <- function(genomicSignal,
 #' @param centerTargetVar Logical. Should columns in targetVar be 
 #' centered based
 #' on their means? (subtract column mean from each column)
-#' @return data.frame. The output of aggregateSignalGRList for one permutation
+#' @return data.frame. The output of aggregateSignalGRList for one permutation.
 #' @examples
 #' data("esr1_chr1")
 #' data("nrf1_chr1")
@@ -520,7 +526,8 @@ permListToOneNullDist <- function(resultsList, rsInd) {
 #' region set (list items should be in the same order as rows of rsScores). 
 #' Has same score columns as rsScores. 
 #' Each column corresponds to a null distribution for that 
-#' region set for a given sample variable of interest (e.g. PC or sample phenotype).  
+#' region set for a given sample variable of interest/target variable
+#' (e.g. PC or sample phenotype).  
 #' @templateVar usesRSScores TRUE
 #' @template signalCol
 #' @param method Character. Has the method to use to fit the gamma 
@@ -541,7 +548,7 @@ permListToOneNullDist <- function(resultsList, rsInd) {
 #' instead use the "mme" method
 #' for fitting that specific gamma distribution.
 # 
-#' @return Returns a data.frame with p values, one column for each col in
+#' @return Returns a data.frame with p values, one column for each signalCol in
 #' rsScores 
 #' 
 #' @examples 
@@ -693,7 +700,8 @@ pGammaList <- function(scoreVec, fitDistrList) {
 #' create p values based on one sided test or not. Only applies when
 #' whichMetric="pval".
 #' @param whichMetric Character. Can be "pval" or "zscore"
-#' @return . If whichMetric="pval", returns the empirical p-value for
+#' @return A data.table/data.frame. 
+#' If whichMetric="pval", returns the empirical p-value for
 #' each region set in `rsScores`. If the region set score is more extreme
 #' than all scores in the null distribution, a p-value of 0 is returned but
 #' this simply means the p-value is the minimum detectable p-value with

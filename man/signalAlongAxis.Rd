@@ -66,7 +66,7 @@ decreasing order of `orderByCol` or not (FALSE is increasing order).}
 
 \item{cluster_rows}{Logical. Whether rows should be clustered. 
 This should be kept as FALSE to keep the correct ranking of 
-samples/observations according to their PC score.}
+samples/observations according to their target variable score.}
 
 \item{row_title}{Character object, row title}
 

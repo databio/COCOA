@@ -36,8 +36,8 @@ to the same biological annotation.
 Must be from the same reference genome as the coordinates for the actual data/samples (signalCoord).
 The regions that will be visualized.}
 
-\item{rsName}{Character vector. Names of the region sets in the same
-order as GRList. For use as a title for each heatmap.}
+\item{rsName}{Character. Name of the region set. 
+For use as a title for the heatmap.}
 
 \item{signalCol}{A character vector with the names of the sample variables
 of interest/target variables (e.g. PCs or sample phenotypes).}
@@ -62,7 +62,8 @@ increase computation time significantly for large number of rows)}
 
 \item{cluster_columns}{Logical object, whether to cluster columns. 
 It is recommended
-to keep this as FALSE so it will be easier to compare PCs 
+to keep this as FALSE so it will be easier to compare target
+variables that have a certain order such as PCs 
 (with cluster_columns = FALSE, they will be in the same specified
 order in different heatmaps)}
 

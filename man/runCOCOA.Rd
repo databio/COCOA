@@ -107,7 +107,7 @@ centered based
 on their means? (subtract column mean from each column)}
 }
 \value{
-data.frame. The output of aggregateSignalGRList for one permutation
+data.frame. The output of aggregateSignalGRList for one permutation.
 }
 \description{
 This is a convenience function that does the two steps of COCOA: 
