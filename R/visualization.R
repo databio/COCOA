@@ -160,6 +160,8 @@ signalAlongAxis <- function(genomicSignal, signalCoord, regionSet,
     # reducedValsPCA <- centeredPCAMeth %*% pcaData$rotation
     # reducedValsPCA <- pcaData$x
     # pcaData must have subject_ID as row name
+    # Error in thisRSMData[names(sort(sampleScores[, orderByCol], decreasing = decreasing)),  : 
+    #                          subscript out of bounds 
     thisRSMData <- thisRSMData[names(sort(sampleScores[, orderByCol], 
                                           decreasing = decreasing)), ]
     
@@ -464,14 +466,18 @@ regionQuantileByTargetVar <- function(signal, signalCoord, regionSet,
     # ranking in terms of percentiles in case there were different 
     # distributions of loading scores for each PC
     
-    # the heatmap
-    Heatmap(matrix = as.matrix(rsRegionAverage[, signalCol, with=FALSE]), 
-            row_title = row_title,
-            column_title = rsName,
-            column_title_side = column_title_side,
-            cluster_rows = cluster_rows,
-            cluster_columns = cluster_columns, 
-            name = name, 
-            col = col, ...)
+    # if no overlap, it will be null
+    if (!is.null(rsRegionAverage)) {
+        # the heatmap
+        Heatmap(matrix = as.matrix(rsRegionAverage[, signalCol, with=FALSE]), 
+                row_title = row_title,
+                column_title = rsName,
+                column_title_side = column_title_side,
+                cluster_rows = cluster_rows,
+                cluster_columns = cluster_columns, 
+                name = name, 
+                col = col, ...)
+    }
+
 }
 
