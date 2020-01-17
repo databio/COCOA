@@ -145,7 +145,7 @@ signalAlongAxis <- function(genomicSignal, signalCoord, regionSet,
     olList <- findOverlaps(regionSet, coordGR)
     # regionHitInd <- sort(unique(queryHits(olList)))
     cytosineHitInd <- sort(unique(subjectHits(olList)))
-    thisRSMData <- t(genomicSignal[cytosineHitInd, ])
+    thisRSMData <- t(genomicSignal[cytosineHitInd, , drop=FALSE])
     nRegion = length(unique(queryHits(olList)))
     # get top variables
     if (!is.null(topXVariables)) {
