@@ -552,15 +552,15 @@ permListToOneNullDist <- function(resultsList, rsInd) {
 #' rsScores 
 #' 
 #' @examples 
-#' fakeOriginalScores <- data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
-#' fakePermScores <- data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
-#' fakePermScores2 <- data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
-#' fakePermScores3 <- data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
-#' permRSScores <- list(fakePermScores, fakePermScores2, fakePermScores3)
-#' nullDistList <- convertToFromNullDist(permRSScores)
-#' getGammaPVal(rsScores=fakeOriginalScores,
-#'              nullDistList=nullDistList,
-#'              signalCol=c("PC1", "PC2"))
+# fakeOriginalScores <- data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
+# fakePermScores <- data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
+# fakePermScores2 <- data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
+# fakePermScores3 <- data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
+# permRSScores <- list(fakePermScores, fakePermScores2, fakePermScores3)
+# nullDistList <- convertToFromNullDist(permRSScores)
+# getGammaPVal(rsScores=fakeOriginalScores,
+#              nullDistList=nullDistList,
+#              signalCol=c("PC1", "PC2"))
 #' 
 #' @export
 
@@ -569,11 +569,11 @@ getGammaPVal <- function(rsScores, nullDistList, signalCol, method="mme",
     
     
     # take absolute value since gamma distribution cannot have negative values
-    if (any(rsScores < 0)) {
+    if (any(rsScores < 0, na.rm = TRUE)) {
         rsScores <- abs(rsScores)
     }
     conditionalAbs <- function(x) {
-        if (any(x < 0)) {
+        if (any(x < 0, na.rm = TRUE)) {
             return(abs(x))
         } else {
             return(x)
