@@ -606,9 +606,22 @@ getGammaPVal <- function(rsScores, nullDistList, signalCol, method="mme",
                                                           method=method, 
                                                           force=force))
     
+    # region sets with no coverage have NA for fittedDistList value
+    # pGammaList cannot assign these column names so assign them ahead of time
+    # and don't run pGammaList on those region sets
+    naInd = vapply(X = fittedDistList, 
+                   FUN = function(x) all(is.na(x)), 
+                   FUN.VALUE = TRUE)
+    
     pValList <- list()
+    
+    # assign na items
+    naEntry = as.data.frame(t(rep(NA, length(colsToAnnotate))))
+    colnames(naEntry) = colsToAnnotate
+    pValList[naInd] = list(naEntry)
+    
     # once for each region set
-    for (i in seq_along(nullDistList)) {
+    for (i in seq_along(nullDistList)[!naInd]) {
         
         pValList[[i]] <- as.data.frame(t(pGammaList(scoreVec = as.numeric(rsScores[i, ]), 
                                                    fitDistrList = fittedDistList[[i]])))
@@ -666,7 +679,9 @@ fitGammaNullDist <- function(nullDistDF, method="mme", force=FALSE) {
 pGammaList <- function(scoreVec, fitDistrList) {
     
     if (any(is.na(scoreVec))) {
-        return(rep(NA, length(scoreVec)))
+        naVec <- rep(NA, length(scoreVec))
+        names(naVec) <- names(scoreVec)
+        return(naVec)
     }
     
     pValVec <- mapply(FUN = function(x, y) pgamma(q = y, 
