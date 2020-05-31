@@ -68,6 +68,35 @@ checkConvertInputClasses <- function(signal=NULL,
     
 }
 
+# convenience function to help in maintaining scoring methods
+# @param scoringContext character. "singleBase", "multiBase", or "both"
+# also can be "metaRegionProfile"
+# "metaRegionProfile is a separate category in case some methods do not work
+# for binned region sets
+getScoringMethods <- (scoringContext = "both") {
+    
+    if (scoringContext == "singleBase") {
+        sMethods <- c("default", "regionMean", "simpleMean", 
+                      "regionMedian")
+    } else if (scoringContext == "multiBase") {
+        sMethods <- c("default", "simpleMean", 
+                      "proportionWeightedMean")
+    } else if (scoringContext == "both") {
+        sMethods <- c("default", "regionMean", "simpleMean", 
+                     "regionMedian",
+                     # "meanDiff", "rankSum", 
+                     "proportionWeightedMean")
+    } else if (scoringContext == "metaRegionProfile") {
+        sMethods <- c("default", "regionMean", "simpleMean", 
+                     "proportionWeightedMean")
+    } else {
+        stop("Invalid scoringContext specified")
+    }
+    
+    return(sMethods)
+}
+
+
 # Converts a list of data.tables into GRanges.
 # @param dtList A list of data.tables, 
 # Each should have "chr", "start", "methylCount", and "coverage" columns.

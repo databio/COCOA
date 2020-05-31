@@ -169,9 +169,7 @@ aggregateSignal <- function(signal,
     
     ######## check that scoringMetric is appropriate
     
-    if (!(scoringMetric %in% c("default", "regionMean", "simpleMean", 
-                               # "meanDiff", "rankSum", 
-                               "proportionWeightedMean"))) {
+    if (!(scoringMetric %in% getScoringMethods("both"))) {
         stop(cleanws("scoringMetric was not recognized. 
                       Check spelling and available options."))
     }
@@ -228,14 +226,12 @@ aggregateSignal <- function(signal,
     
     # make sure that scoringMetric is consistent with signalCoordType
     if (signalCoordType == "singleBase") {
-        if (!(scoringMetric %in% c("regionMean", "simpleMean" #, 
-                                   # "rankSum", "meanDiff"
-                                   ))) {
+        if (!(scoringMetric %in% getScoringMethods("singleBase"))) {
             stop("The scoringMetric you selected is not available for
                  this data's signalCoordType")
         }
     } else if (signalCoordType == "multiBase") {
-        if (!(scoringMetric %in% c("proportionWeightedMean", "simpleMean"))) {
+        if (!(scoringMetric %in% getScoringMethods("multiBase"))) {
             stop("The scoringMetric you selected is not available for
                  this data's signalCoordType")
         }
@@ -339,6 +335,32 @@ aggregateSignal <- function(signal,
                                                          "regionSetCoverage", 
                                                          "totalRegionNumber", 
                                                          "meanRegionSize")]) 
+            }
+        } else if (scoringMetric == "regionMedian") {
+            
+            aggrCommand <- buildJ(signalCol, 
+                                  rep("median", length(signalCol)))
+            loadAgMain <- BSAggregate(BSDT = loadingDT, 
+                                      regionsGRL = GRangesList(regionSet),
+                                      BSCoord = signalCoord,
+                                      jExpr = aggrCommand,
+                                      byRegionGroup = TRUE,
+                                      splitFactor = NULL,
+                                      returnOLInfo = TRUE)
+            # if no cytosines from loadings were included in regionSet, result is NA
+            if (is.null(loadAgMain)) {
+                results <- as.data.table(t(rep(NA, length(signalCol))))
+                setnames(results, signalCol)
+                results[, signalCoverage := 0]
+                results[, regionSetCoverage := 0]
+                results[, totalRegionNumber := numOfRegions]
+                results[, meanRegionSize := round(mean(width(regionSet)), 1)]
+            } else {
+                results <- loadAgMain[, .SD, .SDcols = signalCol]
+                results[, signalCoverage := loadAgMain[, .SD, .SDcols = "signalCoverage"]]
+                results[, regionSetCoverage := loadAgMain[, .SD, .SDcols = "regionSetCoverage"]]
+                results[, totalRegionNumber := numOfRegions]
+                results[, meanRegionSize := round(mean(width(regionSet)), 1)]
             }
         # } else if (scoringMetric == "meanDiff") {
         #     # if (is.null(pcLoadAv)) {
@@ -560,9 +582,7 @@ aggregateSignalGRList <- function(signal,
     
     ######## check that scoringMetric is appropriate
     
-    if (!(scoringMetric %in% c("default", "regionMean", "simpleMean", 
-                               # "meanDiff", "rankSum", 
-                               "proportionWeightedMean"))) {
+    if (!(scoringMetric %in% getScoringMethods("both"))) {
         stop(cleanws("scoringMetric was not recognized. 
                       Check spelling and available options."))
     }
@@ -844,8 +864,7 @@ getMetaRegionProfile <- function(signal, signalCoord, regionSet,
     
     ######## check that aggregation method is appropriate
     
-    if (!(aggrMethod %in% c("default", "regionMean", "simpleMean", 
-                               "proportionWeightedMean"))) {
+    if (!(aggrMethod %in% getScoringMethods("metaRegionProfile"))) {
         stop(cleanws("scoringMetric was not recognized. 
                      Check spelling and available options."))
     }
