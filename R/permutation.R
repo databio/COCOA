@@ -151,6 +151,11 @@ runCOCOAPerm <- function(genomicSignal,
     colsToAnnotate <- signalCol
     allResultsList <- list()
     
+    if (is(rsScores, "data.table")) {
+        rsScores = as.data.frame(rsScores)
+    }
+    rsScores = rsScores[, colsToAnnotate] # prevents error that occurs if extra column is factor
+    
     # more efficient to only do once (not that high impact though)
     if (centerGenomicSignal) {
         cpgMeans <- rowMeans(genomicSignal, na.rm = TRUE)
@@ -255,7 +260,7 @@ runCOCOAPerm <- function(genomicSignal,
                                   signalCol=colsToAnnotate, whichMetric = "pval",
                                   testType=testType)
             rsPVals
-        }, assignToVariable=rsPVals, cacheDir=cacheDir, ...)
+        }, assignToVariable="rsPVals", cacheDir=cacheDir, ...)
         
         simpleCache(paste0("permZScores", .analysisID), {
             rsZScores <- getPermStat(rsScores=rsScores, nullDistList=nullDistList,
