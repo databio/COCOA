@@ -73,7 +73,7 @@ checkConvertInputClasses <- function(signal=NULL,
 # also can be "metaRegionProfile"
 # "metaRegionProfile is a separate category in case some methods do not work
 # for binned region sets
-getScoringMethods <- (scoringContext = "both") {
+getScoringMethods <- function(scoringContext = "both") {
     
     if (scoringContext == "singleBase") {
         sMethods <- c("default", "regionMean", "simpleMean", 
