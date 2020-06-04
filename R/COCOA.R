@@ -1065,6 +1065,20 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount,
         if (nrow(binnedBSDT) < binCount) {
             return(NULL)
         }
+    } else if (aggrMethod == "regionMedian") {
+        # what is output if a region set has no overlap?
+        binnedBSDT <- BSAggregate(BSDT,
+                                  regionsGRL=GRangesList(binnedGR),
+                                  BSCoord = BSCoord, 
+                                  jExpr=buildJ(signalCol,
+                                               rep("median", length(signalCol))),
+                                  byRegionGroup = byRegionGroup,
+                                  splitFactor = splitFactor)
+        
+        # if any bins had no data
+        if (nrow(binnedBSDT) < binCount) {
+            return(NULL)
+        }
     }
     # RGenomeUtils::BSAggregate
 
