@@ -87,8 +87,8 @@ getScoringMethods <- function(scoringContext = "both") {
                      # "meanDiff", "rankSum", 
                      "proportionWeightedMean")
     } else if (scoringContext == "metaRegionProfile") {
-        sMethods <- c("default", "regionMean", "simpleMean", 
-                     "proportionWeightedMean")
+        sMethods <- c("default", "regionMean", "simpleMean",
+                      "regionMedian", "proportionWeightedMean")
     } else {
         stop("Invalid scoringContext specified")
     }
