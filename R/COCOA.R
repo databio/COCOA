@@ -362,6 +362,36 @@ aggregateSignal <- function(signal,
                 results[, totalRegionNumber := numOfRegions]
                 results[, meanRegionSize := round(mean(width(regionSet)), 1)]
             }
+        } else if (scoringMetric == "simpleMedian") {
+            # scoring singleBase and multiBase both with this function for
+            # simpleMedian
+            loadAgMain <- regionOLMean(signalDT = loadingDT, 
+                                       signalGR = signalCoord,
+                                       regionSet = regionSet,
+                                       calcCols= signalCol,
+                                       metric = "median")
+            
+            # in the case of no overlaps
+            if (is.null(loadAgMain)) {
+                results <- as.data.table(t(rep(NA, length(signalCol))))
+                setnames(results, signalCol)
+                results[, signalCoverage := 0]
+                results[, regionSetCoverage := 0]
+                results[, totalRegionNumber := numOfRegions]
+                results[, meanRegionSize := round(mean(width(regionSet)), 1)]
+                # this column is only added by this scoring method
+                if (scoringMetric == "proportionWeightedMean") {
+                    results[, sumProportionOverlap := 0]
+                }
+            } else {
+                loadAgMain <- as.data.table(loadAgMain)
+                results <- loadAgMain[, .SD, .SDcols = signalCol]
+                results[, signalCoverage := loadAgMain[, .SD, .SDcols = "signalCoverage"]]
+                results[, regionSetCoverage := loadAgMain[, .SD, .SDcols = "regionSetCoverage"]]
+                results[, totalRegionNumber := numOfRegions]
+                results[, meanRegionSize := round(mean(width(regionSet)), 1)]
+            }
+        }
         # } else if (scoringMetric == "meanDiff") {
         #     # if (is.null(pcLoadAv)) {
         #     #     # calculate (should already be absolute)
@@ -432,7 +462,7 @@ aggregateSignal <- function(signal,
         #             results <- as.data.table(wRes)
         #         }    
         #     #}
-        }  
+          
     } else {
         
         # signalCoordType == "multiBase"
@@ -449,7 +479,16 @@ aggregateSignal <- function(signal,
             loadAgMain <- regionOLMean(signalDT = loadingDT, 
                                        signalGR = signalCoord,
                                        regionSet = regionSet,
-                                       calcCols= signalCol)
+                                       calcCols = signalCol,
+                                       metric = "mean")
+            # setnames(loadAgMain, c("signalCoverage", "regionSetCoverage"),
+            #          c("numCpGsOverlapping", "numRegionsOverlapping"))
+        } else if (scoringMetric == "simpleMedian") {
+            loadAgMain <- regionOLMean(signalDT = loadingDT, 
+                                       signalGR = signalCoord,
+                                       regionSet = regionSet,
+                                       calcCols= signalCol,
+                                       metric = "median")
             # setnames(loadAgMain, c("signalCoverage", "regionSetCoverage"),
             #          c("numCpGsOverlapping", "numRegionsOverlapping"))
         }
@@ -2061,13 +2100,14 @@ regionOLWeightedMean <- function(signalMat, signalGR,
 # The region set to score.
 # @param calcCols character object. Column names. A mean will be calculated for 
 # each of these columns (columns should be numeric).
+# @param metric character. "mean" or "median"
 # @value Returns data.frame with columns 'calcCols', signalCoverage col has
 # number of signalGR regions that overlapped with any regionSet regions, 
 # regionSetCoverage has the number of regions from 
 # signalGR that overlapped with regionSet
 # Returns NULL if there is no overlap between signalGR and regionSet
 
-regionOLMean <- function(signalDT, signalGR, regionSet, calcCols) {
+regionOLMean <- function(signalDT, signalGR, regionSet, calcCols, metric="mean") {
 
     hits  <- findOverlaps(query = signalGR, subject = regionSet)
     # if no overlap, return NULL
@@ -2079,9 +2119,17 @@ regionOLMean <- function(signalDT, signalGR, regionSet, calcCols) {
     # regions from signalGR but that is ok
     signalDT  <- signalDT[queryHits(hits), ]
 
-    # mean of the overlapping signalDT values
-    signalAve <- as.data.frame(t(colMeans(signalDT[,..calcCols])))
-
+    if (metric == "mean") {
+        # mean of the overlapping signalDT values
+        signalAve <- as.data.frame(t(colMeans(signalDT[,..calcCols])))
+    } else if (metric == "median") {
+        # median of the overlapping signalDT values
+        signalAve <- as.data.frame(t(apply(X = signalDT[,..calcCols], 2, median)))
+        
+    } else {
+        stop("Error in regionOLMean function. Invalid metric specified.")
+    }
+    
     # add columns for coverage info
     signalAve$signalCoverage    <- length(unique(queryHits(hits)))
     signalAve$regionSetCoverage <- length(unique(subjectHits(hits)))
