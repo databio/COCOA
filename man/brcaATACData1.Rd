@@ -5,7 +5,9 @@
 \alias{brcaATACData1}
 \title{A matrix with ATAC-seq counts in select peak regions 
 from chromosome 1 for 37 patients.}
-\format{A matrix object}
+\format{
+A matrix object
+}
 \usage{
 data(brcaATACData1)
 }

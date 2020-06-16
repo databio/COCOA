@@ -4,8 +4,14 @@
 \alias{getTopRegions}
 \title{Get regions that are most associated with target variable}
 \usage{
-getTopRegions(signal, signalCoord, regionSet, signalCol = c("PC1",
-  "PC2"), cutoff = 0.8, returnQuantile = TRUE)
+getTopRegions(
+  signal,
+  signalCoord,
+  regionSet,
+  signalCol = c("PC1", "PC2"),
+  cutoff = 0.8,
+  returnQuantile = TRUE
+)
 }
 \arguments{
 \item{signal}{Matrix of feature contribution scores (the contribution of 

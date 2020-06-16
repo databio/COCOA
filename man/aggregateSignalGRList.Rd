@@ -4,9 +4,19 @@
 \alias{aggregateSignalGRList}
 \title{Score many region sets}
 \usage{
-aggregateSignalGRList(signal, signalCoord, GRList, signalCol = c("PC1",
-  "PC2"), signalCoordType = "default", scoringMetric = "default",
-  verbose = TRUE, absVal = TRUE)
+aggregateSignalGRList(
+  signal,
+  signalCoord,
+  GRList,
+  signalCol = c("PC1", "PC2"),
+  signalCoordType = "default",
+  scoringMetric = "default",
+  verbose = TRUE,
+  absVal = TRUE,
+  olList = NULL,
+  pOlapList = NULL,
+  returnCovInfo = TRUE
+)
 }
 \arguments{
 \item{signal}{Matrix of feature contribution scores (the contribution of 

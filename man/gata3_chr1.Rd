@@ -4,7 +4,9 @@
 \name{gata3_chr1}
 \alias{gata3_chr1}
 \title{Gata3 binding regions.}
-\format{A GRanges object}
+\format{
+A GRanges object
+}
 \usage{
 data(gata3_chr1)
 }

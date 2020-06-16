@@ -16,6 +16,8 @@ checkConvertInputClasses <- function(signal=NULL,
                                      regionSet=NULL,
                                      signalCol = NULL,
                                      GRList = NULL,
+                                     rsOL=NULL,
+                                     olList=NULL,
                                      .env=.enclosingEnv) {
     
     # default value for .env, I put this inside the function to clarify

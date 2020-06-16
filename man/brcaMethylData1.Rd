@@ -5,7 +5,9 @@
 \alias{brcaMethylData1}
 \title{A matrix with DNA methylation levels 
 from some CpGs on chromosome 1}
-\format{A matrix object}
+\format{
+A matrix object
+}
 \usage{
 data(brcaMethylData1)
 }

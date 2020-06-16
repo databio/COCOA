@@ -4,13 +4,31 @@
 \alias{runCOCOAPerm}
 \title{Run COCOA permutations to get p-values}
 \usage{
-runCOCOAPerm(genomicSignal, signalCoord, GRList, rsScores, targetVar,
-  signalCol = c("PC1", "PC2"), scoringMetric = "default",
-  absVal = TRUE, centerGenomicSignal = TRUE, centerTargetVar = TRUE,
-  variationMetric = "cor", nPerm = 300, useSimpleCache = TRUE,
-  cacheDir = getwd(), dataID = "", testType = "greater",
-  gammaFitMethod = "mme", realScoreInDist = TRUE, force = FALSE,
-  verbose = TRUE, ...)
+runCOCOAPerm(
+  genomicSignal,
+  signalCoord,
+  GRList,
+  rsScores,
+  targetVar,
+  signalCol = c("PC1", "PC2"),
+  scoringMetric = "default",
+  absVal = TRUE,
+  olList = NULL,
+  centerGenomicSignal = TRUE,
+  centerTargetVar = TRUE,
+  variationMetric = "cor",
+  nPerm = 300,
+  useSimpleCache = TRUE,
+  cacheDir = getwd(),
+  dataID = "",
+  testType = "greater",
+  gammaFitMethod = "mme",
+  realScoreInDist = TRUE,
+  force = FALSE,
+  verbose = TRUE,
+  returnCovInfo = FALSE,
+  ...
+)
 }
 \arguments{
 \item{genomicSignal}{Matrix/data.frame. 
@@ -90,6 +108,20 @@ will decrease (if there may be anticorrelation between
 regions in a region set). Choose FALSE if you expect regions in a 
 given region set to all change in the same direction (all be positively
 correlated with each other).}
+
+\item{olList}{list. Each list item should be a "SortedByQueryHits" object 
+(output of findOverlaps function). Each hits object should have the overlap
+information between signalCoord and one item of GRList (one unique region set).
+The region sets from GRList must be the "subject" in findOverlaps 
+and signalCoord must be the "query". E.g. findOverlaps(subject=regionSet,
+query=signalCoord).
+Providing this information can greatly improve permutation speed since the 
+overlaps will not have to be calculated for each permutation. When using 
+this parameter, signalCoord, 
+genomicSignal, and each region set must be in the same order as they were
+when olList was created. Otherwise, the wrong genomic loci will be referenced
+(e.g. if epigenetic features were filtered out of genomicSignal after olList
+was created.)}
 
 \item{centerGenomicSignal}{Logical. Should rows in genomicSignal
 be centered based on

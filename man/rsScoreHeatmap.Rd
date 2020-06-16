@@ -4,13 +4,23 @@
 \alias{rsScoreHeatmap}
 \title{Heatmap of region set scores}
 \usage{
-rsScoreHeatmap(rsScores, signalCol = paste0("PC", 1:5),
-  orderByCol = "PC1", rsNameCol = "rsName", topX = 20,
-  col = c("red", "#EEEEEE", "blue"), row_title = "Region Set",
-  column_title = "Principal Component", column_title_side = "bottom",
-  cluster_rows = FALSE, cluster_columns = FALSE,
-  show_row_names = TRUE, row_names_max_width = unit(10000, "mm"),
-  name = "Rank within PC", ...)
+rsScoreHeatmap(
+  rsScores,
+  signalCol = paste0("PC", 1:5),
+  orderByCol = "PC1",
+  rsNameCol = "rsName",
+  topX = 20,
+  col = c("red", "#EEEEEE", "blue"),
+  row_title = "Region Set",
+  column_title = "Principal Component",
+  column_title_side = "bottom",
+  cluster_rows = FALSE,
+  cluster_columns = FALSE,
+  show_row_names = TRUE,
+  row_names_max_width = unit(10000, "mm"),
+  name = "Rank within PC",
+  ...
+)
 }
 \arguments{
 \item{rsScores}{data.frame. A data.frame with region set

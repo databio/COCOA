@@ -4,9 +4,20 @@
 \alias{aggregateSignal}
 \title{Score a region set using feature contribution scores}
 \usage{
-aggregateSignal(signal, signalCoord, regionSet, signalCol = c("PC1",
-  "PC2"), signalCoordType = "default", scoringMetric = "default",
-  verbose = FALSE, absVal = TRUE)
+aggregateSignal(
+  signal,
+  signalCoord,
+  regionSet,
+  signalCol = c("PC1", "PC2"),
+  signalCoordType = "default",
+  scoringMetric = "default",
+  verbose = FALSE,
+  absVal = TRUE,
+  rsOL = NULL,
+  pOlap = NULL,
+  returnCovInfo = TRUE,
+  .checkInput = TRUE
+)
 }
 \arguments{
 \item{signal}{Matrix of feature contribution scores (the contribution of 

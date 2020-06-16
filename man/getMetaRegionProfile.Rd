@@ -4,9 +4,17 @@
 \alias{getMetaRegionProfile}
 \title{Create a "meta-region" profile}
 \usage{
-getMetaRegionProfile(signal, signalCoord, regionSet, signalCol = c("PC1",
-  "PC2"), signalCoordType = "default", binNum = 21, verbose = TRUE,
-  aggrMethod = "default", absVal = TRUE)
+getMetaRegionProfile(
+  signal,
+  signalCoord,
+  regionSet,
+  signalCol = c("PC1", "PC2"),
+  signalCoordType = "default",
+  binNum = 21,
+  verbose = TRUE,
+  aggrMethod = "default",
+  absVal = TRUE
+)
 }
 \arguments{
 \item{signal}{Matrix of feature contribution scores (the contribution of 

@@ -4,12 +4,23 @@
 \alias{regionQuantileByTargetVar}
 \title{Visualize how individual regions are associated with target variable}
 \usage{
-regionQuantileByTargetVar(signal, signalCoord, regionSet, rsName = "",
-  signalCol = paste0("PC", 1:5), maxRegionsToPlot = 8000,
-  cluster_rows = TRUE, row_title = "Region", column_title = rsName,
-  column_title_side = "top", cluster_columns = FALSE,
-  name = "Percentile of Loading Scores in PC", col = c("skyblue",
-  "yellow"), absVal = TRUE, ...)
+regionQuantileByTargetVar(
+  signal,
+  signalCoord,
+  regionSet,
+  rsName = "",
+  signalCol = paste0("PC", 1:5),
+  maxRegionsToPlot = 8000,
+  cluster_rows = TRUE,
+  row_title = "Region",
+  column_title = rsName,
+  column_title_side = "top",
+  cluster_columns = FALSE,
+  name = "Percentile of Loading Scores in PC",
+  col = c("skyblue", "yellow"),
+  absVal = TRUE,
+  ...
+)
 }
 \arguments{
 \item{signal}{Matrix of feature contribution scores (the contribution of 
