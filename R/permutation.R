@@ -29,6 +29,7 @@
 #' @template signalCol
 #' @template scoringMetric
 #' @template absVal
+#' @template olList
 #' @param centerGenomicSignal Logical. Should rows in genomicSignal
 #' be centered based on
 #' their means? (subtracting row mean from each row)
@@ -134,6 +135,7 @@ runCOCOAPerm <- function(genomicSignal,
                          signalCol=c("PC1", "PC2"),
                          scoringMetric="default",
                          absVal=TRUE,
+                         olList=NULL,
                          centerGenomicSignal=TRUE,
                          centerTargetVar=TRUE,
                          variationMetric="cor",
@@ -145,7 +147,8 @@ runCOCOAPerm <- function(genomicSignal,
                          gammaFitMethod="mme",
                          realScoreInDist=TRUE,
                          force=FALSE,
-                         verbose=TRUE, ...) {
+                         verbose=TRUE,
+                         returnCovInfo=FALSE, ...) {
     
     
     colsToAnnotate <- signalCol
@@ -176,6 +179,105 @@ runCOCOAPerm <- function(genomicSignal,
     }
     
 
+    checkConvertInputClasses(signal=genomicSignal,
+                             signalCoord=signalCoord,
+                             regionSet=NULL,
+                             signalCol=signalCol,
+                             rsOL=NULL)
+    
+        # detect signalCoordType
+        # when signalCoord is a GRanges object
+        if (any(start(signalCoord) != end(signalCoord))) {
+            signalCoordType <- "multiBase"
+        } else {
+            signalCoordType <- "singleBase"
+        }
+
+    
+    # if "default" scoring method is given, choose based on signalCoordType
+    if (scoringMetric == "default") {
+        if (signalCoordType == "singleBase") {
+            scoringMetric <- "regionMean"   
+        } else if (signalCoordType == "multiBase") {
+            scoringMetric <- "proportionWeightedMean"
+        } else {
+            stop(cleanws("signalCoordType not recognized. 
+                         Check spelling/capitalization."))
+        }
+    }
+    
+    #################
+    if (is.null(olList)) {
+        
+        #######
+        # must take out NA rows before getting OL list. Otherwise later calculations 
+        # will use wrong indices. 
+        
+        # what happens if there are NAs or Inf in `signal`?
+        # any NAs that overlap the regionSet will cause the score to be NA
+        if (is(genomicSignal, "data.table")) {
+            naRows = apply(X = genomicSignal[, , with=FALSE, drop=FALSE], 
+                           MARGIN = 1, FUN = function(x) any(is.na(x)))
+        } else {
+            naRows = apply(X = genomicSignal[, , drop=FALSE], 
+                           MARGIN = 1, FUN = function(x) any(is.na(x)))    
+        }
+        
+        if (any(naRows)) {
+            genomicSignal <- genomicSignal[!naRows, ]
+            signalCoord <- signalCoord[!naRows]
+            warning("Removing rows with NA from `genomicSignal`")
+        }
+        
+        #################################################################
+        
+        # calculate overlaps only once
+        # region set must be subject to fit with scoring functions
+        olList <- lapply(X = GRList, FUN = function(x) findOverlaps(query = signalCoord, 
+                                                                 subject = x))
+        totalRegionNumber = sapply(X = GRList, length)
+        meanRegionSize = sapply(X = GRList, function(x) round(mean(width(x))))
+    }
+    
+    # also calculate coverage info
+    # @param rsOL 
+    calculateCovInfo <- function(rsOL, 
+                                 scoringMetric=scoringMetric, 
+                                 pOlap=NULL) {
+        
+        covInfo <- data.frame(signalCoverage=length(unique(queryHits(rsOL))), 
+                              regionSetCoverage=length(unique(subjectHits(rsOL))))
+        
+        if (scoringMetric == "proportionWeightedMean") {
+            
+            covInfo$sumProportionOverlap <- sum(pOlap)
+        }
+        
+    }
+    
+    covInfo <- lapply(X = olList, FUN = function(x) calculateCovInfo(rsOL=x, 
+                                                          scoringMetric = scoringMetric))
+    
+    
+    if (scoringMetric == "proportionWeightedMean") {
+        getPOlap <- function(rsOL, signalGR, regionSet) {
+            olap  <- pintersect(signalGR[queryHits(rsOL)],
+                                regionSet[subjectHits(rsOL)])
+            pOlap <- width(olap) / width(regionSet[subjectHits(rsOL)])
+            return(pOlap)
+        }
+        
+        # list
+        pOlapList <- mapply(FUN = function(x, y) getPOlap(rsOL = x, 
+                                                     signalGR=signalCoord, 
+                                                     regionSet = y), 
+                       x=olList, y=GRList, SIMPLIFY = FALSE)
+        covInfo$sumProportionOverlap <- sapply(X = pOlapList, FUN = sum)
+    } else {
+        pOlapList <- NULL
+    }
+    
+    #################
     
         
     indList <- list()
@@ -183,6 +285,7 @@ runCOCOAPerm <- function(genomicSignal,
     for (i in 1:nPerm) {
         indList[[i]] <- sample(1:nrow(targetVar), nrow(targetVar))
     }
+    # replicate(10, sample(seq_len(nrow(targetVar)))
 
     if (useSimpleCache) {
         
@@ -206,7 +309,10 @@ runCOCOAPerm <- function(genomicSignal,
                                 absVal=absVal,
                                 centerGenomicSignal = centerGenomicSignal,
                                 centerTargetVar = centerTargetVar,
-                                verbose=verbose)
+                                verbose=verbose,
+                                olList=olList,
+                                pOlapList=pOlapList,
+                                returnCovInfo = returnCovInfo)
                 message(y) # must be ahead of object that is saved as cache, not after
                 tmp
                 
@@ -215,41 +321,6 @@ runCOCOAPerm <- function(genomicSignal,
         }
         rsPermScores = mapply(FUN = helperFun, x=indList, y=seq_along(indList), ..., SIMPLIFY=FALSE)
         rsPermScores
-        
-        # # create the main permutation cache
-        # simpleCache(paste0("rsPermScores_", nPerm, "Perm_", variationMetric, "_", dataID), {
-        #     
-        #     rsPermScores <- list()
-        #     for (i in seq_along(indList)) {
-        #         # for (i in (length(rsPermScores) + 1):nPerm) {
-        #         onePermCacheName <- paste0("rsPermScores_", nPerm, "Perm_", variationMetric, "_", dataID, "_Cache", i)
-        #         # create sub caches, one for each permutation
-        #         simpleCache(onePermCacheName, cacheSubDir = paste0("rsPermScores_", nPerm, "Perm_", variationMetric, "_", dataID), {
-        #             
-        #             tmp <- runCOCOA(sampleOrder=indList[[i]],
-        #                            genomicSignal=genomicSignal,
-        #                            signalCoord=signalCoord,
-        #                            GRList=GRList,
-        #                            signalCol=colsToAnnotate,
-        #                            targetVar=targetVar,
-        #                            variationMetric = variationMetric,
-        #                            scoringMetric=scoringMetric,
-        #                            absVal=absVal,
-        #                            centerGenomicSignal = centerGenomicSignal,
-        #                            centerTargetVar = centerTargetVar,
-        #                            verbose=verbose)
-        #             message(i) # must be ahead of object that is saved as cache, not after
-        #             tmp
-        #             
-        #         }, cacheDir=cacheDir, ...)
-        #     }
-        #     
-        #     # combining all individual permutations/caches into one object
-        #     for (i in seq_along(indList)) {
-        #         onePermCacheName <- paste0("rsPermScores_", nPerm, "Perm_", variationMetric, "_", dataID, "_Cache", i)
-        #         rsPermScores[[i]] <- get(onePermCacheName)
-        #     }
-        #     rsPermScores
             
         }, assignToVariable="rsPermScores", cacheDir=cacheDir, ...)    
     } else {
@@ -264,14 +335,16 @@ runCOCOAPerm <- function(genomicSignal,
                           variationMetric = variationMetric,
                           scoringMetric=scoringMetric,
                           absVal=absVal,
-                          verbose=verbose)
+                          verbose=verbose,
+                          olList=olList,
+                          pOlapList=pOlapList,
+                          returnCovInfo = returnCovInfo)
             message(".")
             return(tmp)
         }
         
         rsPermScores <- lapply(X = indList, helperFun)
  
-    
     }
     
     
@@ -443,8 +516,10 @@ runCOCOA <- function(genomicSignal,
                     sampleOrder=1:nrow(targetVar),
                     variationMetric = "cor", 
                     scoringMetric="default", verbose=TRUE,
-                    absVal=TRUE, centerGenomicSignal=TRUE,
-                    centerTargetVar=TRUE) {
+                    absVal=TRUE, olList=NULL, pOlapList=NULL,
+                    centerGenomicSignal=TRUE,
+                    centerTargetVar=TRUE, 
+                    returnCovInfo=TRUE) {
     
     # if vector is given, return error
     if (is.null(dim(targetVar))) {
@@ -485,7 +560,8 @@ runCOCOA <- function(genomicSignal,
                            signalCoord=signalCoord, GRList=GRList, 
                            signalCol = signalCol, 
                            scoringMetric = scoringMetric, verbose = verbose,
-                           absVal = absVal)
+                           absVal = absVal, olList = olList, pOlapList=pOlapList,
+                           returnCovInfo=returnCovInfo)
     
     # return
     return(thisPermRes)

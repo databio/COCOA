@@ -5,7 +5,9 @@
 \alias{brcaMetadata}
 \title{A data.frame with patient metadata for breast 
 cancer patients.}
-\format{A data.frame object}
+\format{
+A data.frame object
+}
 \usage{
 data(brcaMetadata)
 }

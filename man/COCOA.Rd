@@ -3,7 +3,6 @@
 \docType{package}
 \name{COCOA}
 \alias{COCOA}
-\alias{COCOA-package}
 \title{Coordinate Covariation Analysis (COCOA)}
 \description{
 COCOA is a method for understanding epigenetic variation among samples.

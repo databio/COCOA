@@ -4,7 +4,9 @@
 \name{rsScores}
 \alias{rsScores}
 \title{Example COCOA Results (made up)}
-\format{A data.frame object}
+\format{
+A data.frame object
+}
 \usage{
 data(rsScores)
 }

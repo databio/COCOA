@@ -50,4 +50,4 @@ biocViews: Epigenetics, DNAMethylation, ATACSeq, DNaseSeq, MethylSeq, Methylatio
             Sequencing, ImmunoOncology
 URL: http://code.databio.org/COCOA/
 BugReports: https://github.com/databio/COCOA
-RoxygenNote: 6.1.1
+RoxygenNote: 7.1.0

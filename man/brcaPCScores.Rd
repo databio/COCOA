@@ -5,7 +5,9 @@
 \alias{brcaPCScores}
 \title{A matrix with principal component scores for 
 PCs 1-4 for four breast cancer patients.}
-\format{A matrix object}
+\format{
+A matrix object
+}
 \usage{
 data(brcaPCScores)
 }

@@ -4,7 +4,9 @@
 \name{nrf1_chr1}
 \alias{nrf1_chr1}
 \title{Nrf1 binding regions.}
-\format{A GRanges object}
+\format{
+A GRanges object
+}
 \usage{
 data(nrf1_chr1)
 }
