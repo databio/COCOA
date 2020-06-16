@@ -4,10 +4,23 @@
 \alias{runCOCOA}
 \title{Run COCOA: quantify inter-sample variation, score region sets}
 \usage{
-runCOCOA(genomicSignal, signalCoord, GRList, signalCol, targetVar,
-  sampleOrder = 1:nrow(targetVar), variationMetric = "cor",
-  scoringMetric = "default", verbose = TRUE, absVal = TRUE,
-  centerGenomicSignal = TRUE, centerTargetVar = TRUE)
+runCOCOA(
+  genomicSignal,
+  signalCoord,
+  GRList,
+  signalCol,
+  targetVar,
+  sampleOrder = 1:nrow(targetVar),
+  variationMetric = "cor",
+  scoringMetric = "default",
+  verbose = TRUE,
+  absVal = TRUE,
+  olList = NULL,
+  pOlapList = NULL,
+  centerGenomicSignal = TRUE,
+  centerTargetVar = TRUE,
+  returnCovInfo = TRUE
+)
 }
 \arguments{
 \item{genomicSignal}{Matrix/data.frame. 

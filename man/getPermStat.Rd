@@ -4,8 +4,13 @@
 \alias{getPermStat}
 \title{Get p-value or z-score based on permutation results}
 \usage{
-getPermStat(rsScores, nullDistList, signalCol, testType = "greater",
-  whichMetric = "pval")
+getPermStat(
+  rsScores,
+  nullDistList,
+  signalCol,
+  testType = "greater",
+  whichMetric = "pval"
+)
 }
 \arguments{
 \item{rsScores}{data.frame. A data.frame with region set

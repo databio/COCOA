@@ -4,8 +4,14 @@
 \alias{getGammaPVal}
 \title{Get a p-value for region set scores based on a gamma distribution.}
 \usage{
-getGammaPVal(rsScores, nullDistList, signalCol, method = "mme",
-  realScoreInDist = TRUE, force = FALSE)
+getGammaPVal(
+  rsScores,
+  nullDistList,
+  signalCol,
+  method = "mme",
+  realScoreInDist = TRUE,
+  force = FALSE
+)
 }
 \arguments{
 \item{rsScores}{data.frame. A data.frame with region set
@@ -59,14 +65,5 @@ First fit a gamma distribution to each region set's null distribution/s
 rsScores to p-values.
 }
 \examples{
-fakeOriginalScores <- data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
-fakePermScores <- data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
-fakePermScores2 <- data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
-fakePermScores3 <- data.frame(PC1=abs(rnorm(6)), PC2=abs(rnorm(6)))
-permRSScores <- list(fakePermScores, fakePermScores2, fakePermScores3)
-nullDistList <- convertToFromNullDist(permRSScores)
-getGammaPVal(rsScores=fakeOriginalScores,
-             nullDistList=nullDistList,
-             signalCol=c("PC1", "PC2"))
 
 }

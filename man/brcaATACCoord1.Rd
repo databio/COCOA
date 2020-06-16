@@ -5,7 +5,9 @@
 \alias{brcaATACCoord1}
 \title{A GRanges object with coordinates for select 
 BRCA ATAC-seq peak regions from chr1.}
-\format{A GRanges object}
+\format{
+A GRanges object
+}
 \usage{
 data(brcaATACCoord1)
 }

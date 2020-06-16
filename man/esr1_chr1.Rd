@@ -4,7 +4,9 @@
 \name{esr1_chr1}
 \alias{esr1_chr1}
 \title{Estrogen receptor alpha binding regions.}
-\format{A GRanges object}
+\format{
+A GRanges object
+}
 \usage{
 data(esr1_chr1)
 }

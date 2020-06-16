@@ -5,12 +5,24 @@
 \title{Visualize how genomic signal in a region set changes 
 along a given axis}
 \usage{
-signalAlongAxis(genomicSignal, signalCoord, regionSet, sampleScores,
-  orderByCol = "PC1", topXVariables = NULL, variableScores = NULL,
-  decreasing = TRUE, cluster_columns = FALSE, cluster_rows = FALSE,
-  row_title = "Sample", column_title = "Genomic Signal",
-  column_title_side = "bottom", name = "Genomic Signal Value",
-  col = c("blue", "#EEEEEE", "red"), ...)
+signalAlongAxis(
+  genomicSignal,
+  signalCoord,
+  regionSet,
+  sampleScores,
+  orderByCol = "PC1",
+  topXVariables = NULL,
+  variableScores = NULL,
+  decreasing = TRUE,
+  cluster_columns = FALSE,
+  cluster_rows = FALSE,
+  row_title = "Sample",
+  column_title = "Genomic Signal",
+  column_title_side = "bottom",
+  name = "Genomic Signal Value",
+  col = c("blue", "#EEEEEE", "red"),
+  ...
+)
 }
 \arguments{
 \item{genomicSignal}{Matrix/data.frame. 

@@ -4,8 +4,7 @@
 \alias{rsRankingIndex}
 \title{Get indices for top scored region sets}
 \usage{
-rsRankingIndex(rsScores, signalCol, decreasing = TRUE,
-  newColName = signalCol)
+rsRankingIndex(rsScores, signalCol, decreasing = TRUE, newColName = signalCol)
 }
 \arguments{
 \item{rsScores}{data.frame. A data.frame with region set

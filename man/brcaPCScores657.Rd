@@ -6,7 +6,9 @@
 \title{A data.frame with principal component scores for 
 PCs 1-4 for 657 breast cancer patients as well
 as a column with estrogen receptor status.}
-\format{A data.frame object}
+\format{
+A data.frame object
+}
 \usage{
 data(brcaPCScores657)
 }

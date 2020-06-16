@@ -4,7 +4,9 @@
 \name{atf3_chr1}
 \alias{atf3_chr1}
 \title{Atf3 binding regions.}
-\format{A GRanges object}
+\format{
+A GRanges object
+}
 \usage{
 data(atf3_chr1)
 }

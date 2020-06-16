@@ -5,7 +5,9 @@
 \alias{brcaMCoord1}
 \title{A GRanges object with genomic coordinates for cytosines
 from chr1 for the package's built-in DNA methylation data}
-\format{A GRanges object}
+\format{
+A GRanges object
+}
 \usage{
 data(brcaMCoord1)
 }
