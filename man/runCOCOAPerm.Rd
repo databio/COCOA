@@ -116,7 +116,9 @@ The region sets from GRList must be the "subject" in findOverlaps
 and signalCoord must be the "query". E.g. findOverlaps(subject=regionSet,
 query=signalCoord).
 Providing this information can greatly improve permutation speed since the 
-overlaps will not have to be calculated for each permutation. When using 
+overlaps will not have to be calculated for each permutation. 
+The "runCOCOAPerm" function calculates this information only once, internally,
+so this does not have to be provided when using that function. When using 
 this parameter, signalCoord, 
 genomicSignal, and each region set must be in the same order as they were
 when olList was created. Otherwise, the wrong genomic loci will be referenced
@@ -176,6 +178,13 @@ for fitting that specific gamma distribution.}
 \item{verbose}{A "logical" object. Whether progress 
 of the function should be shown. One
 bar indicates the region set is completed.}
+
+\item{returnCovInfo}{logical. If TRUE, the following coverage and 
+region set info will
+be calculated and included in function output: regionSetCoverage, 
+signalCoverage, totalRegionNumber, and meanRegionSize. For the
+proportionWeightedMean scoring method, 
+sumProportionOverlap will also be calculated.}
 
 \item{...}{Character. Optional additional arguments for simpleCache.}
 }
