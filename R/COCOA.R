@@ -103,6 +103,13 @@ if (getRversion() >= "2.15.1") {
 # method. returns a 95% confidence interval from the Wilcoxon rank sum test
 # instead of p value.
 #' @template absVal
+#' @template rsOL
+#' @param pOlap Numeric vector. Only used if rsOL is given and scoringMetric
+#' is "proportionWeightedMean". This vector should contain the proportion of 
+#' each regionSet region that is overlapped by a signalCoord region. The 
+#' order of pOlap should be the same as the overlaps in rsOL. 
+#' @template returnCovInfo
+#' @template checkInput
 
 #' @return A data.frame with one row and the following 
 #' columns: one column for each item of signalCol with names given
@@ -496,6 +503,9 @@ aggregateSignal <- function(signal,
 # method. returns a 95% confidence interval from the Wilcoxon rank sum test
 # instead of p value.
 #' @template absVal
+#' @template olList
+#' @template pOlapList
+#' @template returnCovInfo
 #' @return Data.frame of results, one row for each region set. 
 #' It has the following columns:
 #' one column for each item of signalCol with names given
@@ -1459,6 +1469,7 @@ getTopRegions <- function(signal,
 # @param returnQuantile Only used if meanPerRegion=TRUE, instead of mean
 # return the quantile/percentile of the mean of each region
 # in relation to the distribution of original values in BSDT
+# @template rsOL
 # 
 BSAggregate <- function(BSDT, regionsGRL, BSCoord=NULL, excludeGR=NULL, 
                         regionsGRL.length = NULL, splitFactor=NULL, 
@@ -2107,6 +2118,9 @@ rsWilcox <- function(dataDT,
 # The region set to score.
 # @param calcCols character object. Column names. A weighted sum will be done 
 # for each of these columns (columns should be numeric).
+# @template rsOL
+# @param pOlap see "?aggregateSignal"
+# @template returnCovInfo
 # @value Returns data.frame with columns 'calcCols', signalCoverage col has
 # number of signalGR regions that overlapped with any regionSet regions, 
 # regionSetCoverage has the sum of all proportion overlaps of regions from 
@@ -2171,6 +2185,8 @@ regionOLWeightedMean <- function(signalMat, signalGR,
 # The region set to score.
 # @param calcCols character object. Column names. A mean will be calculated for 
 # each of these columns (columns should be numeric).
+# @template rsOL
+# @template returnCovInfo
 # @value Returns data.frame with columns 'calcCols', signalCoverage col has
 # number of signalGR regions that overlapped with any regionSet regions, 
 # regionSetCoverage has the number of regions from 

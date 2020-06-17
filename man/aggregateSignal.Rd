@@ -96,6 +96,38 @@ will decrease (if there may be anticorrelation between
 regions in a region set). Choose FALSE if you expect regions in a 
 given region set to all change in the same direction (all be positively
 correlated with each other).}
+
+\item{rsOL}{a "SortedByQueryHits" object 
+(output of findOverlaps function). Should have the overlap
+information between signalCoord and one item of GRList (one unique region set).
+The region set must be the "subject" in findOverlaps 
+and signalCoord must be the "query". E.g. findOverlaps(subject=regionSet,
+query=signalCoord).
+Providing this information can greatly improve permutation speed since the 
+overlaps will not have to be calculated for each permutation. 
+When using this parameter, signalCoord, 
+genomicSignal, and the region set must be in the same order as they were
+when olList was created. Otherwise, the wrong genomic loci will be referenced
+(e.g. if epigenetic features were filtered out of genomicSignal after rsOL
+was created.)}
+
+\item{pOlap}{Numeric vector. Only used if rsOL is given and scoringMetric
+is "proportionWeightedMean". This vector should contain the proportion of 
+each regionSet region that is overlapped by a signalCoord region. The 
+order of pOlap should be the same as the overlaps in rsOL.}
+
+\item{returnCovInfo}{logical. If TRUE, the following coverage and 
+region set info will
+be calculated and included in function output: regionSetCoverage, 
+signalCoverage, totalRegionNumber, and meanRegionSize. For the
+proportionWeightedMean scoring method, 
+sumProportionOverlap will also be calculated.}
+
+\item{.checkInput}{A "logical" object. For programmatic use only.
+Whether inputs to the function should be checked for 
+correctness/appropriateness. This parameter may be used by some COCOA
+functions to prevent unnecessary checks of objects 
+after arguments have already been checked once.}
 }
 \value{
 A data.frame with one row and the following 
