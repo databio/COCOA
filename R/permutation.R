@@ -68,6 +68,7 @@
 #' instead use the "mme" method
 #' for fitting that specific gamma distribution.
 #' @template verbose
+#' @template returnCovInfo
 #' @param ... Character. Optional additional arguments for simpleCache.
 #'
 #' 
@@ -468,12 +469,15 @@ runCOCOAPerm <- function(genomicSignal,
 #' @template scoringMetric
 #' @template verbose
 #' @template absVal
+#' @template olList
+#' @template pOlapList
 #' @param centerGenomicSignal Logical. Should rows in genomicSignal
 #' be centered based on
 #' their means? (subtracting row mean from each row)
 #' @param centerTargetVar Logical. Should columns in targetVar be 
 #' centered based
 #' on their means? (subtract column mean from each column)
+#' @template returnCovInfo
 #' @return data.frame. The output of aggregateSignalGRList for one permutation.
 #' @examples
 #' data("esr1_chr1")
