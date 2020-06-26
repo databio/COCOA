@@ -1590,6 +1590,11 @@ BSAggregate <- function(BSDT, regionsGRL, BSCoord=NULL, excludeGR=NULL,
             fo <- findOverlaps(query = bsgr, subject = regionsGR)
         }
         
+        if (length(subjectHits(fo)) < 1) {
+            warning("Insufficient overlap between signalCoord and the region set.")
+            return(NULL)
+        }
+        
     } else { 
         # Build a table to keep track of which regions belong to which group
         # BIOC note: sapply returns a list where each item is of different length
@@ -1599,6 +1604,11 @@ BSAggregate <- function(BSDT, regionsGRL, BSCoord=NULL, excludeGR=NULL,
         #     regionID=seq_len(regionsGR), 
         #     withinGroupID= as.vector(unlist(sapply(regionsGRL.length, seq))),
         #     regionGroupID=rep(seq_along(regionsGRL), regionsGRL.length))
+        
+        if (length(subjectHits(rsOL)) < 1) {
+            warning("Insufficient overlap between signalCoord and the region set.")
+            return(NULL)
+        }
         
         # only works for when one region set is given in regionsGRL (ie does
         # not work for metaregion profiles)
@@ -1630,11 +1640,6 @@ BSAggregate <- function(BSDT, regionsGRL, BSCoord=NULL, excludeGR=NULL,
 
     # message("Setting regionIDs...")
     BSDT <- BSDT[queryHits(fo),] #restrict the table to CpGs (or input region) in any region set.
-
-    if (NROW(BSDT) < 1) {
-        warning("No BSDT sites in the given region list; please expand your regionsGRL")
-        return(NULL)
-    }
 
     BSDT[,regionID:=subjectHits(fo)] #record which region they overlapped.
     #BSDT[queryHits(fo),regionID:=subjectHits(fo)]
