@@ -292,7 +292,8 @@ aggregateSignal <- function(signal,
         loadAgMain <- as.data.table(regionOLMean(signalDT = loadingDT, 
                                                  signalGR = signalCoord,
                                                  regionSet = regionSet,
-                                                 calcCols= signalCol, 
+                                                 calcCols= signalCol,
+                                                 metric = "mean",
                                                  rsOL = rsOL,
                                                  returnCovInfo=returnCovInfo))
         results <- .formatResults(loadAgMain, scoringMetric = scoringMetric, 
@@ -306,6 +307,7 @@ aggregateSignal <- function(signal,
                                                  regionSet = regionSet,
                                                  calcCols= signalCol,
                                                  metric = "median", 
+                                                 rsOL=rsOL,
                                                  returnCovInfo = returnCovInfo))
         
         results <- .formatResults(loadAgMain, scoringMetric = scoringMetric, 
@@ -347,7 +349,8 @@ aggregateSignal <- function(signal,
                                       jExpr = aggrCommand,
                                       byRegionGroup = TRUE,
                                       splitFactor = NULL,
-                                      returnOLInfo = returnCovInfo)
+                                      returnOLInfo = returnCovInfo,
+                                      rsOL=rsOL)
             
             results <- .formatResults(loadAgMain, 
                                       scoringMetric = scoringMetric,
