@@ -1051,7 +1051,11 @@ A "meta-region" profile is a summary of the FCS in the genome in and around the 
 
 1. Where can I get more information about COCOA?
 
-Be on the lookout for a preprint/paper about COCOA! As of October 2019, the best ways to get COCOA info are the vignettes and reference manual on the Bioconductor website. You can also check out ongoing development or report an issue with COCOA [on Github](https://github.com/databio/COCOA).
+For more in-depth info on COCOA methods and examples of use, check out our paper:
+
+Lawson, J.T., Smith, J.P., Bekiranov, S. et al. COCOA: coordinate covariation analysis of epigenetic heterogeneity. Genome Biol 21, 240 (2020). https://doi.org/10.1186/s13059-020-02139-4
+
+For package documentation, see the vignettes and reference manual on the Bioconductor website. You can also check out ongoing development or report an issue with COCOA [on Github](https://github.com/databio/COCOA).
 
 
 2. What data types can COCOA be used with?
@@ -1070,6 +1074,8 @@ The method is called Coordinate Covariation Analysis because it looks at covaria
 
 
 ## Related references {#refs}
+
+Lawson, J.T., Smith, J.P., Bekiranov, S. et al. COCOA: coordinate covariation analysis of epigenetic heterogeneity. Genome Biol 21, 240 (2020). https://doi.org/10.1186/s13059-020-02139-4
 
 ATACseq data source:
 Corces MR, Granja JM, Shams S, et al. The chromatin accessibility landscape of primary human cancers. Science. 2018;362(6413):eaav1898. doi:10.1126/science.aav1898
