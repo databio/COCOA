@@ -481,3 +481,97 @@ regionQuantileByTargetVar <- function(signal, signalCoord, regionSet,
 
 }
 
+
+#' Plot ranked region set scores, annotating groups of interest
+#' 
+#' Visualize the distribution of region set scores for region set groups of
+#' interest.
+#' 
+#' If the same region set matches two patterns, the later group
+#' will be assigned to that region set.
+#' 
+#' @param rsScores data.frame. Each row should be a region set. 
+#' Columns should include score columns and a column that contains the name
+#' of each region set.
+#' @param colToPlot character. Name of the column with region set scores to plot.
+#' @param pattern character. Region sets that match each pattern will be given 
+#' the same color.
+#' Multiple patterns can be given as character objects in a vector (each will
+#' have a different color).
+#' Regular expressions can be used (ignore.case=TRUE though). For example,
+#' to search for ER or GATA3 and color with a single color, 
+#' this pattern can be given "ER|GATA3".
+#' @param patternName character. A name for each string in "pattern" that
+#' will be used for the legend.
+#' @param rsNameCol character. Column name of "rsScores" column that contains
+#' the name or description of each region set. This column will be 
+#' searched for the pattern given by the "pattern" parameter.
+#' @param alpha numeric. Transparency of points. See ggplot documentation for
+#' further details.
+#' @param shape integer. Shape of the points. 
+#' See ggplot documentation for options.
+#' 
+#' @return ggplot object that can be modified using ggplot syntax. E.g.
+#' plot + ggplot_function
+#' @examples 
+#' data(rsScores)
+#' rsScores$rsName <- c("ER", "GATA3", "ER", "GATA3", "AP1") 
+#' plotAnnoScoreDist(rsScores, colToPlot="PC1", pattern="ER", alpha=1)
+#' plotAnnoScoreDist(rsScores, colToPlot="PC2", pattern=c("ER", "GATA3")) + geom_point(size=5)
+#' @export
+plotAnnoScoreDist <- function(rsScores, colToPlot, pattern, patternName=pattern, 
+                              rsNameCol="rsName", alpha=0.5, shape=3) {
+    
+    if (!(is(rsScores, "data.frame") | is(rsScores, "matrix"))) {
+        stop("rsScores should be a data.frame")
+    }
+    if (length(colToPlot) > 1) {
+        stop("colToPlot may only be a single column.")
+    }
+    
+    if (!all(c(colToPlot, rsNameCol) %in% colnames(rsScores))) {
+        stop("colToPlot and rsNameCol must be columns of rsScores.")    
+    }
+    
+    rsScores$rank <- order(order(as.numeric(rsScores[, colToPlot]), decreasing = TRUE))
+    
+    rsGroup <- rep(0, nrow(rsScores))
+    for (i in seq_along(pattern)) {
+        thisPatternInd <- grepl(pattern = pattern[i], 
+                               x = rsScores[, rsNameCol], 
+                               ignore.case = TRUE)
+        # earlier groups will be overwritten if they are not mutually exclusive
+        # (e.g. if the same region set matches two patterns, the later group
+        # will be assigned)
+        rsGroup[thisPatternInd] <- i
+    }
+    rsGroup <- as.factor(rsGroup)
+    # necessary so region set names will be in legend
+    levels(rsGroup) <- c("Other", patternName)
+    rsScores$Group <- rsGroup 
+    
+    
+    rsCorP <- ggplot(data = rsScores, 
+                    mapping = aes(x=rank, y=get(colToPlot), 
+                                  col=Group)) +
+        theme_classic() + theme(text = element_text(colour = "black"),
+                                axis.text=element_text(colour = "black"),
+                                axis.ticks = element_line(colour = "black")) +
+        # alpha=Group
+        # geom_point(alpha=0.0, shape=3) +
+        ylab("Region set score") + xlab("Region set rank") +
+        scale_color_discrete(drop = FALSE) + theme(aspect.ratio = 1)
+    
+    
+    # add each group (Other and pattern) sequentially so they will be plotted on top
+    # of other points ('Other' plotted first)
+    
+    for (i in 1:(length(pattern) + 1)) {
+        rsCorP <- rsCorP + geom_point(data = rsScores[as.numeric(rsScores$Group) == i, ], alpha=alpha, shape=shape) 
+    }
+
+    
+    return(rsCorP)
+}
+
+
