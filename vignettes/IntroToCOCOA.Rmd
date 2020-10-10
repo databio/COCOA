@@ -20,7 +20,7 @@ vignette: >
 
 Epigenetic differences between samples can be hard to interpret because epigenetic data is high dimensional. Grouping high dimensional data into functional categories helps to interpret data. An effective grouping method for epigenetic data is to group by related genomic regions, which collectively are called a region set. A region set is a set of genomic regions that share the same biological annotation. A few examples of region sets are binding regions for a certain transcription factor, cell-type specific open chromatin or enhancer regions, or regions with a certain histone modification. Reference region sets derived from public data are used by COCOA to annotate inter-sample epigenetic variation. Epigenetic variation can be annotated by COCOA in a supervised or unsupervised analysis. A supervised COCOA analysis annotates epigenetic variation that is related to a specific sample phenotype of interest (whether a molecular or higher-level phenotype). For example, we might want to see what epigenetic variation is associated with disease status, disease severity, survival, a certain mutation, or the expression of a certain gene transcript or protein. In contrast, an unsupervised COCOA analysis annotates inter-sample epigenetic variation without requiring a sample phenotype. Often, unsupervised analyses will look at the major sources of inter-sample variation by using a dimensionality reduction technique such as principal component analysis (PCA). COCOA can annotate those major sources of inter-sample variation (e.g. the principal components) for linear dimensionality reduction methods like PCA. To annotate the epigenetic variation of interest, whether supervised or unsupervised, COCOA finds reference region sets that are most associated with that variation, giving you biologically meaningful insight into variation in your data. 
 
-COCOA can be used in many different contexts so feel free to skip around to the section that is most relevant to you although you might also want to read the [Basic workflow] section for a high level overview of the COCOA workflow. We'll show COCOA workflows with [DNA methylation](#DNAm) and [chromatin accessibility](#ATAC) data and for each of those we will demonstrate a supervised and unsupervised analysis. The vignettes are very similar since a similar COCOA workflow is used. For a more in-depth description of the method, see the "[Method details]" section. 
+COCOA can be used in many different contexts so feel free to skip around to the section that is most relevant to you although you might also want to read the [Basic workflow] section for a high level overview of the COCOA workflow. We'll show COCOA workflows with [DNA methylation](#DNAm) and [chromatin accessibility](#ATAC) data and for each of those we will demonstrate a supervised and unsupervised analysis. The vignettes are very similar since a similar COCOA workflow is used. For a more in-depth description of the method, see the "[Method details]" section and [the COCOA paper](https://doi.org/10.1186/s13059-020-02139-4). 
 
 # Basic workflow
 
@@ -40,7 +40,7 @@ The second step in COCOA is use the feature contribution scores from step 1 to f
 
 ### Permutation test
 
-To account for the different sizes of region sets and to assess statistical significance of the results, we can do a permutation test to estimate p-values. We run COCOA on shuffled data to get null distributions for each region set. More specifically, we shuffle the samples' values for the target variable and recompute COCOA scores as described above. After doing this many times, the permutation COCOA scores for a given region set make up a region set-specific null distribution. This null distribution accounts for the size of the region set. If multiple target variables are used, each target variable, region set combination will have its own unique null distribution. To avoid the need to run a large number of permutations, we can run a small number of permutations (a few hundred) and then fit a gamma distribution to each null distribution. We use the gamma distribution to estimate a p-value for the real COCOA score for each region set. As mentioned before, the unsupervised COCOA test does not use PCA loadings as the feature contribution scores. This is done so that PCA, a time-consuming computation, does not have to be recomputed for every permutation. Instead, the PC sample scores are treated as the target variable and shuffled so that the feature contribution scores can be recalculated.  
+To account for the different sizes of region sets and to assess statistical significance of the results, we can do a permutation test to estimate p-values. We run COCOA on shuffled data to get null distributions for each region set. More specifically, we shuffle the samples' values for the target variable and recompute COCOA scores as described above. After doing this many times, the permutation COCOA scores for a given region set make up a region set-specific null distribution. This null distribution accounts for the size of the region set. If multiple target variables are used, each target variable, region set combination will have its own unique null distribution. To avoid the need to run a large number of permutations, we can run a small number of permutations (a few hundred) and then fit a gamma distribution to each null distribution. We use the gamma distribution to estimate a p-value for the real COCOA score for each region set. It should be noted that the gamma approximation is accurate for high p values, but may overestimate the significance of low p values. Because of this, the approximation may be helpful for screening out region sets that are not significant but should be interpreted carefully for low p-values. Our analysis of the gamma approximation as used by COCOA is shown in the COCOA paper. As mentioned before, the unsupervised COCOA test does not use PCA loadings as the feature contribution scores. This is done so that PCA, a time-consuming computation, does not have to be recomputed for every permutation. Instead, the PC sample scores are treated as the target variable and shuffled so that the feature contribution scores can be recalculated.  
 
 # COCOA for DNA methylation data {#DNAm}
 
@@ -159,7 +159,7 @@ We have four null distributions, one for each region set in `GRList`.
 
 #### Fit gamma distribution to null distributions and get p-values
 
-To reduce the number of permutations (and the run time for COCOA), we will approximate each null distribution with a gamma distribution [(Winkler et al., 2016)](#refs). After fitting the gamma distribution to each null distribution, we can use the gamma distributions to get p-values. We fit the gamma distribution and get the p-value with `getGammaPVal`.
+To reduce the number of permutations (and the run time for COCOA), we will approximate each null distribution with a gamma distribution [(Winkler et al., 2016)](#refs). After fitting the gamma distribution to each null distribution, we can use the gamma distributions to get p-values. We fit the gamma distribution and get the p-value with `getGammaPVal`. Take a look at the COCOA paper for more information on the best use of the gamma approximation (it may overestimate significance of low p-values).
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 # p-values based on fitted gamma distributions
@@ -212,6 +212,7 @@ data("nrf1_chr1")
 data("atf3_chr1")
 data("brcaMCoord1")
 data("brcaMethylData1")
+data("brcaMetadata")
 ```
 
 Next, we will do PCA on our breast cancer DNA methylation data. PCA could take a while for large datasets (e.g. longer than 30 minutes).
@@ -272,7 +273,18 @@ annoPCScores <- data.frame(pcScores, ER_status=as.factor(brcaMetadata[row.names(
 ggplot(data = annoPCScores, mapping = aes(x=PC1, y=PC2, col=ER_status)) + geom_point() + ggtitle("PCA of a subset of DNA methylation data from breast cancer patients") + theme_classic()
 ```
 
-As an easy way to visualize how the region sets are ranked for each PC, we can use `rsScoreHeatmap`:
+We can visualize the scores of region sets of interest with the `plotAnnoScoreDist` function. This function allows you to supply regular expressions matching one or more groups of region sets and will color the region set scores according to their group. This can be useful to see trends when using a large region set database. Here are scores for PC1, coloring region sets related to ER:
+
+```{r, eval=TRUE, message=FALSE, warning=FALSE}
+plotAnnoScoreDist(rsScores = regionSetScores, 
+                  colToPlot = "PC1", 
+                  pattern = "GATA3|ESR1", 
+                  patternName = "ER-related", 
+                  rsNameCol = "regionSetName", 
+                  alpha=1)
+```
+
+As an easy way to visualize how the region sets are ranked for multiple target variables, we can use `rsScoreHeatmap`:
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 rsScoreHeatmap(regionSetScores, 
@@ -334,7 +346,7 @@ We have four null distributions, one for each region set in `GRList`.
 
 #### Fit gamma distribution to null distributions and get p-values
 
-To reduce the number of permutations (and the run time for COCOA), we will approximate each null distribution with a gamma distribution [(Winkler et al., 2016)](#refs). After fitting the gamma distribution to each null distribution, we can use the gamma distributions to get p-values. We fit the gamma distribution and get the p-value with `getGammaPVal`.
+To reduce the number of permutations (and the run time for COCOA), we will approximate each null distribution with a gamma distribution [(Winkler et al., 2016)](#refs). After fitting the gamma distribution to each null distribution, we can use the gamma distributions to get p-values. We fit the gamma distribution and get the p-value with `getGammaPVal`. Take a look at the COCOA paper for more information on the best use of the gamma approximation (it may overestimate significance of low p-values).
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 # p-values based on fitted gamma distributions
@@ -638,7 +650,7 @@ We have four null distributions, one for each region set in `GRList`.
 
 #### Fit gamma distribution to null distributions and get p-values
 
-To reduce the number of permutations (and the run time for COCOA), we will approximate each null distribution with a gamma distribution [(Winkler et al., 2016)](#refs). After fitting the gamma distribution to each null distribution, we can use the gamma distributions to get p-values. We fit the gamma distribution and get the p-value with `getGammaPVal`.
+To reduce the number of permutations (and the run time for COCOA), we will approximate each null distribution with a gamma distribution [(Winkler et al., 2016)](#refs). After fitting the gamma distribution to each null distribution, we can use the gamma distributions to get p-values. We fit the gamma distribution and get the p-value with `getGammaPVal`. Take a look at the COCOA paper for more information on the best use of the gamma approximation (it may overestimate significance of low p-values).
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 # p-values based on fitted gamma distributions
@@ -752,7 +764,18 @@ ggplot(data = annoPCScores, mapping = aes(x=PC1, y=PC2, col=ER_status)) + geom_p
 ```
 Given that some ER+ samples cluster with the ER- samples and vice versa, it is interesting to consider whether the clinical ER+/- designation is accurately representing the molecular phenotype of the samples although there are multiple potential reasons for this including tumor heterogeneity (this trend is still present when using the full ATAC-seq count matrix which includes additional samples). 
 
-As an easy way to visualize how the region sets are ranked for each PC, we can use `rsScoreHeatmap`:
+We can visualize the scores of region sets of interest with the `plotAnnoScoreDist` function. This function allows you to supply regular expressions matching one or more groups of region sets and will color the region set scores according to their group. This can be useful to see trends when using a large region set database. Here are scores for PC1, coloring region sets related to ER:
+
+```{r, eval=TRUE, message=FALSE, warning=FALSE}
+plotAnnoScoreDist(rsScores = regionSetScores, 
+                  colToPlot = "PC1", 
+                  pattern = "GATA3|ESR1", 
+                  patternName = "ER-related", 
+                  rsNameCol = "regionSetName", 
+                  alpha=1)
+```
+
+As an easy way to visualize how the region sets are ranked for multiple target variables, we can use `rsScoreHeatmap`:
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 rsScoreHeatmap(regionSetScores, 
@@ -814,7 +837,7 @@ We have four null distributions, one for each region set in `GRList`.
 
 #### Fit gamma distribution to null distributions and get p-values
 
-To reduce the number of permutations (and the run time for COCOA), we will approximate each null distribution with a gamma distribution [(Winkler et al., 2016)](#refs). After fitting the gamma distribution to each null distribution, we can use the gamma distributions to get p-values. We fit the gamma distribution and get the p-value with `getGammaPVal`.
+To reduce the number of permutations (and the run time for COCOA), we will approximate each null distribution with a gamma distribution [(Winkler et al., 2016)](#refs). After fitting the gamma distribution to each null distribution, we can use the gamma distributions to get p-values. We fit the gamma distribution and get the p-value with `getGammaPVal`. Take a look at the COCOA paper for more information on the best use of the gamma approximation (it may overestimate significance of low p-values).
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 # p-values based on fitted gamma distributions
@@ -1003,7 +1026,7 @@ We can see that fewer regions in the NRF1 region set have high FCS for PC 1. Thi
 
 ## Method details
 
-The overall conceptual steps are described in the [Basic workflow] section. In this section, we give more details about some of the individual parts of that workflow.
+The overall conceptual steps are described in the [Basic workflow] section. In this section, we give more details about some of the individual parts of that workflow. For further information, see [the COCOA paper](https://doi.org/10.1186/s13059-020-02139-4).
 
 ### Region set database
 
