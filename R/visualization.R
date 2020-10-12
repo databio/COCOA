@@ -517,7 +517,7 @@ regionQuantileByTargetVar <- function(signal, signalCoord, regionSet,
 #' data(rsScores)
 #' rsScores$rsName <- c("ER", "GATA3", "ER", "GATA3", "AP1") 
 #' plotAnnoScoreDist(rsScores, colToPlot="PC1", pattern="ER", alpha=1)
-#' plotAnnoScoreDist(rsScores, colToPlot="PC2", pattern=c("ER", "GATA3")) + geom_point(size=5)
+#' plotAnnoScoreDist(rsScores, colToPlot="PC2", pattern=c("ER", "GATA3"))
 #' @export
 plotAnnoScoreDist <- function(rsScores, colToPlot, pattern, patternName=pattern, 
                               rsNameCol="rsName", alpha=0.5, shape=3) {
