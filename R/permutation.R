@@ -326,7 +326,7 @@ runCOCOAPerm <- function(genomicSignal,
         }, assignToVariable="rsPermScores", cacheDir=cacheDir, ...)    
     } else {
         
-        helperFun <- function(x) {
+        helperFun2 <- function(x) {
             tmp <- runCOCOA(sampleOrder=x,
                           genomicSignal=genomicSignal,
                           signalCoord=signalCoord,
@@ -344,7 +344,7 @@ runCOCOAPerm <- function(genomicSignal,
             return(tmp)
         }
         
-        rsPermScores <- lapply(X = indList, helperFun)
+        rsPermScores <- lapply(X = indList, helperFun2)
  
     }
     

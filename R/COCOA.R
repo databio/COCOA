@@ -72,7 +72,7 @@ if (getRversion() >= "2.15.1") {
     utils::globalVariables(c(
         ".", "..calcCols", "bin", "binID", "chr", "id", "colsToAnnotate", 
         "coordinateDT",
-        "coverage", "pOlap", "regionGroupID", "regionID", "theme", 
+        "coverage", "Group", "pOlap", "regionGroupID", "regionID", "theme", 
         "meanRegionSize", "regionSetCoverage", "rowIndex", "rsIndex",
         "rsRegionID", "totalRegionNumber", "signalCoverage", ".SD",
         "sumProportionOverlap")) 
