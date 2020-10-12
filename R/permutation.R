@@ -826,7 +826,7 @@ pGammaList <- function(scoreVec, fitDistrList) {
 #' is for a target variable (e.g. PC or phenotype), which is given
 #' by the `signalCol` parameter (each target variable has a different
 #' null distribution for a given region set).
-#' @templateVar usesRSScores
+#' @templateVar usesRSScores TRUE
 #' @template signalCol 
 #' @param testType Character. "greater", "lesser", "two-sided" Whether to
 #' create p values based on one sided test or not. Only applies when
