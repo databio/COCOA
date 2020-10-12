@@ -30,7 +30,8 @@ by the `signalCol` parameter (each target variable has a different
 null distribution for a given region set).}
 
 \item{signalCol}{A character vector with the names of the sample variables
-of interest/target variables (e.g. PCs or sample phenotypes).}
+of interest/target variables (e.g. PCs or sample phenotypes). 
+Must be column names of rsScores.}
 
 \item{testType}{Character. "greater", "lesser", "two-sided" Whether to
 create p values based on one sided test or not. Only applies when
