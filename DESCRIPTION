@@ -1,6 +1,6 @@
 Package: COCOA
-Version: 2.2.1
-Date: 2020-05-30
+Version: 2.4.1
+Date: 2020-10-27
 Title: Coordinate Covariation Analysis
 Description: COCOA is a method for understanding epigenetic variation among samples.
     COCOA can be used with epigenetic data that includes
@@ -50,4 +50,4 @@ biocViews: Epigenetics, DNAMethylation, ATACSeq, DNaseSeq, MethylSeq, Methylatio
             Sequencing, ImmunoOncology
 URL: http://code.databio.org/COCOA/
 BugReports: https://github.com/databio/COCOA
-RoxygenNote: 7.1.0
+RoxygenNote: 7.1.1
