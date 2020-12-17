@@ -146,6 +146,7 @@ aggregateSignal <- function(signal,
                             regionSet,
                             signalCol = c("PC1", "PC2"),
                             signalCoordType = "default",
+                            signalCoordType = "default",
                             scoringMetric = "default",
                             verbose = FALSE,
                             absVal=TRUE, 
@@ -187,7 +188,7 @@ aggregateSignal <- function(signal,
                          Check spelling and available options."))
         }
         
-        ###### check that signalCoordType is appropriate
+        ###### check that signalCoordTypesignalCoordType is appropriate
         if (!(signalCoordType %in% c("default", "singleBase", "multiBase"))) {
             stop(cleanws("signalCoordType not recognized. 
                          Check spelling/capitalization."))
@@ -431,7 +432,7 @@ aggregateSignal <- function(signal,
     
     # signalOLMetrics() # make sure it works with no overlap
     if (verbose) {
-        message("|")
+        message(".", appendLF=FALSE)
     }
         
     return(as.data.frame(results))
@@ -1141,7 +1142,7 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount,
     #     binnedBSDT <- binnedBSDT[readCount > minReads,]
     # }
     if (verbose) {
-        message("|")
+        message(".", appendLF=FALSE)
     }
     
     return(binnedBSDT)
