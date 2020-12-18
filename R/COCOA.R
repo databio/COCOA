@@ -146,13 +146,12 @@ aggregateSignal <- function(signal,
                             regionSet,
                             signalCol = c("PC1", "PC2"),
                             signalCoordType = "default",
-                            signalCoordType = "default",
                             scoringMetric = "default",
                             verbose = FALSE,
                             absVal=TRUE, 
                             rsOL=NULL, pOlap=NULL, 
                             returnCovInfo=TRUE, 
-                            .checkInput=TRUE) {
+                            .checkInput=FALSE) {
     
     ################### checking inputs  #################################
     
@@ -251,8 +250,8 @@ aggregateSignal <- function(signal,
         
     }
         
-    numOfRegions <- length(regionSet)
-    totalCpGs    <- nrow(signal)
+    # numOfRegions <- length(regionSet)
+    # totalCpGs    <- nrow(signal)
     
     # extreme positive or negative values both give important information
     # take absolute value or not
@@ -432,7 +431,7 @@ aggregateSignal <- function(signal,
     
     # signalOLMetrics() # make sure it works with no overlap
     if (verbose) {
-        message(".", appendLF=FALSE)
+        message(":", appendLF=FALSE)
     }
         
     return(as.data.frame(results))
