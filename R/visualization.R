@@ -51,6 +51,12 @@
 #' `topXVariables` will be plotted.
 #' @param decreasing Logical. Whether samples should be sorted in 
 #' decreasing order of `orderByCol` or not (FALSE is increasing order).
+#' @param regionAnnoGRList GRangesList. Each GRanges in the list should be
+#' a genomic annotation. These will be displayed above or below the heatmap.
+#' @param plotRegionMean Logical. If TRUE, the genomicSignal will be averaged
+#' for each region in regionSet and those region averages 
+#' will be plotted instead of the
+#' original variables in genomicSignal.
 #' @param cluster_rows Logical. Whether rows should be clustered. 
 #' This should be kept as FALSE to keep the correct ranking of 
 #' samples/observations according to their target variable score.
@@ -88,6 +94,8 @@ signalAlongAxis <- function(genomicSignal, signalCoord, regionSet,
                           sampleScores, orderByCol="PC1", topXVariables=NULL, 
                           variableScores=NULL,
                           decreasing=TRUE,
+                          regionAnnoGRList=NULL,
+                          plotRegionMean=FALSE,
                           cluster_columns = FALSE, 
                           cluster_rows = FALSE, 
                           row_title = "Sample",
@@ -140,21 +148,58 @@ signalAlongAxis <- function(genomicSignal, signalCoord, regionSet,
     }
     
     
-    
-    # coordGR =
-    olList <- findOverlaps(regionSet, coordGR)
-    # regionHitInd <- sort(unique(queryHits(olList)))
-    cytosineHitInd <- sort(unique(subjectHits(olList)))
-    thisRSMData <- t(genomicSignal[cytosineHitInd, , drop=FALSE])
-    nRegion = length(unique(queryHits(olList)))
-    # get top variables
-    if (!is.null(topXVariables)) {
-        if (nRegion > topXVariables) {
-            # select top variables
-            thisRSMData <- thisRSMData[, order(variableScores[cytosineHitInd], decreasing = TRUE)][, 1:topXVariables]
+    if (plotRegionMean) {
+        colnames(genomicSignal) <- paste0("sample_", colnames(genomicSignal))
+        row.names(sampleScores) <- paste0("sample_", row.names(sampleScores))
+        
+        if (!is.null(topXVariables)) {
+            # add to matrix so I can get region averages of variable scores
+            genomicSignal <- cbind(genomicSignal, varScore=variableScores)
         }
+        thisRSMData <- averagePerRegion(signal = genomicSignal, regionSet = regionSet, 
+                                 signalCol=colnames(genomicSignal), 
+                                 signalCoord = coordGR, returnQuantile = FALSE)
+        coordGR <- dtToGr(thisRSMData[, c("chr", "start", "end")])
+        #row.names(thisRSMData) <-
+        
+        if (!is.null(topXVariables)) {
+            nRegion <- length(coordGR)
+            if (nRegion > topXVariables) {
+                # keeping only top regions, regions are still rows here
+                thisRSMData <- thisRSMData[order(thisRSMData$varScore, decreasing = TRUE), ][1:topXVariables, ]
+                coordGR <- coordGR[order(thisRSMData$varScore, decreasing = TRUE)][1:topXVariables]
+            }
+            thisRSMData <- t(thisRSMData[, !(colnames(thisRSMData) %in% c("varScore", "chr", "start", "end")), drop=FALSE, with=FALSE])
+        } else {
+            # with=FALSE must be used to subset because it is a data.table
+            thisRSMData <- t(thisRSMData[, !(colnames(thisRSMData) %in% c("chr", "start", "end")), 
+                                         drop=FALSE, with=FALSE])
+        }
+        
+        
+        
+    } else {
+        olList <- findOverlaps(regionSet, coordGR)
+        # regionHitInd <- sort(unique(queryHits(olList)))
+        cytosineHitInd <- sort(unique(subjectHits(olList)))
+        # subset methylation data
+        thisRSMData <- t(genomicSignal[cytosineHitInd, , drop=FALSE])
+        coordGR = coordGR[cytosineHitInd]
+
+        # get top variables
+        if (!is.null(topXVariables)) {
+            # number of region set regions that overlap methyl data
+            nRegion = length(unique(queryHits(olList)))
+            if (nRegion > topXVariables) {
+                # select top variables
+                thisRSMData <- thisRSMData[, order(variableScores[cytosineHitInd], decreasing = TRUE)][, 1:topXVariables]
+                coordGR <- coordGR[order(variableScores[cytosineHitInd], decreasing = TRUE)][1:topXVariables]
+            }
+        }
+        subject_ID <- row.names(thisRSMData)
     }
-    subject_ID <- row.names(thisRSMData)
+
+    
     # centeredPCAMeth <- t(apply(t(genomicSignal), 1, 
     #                            function(x) x - pcaData$center)) #center first 
     # reducedValsPCA <- centeredPCAMeth %*% pcaData$rotation
@@ -162,12 +207,36 @@ signalAlongAxis <- function(genomicSignal, signalCoord, regionSet,
     # pcaData must have subject_ID as row name
     # Error in thisRSMData[names(sort(sampleScores[, orderByCol], decreasing = decreasing)),  : 
     #                          subscript out of bounds 
+    # warning(row.names(thisRSMData))
     thisRSMData <- thisRSMData[names(sort(sampleScores[, orderByCol], 
                                           decreasing = decreasing)), ]
     
     # message(paste0("Number of epigenetic features: ", length(cytosineHitInd)))
     # message(paste0("Number of region set regions: ", nRegion))
     
+    
+    # create region annotation
+    if (!is.null(regionAnnoGRList)) {
+        regionAnno <- data.frame(tmp=rep(0, length(coordGR)))
+        annoNames <- names(regionAnnoGRList)
+        for (i in seq_along(regionAnnoGRList)) {
+            
+            ################# need to make these factors
+            regionAnno[, annoNames[i]] <- factor(x = rep(0, length(coordGR), levels=c(0,1)))
+            tmp <- findOverlaps(query = regionAnnoGRList[[i]], subject = coordGR) 
+            olInd <- sort(unique(subjectHits(tmp)))
+            regionAnno[olInd, annoNames[i]] <- 1
+            regionAnno[, annoNames[i]] <- as.factor(regionAnno[, annoNames[i]])
+            levels(regionAnno[, annoNames[i]]) <- c("0", "1")
+        }
+        colList <- rep(list(c('0'="white", '1'="black")), length(regionAnnoGRList))
+        names(colList) <- annoNames
+        regionHA <- ComplexHeatmap::HeatmapAnnotation(df=regionAnno[, colnames(regionAnno) != "tmp"], 
+                                                      which = "column", col = colList,
+                                                      show_legend = FALSE)
+    } else {
+        regionHA <- NULL
+    }
     
     
     ComplexHeatmap::Heatmap(thisRSMData, 
@@ -177,7 +246,9 @@ signalAlongAxis <- function(genomicSignal, signalCoord, regionSet,
                             column_title_side = column_title_side,
                             cluster_rows = cluster_rows, 
                             cluster_columns = cluster_columns, 
-                            name = name, ...)
+                            name = name, 
+                            top_annotation = regionHA,
+                            ...)
 }
 
 
