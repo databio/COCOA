@@ -108,6 +108,7 @@ if (getRversion() >= "2.15.1") {
 #' is "proportionWeightedMean". This vector should contain the proportion of 
 #' each regionSet region that is overlapped by a signalCoord region. The 
 #' order of pOlap should be the same as the overlaps in rsOL. 
+#' @param rsOLMat 
 #' @template returnCovInfo
 #' @template checkInput
 
@@ -150,6 +151,7 @@ aggregateSignal <- function(signal,
                             verbose = FALSE,
                             absVal=TRUE, 
                             rsOL=NULL, pOlap=NULL, 
+                            rsOLMat=NULL,
                             returnCovInfo=TRUE, 
                             .checkInput=TRUE) {
     
@@ -249,10 +251,13 @@ aggregateSignal <- function(signal,
         }
         
     }
+    ################### finished checking inputs #########################
         
     numOfRegions <- length(regionSet)
     totalCpGs    <- nrow(signal)
     
+    
+    #### UPDATE: only do this once, in outermost function possible #####
     # extreme positive or negative values both give important information
     # take absolute value or not
     if (absVal) {
@@ -278,7 +283,8 @@ aggregateSignal <- function(signal,
     } else {
         loadingDT  <- signal[, signalCol, drop=FALSE]
     }
-    
+    ######## UPDATE: can above code be done only once, like input checking?
+    ########
 
     
     ###########################################################################
@@ -287,18 +293,44 @@ aggregateSignal <- function(signal,
     # would rounding speed up aggregation?, potentially make a sparse matrix
     # if a lot of entries became 0
     
-    # works for both singleBase and multiBase
+    # works for both singleBase and multiBase (UPDATE: did, but not matrix scoring)
     if (scoringMetric == "simpleMean") {
-        loadAgMain <- as.data.table(regionOLMean(signalDT = loadingDT, 
-                                                 signalGR = signalCoord,
-                                                 regionSet = regionSet,
-                                                 calcCols= signalCol,
-                                                 metric = "mean",
-                                                 rsOL = rsOL,
-                                                 returnCovInfo=returnCovInfo))
-        results <- .formatResults(loadAgMain, scoringMetric = scoringMetric, 
-                                  regionSet=regionSet, signalCol = signalCol,
-                                  returnCovInfo=returnCovInfo)
+        if ((signalCoordType == "multiBase") & !is.null(rsOLMat)) {
+            
+            dim(rsMat)
+            loadings<-loadings[, c("PC1", "PC2")]
+            dim(loadings)
+            
+            loadings <- abs(loadings)
+            rsScoresMatrix <- t(rsMat) %*% loadings
+            covCount <- colSums(rsMat)
+            results <- as.data.frame(apply(rsScoresMatrix, 
+                                                 MARGIN = 2, 
+                                                 FUN = function(x) x/covCount))
+            results$signalCoverage <- covCount
+            # rsOLMat does not give the regionSetCoverage, totalRegionNumber
+            # or meanRegionSize
+                
+            # add these columns?
+                    # results[, signalCoverage := 0]
+                    # results[, regionSetCoverage := 0]
+                    # results[, totalRegionNumber := numOfRegions]
+                    # results[, meanRegionSize := round(mean(width(regionSet)), 1)]
+
+            
+        } else {
+           loadAgMain <- as.data.table(regionOLMean(signalDT = loadingDT, 
+                                                    signalGR = signalCoord,
+                                                    regionSet = regionSet,
+                                                    calcCols= signalCol,
+                                                    metric = "mean",
+                                                    rsOL = rsOL,
+                                                    returnCovInfo=returnCovInfo))
+           results <- .formatResults(loadAgMain, scoringMetric = scoringMetric, 
+                                     regionSet=regionSet, signalCol = signalCol,
+                                     returnCovInfo=returnCovInfo)
+       }
+
     } else if (scoringMetric == "simpleMedian") {
         # scoring singleBase and multiBase both with this function for
         # simpleMedian
@@ -358,77 +390,7 @@ aggregateSignal <- function(signal,
                                       returnCovInfo=returnCovInfo)
 
         } 
-        # } else if (scoringMetric == "meanDiff") {
-        #     # if (is.null(pcLoadAv)) {
-        #     #     # calculate (should already be absolute)
-        #     #     pcLoadAv <- apply(X = loadingDT[, signalCol, with=FALSE], 
-        #     #                       MARGIN = 2, FUN = mean)
-        #     # }
-        #     loadMetrics <- signalOLMetrics(dataDT=loadingDT, regionSet=regionSet,
-        #                                    signalCol = signalCol,
-        #                                    metrics=c("mean", "sd"), 
-        #                                    alsoNonOLMet=TRUE)
-        #     if (is.null(loadMetrics)) {
-        #         results <- as.data.table(t(rep(NA, length(signalCol))))
-        #         setnames(results, signalCol)
-        #         results[, signalCoverage := 0]
-        #         results[, regionSetCoverage := 0]
-        #         results[, totalRegionNumber := numOfRegions]
-        #         results[, meanRegionSize := round(mean(width(regionSet)), 1)]
-        #     } else {
-        #         # calculate mean difference
-        #         # pooled standard deviation
-        #         sdPool <- sqrt((loadMetrics$sd_OL^2 + loadMetrics$sd_nonOL^2) / 2)
-        #         
-        #         # mean difference
-        #         # error if signalCoverage > (1/2) * totalCpGs
-        #         meanDiff <- (loadMetrics$mean_OL - loadMetrics$mean_nonOL) / 
-        #             (sdPool * sqrt((1 / loadMetrics$signalCoverage) - (1 / (totalCpGs - loadMetrics$signalCoverage))))
-        #         results <- as.data.table(t(meanDiff))
-        #         colnames(results) <- loadMetrics$testCol
-        #         
-        #         # add information about degree of overlap
-        #         results <- cbind(results, loadMetrics[1, .SD, .SDcols = c("signalCoverage", "regionSetCoverage", "totalRegionNumber", "meanRegionSize")]) 
-        #     }
-        #     
-        # } else if (scoringMetric == "rankSum") {
-        #     
-        #     # if (wilcox.conf.int) {
-        #     #     # returns confidence interval
-        #     #     wRes <- rsWilcox(dataDT = loadingDT, regionSet=regionSet, 
-        #     #                      signalCol = signalCol, 
-        #     #                      conf.int = wilcox.conf.int)
-        #     #     
-        #     #     if (is.null(wRes)) {
-        #     #         results <- as.data.table(t(rep(NA, length(signalCol) * 2)))
-        #     #         setnames(results, paste0(rep(signalCol, each=2), 
-        #     #                                  c("_low", "_high")))
-        #     #         results[, signalCoverage := 0]
-        #     #         results[, regionSetCoverage := 0]
-        #     #         results[, totalRegionNumber := numOfRegions]
-        #     #         results[, meanRegionSize := round(mean(width(regionSet)), 1)]
-        #     #     } else {
-        #     #         results <- as.data.table(wRes)
-        #     #     }    
-        #     #     
-        #     # } else {
-        #         # returns p value
-        #         # one sided test since I took the absolute value of the loadings 
-        #         wRes <- rsWilcox(dataDT = loadingDT, regionSet=regionSet, 
-        #                          signalCol = signalCol, alternative="greater")
-        #         
-        #         if (is.null(wRes)) {
-        #             results <- as.data.table(t(rep(NA, length(signalCol))))
-        #             setnames(results, signalCol)
-        #             results[, signalCoverage := 0]
-        #             results[, regionSetCoverage := 0]
-        #             results[, totalRegionNumber := numOfRegions]
-        #             results[, meanRegionSize := round(mean(width(regionSet)), 1)]
-        #         } else {
-        #             results <- as.data.table(wRes)
-        #         }    
-        #     #}
-          
+
     } else {
         # signalCoordType == "multiBase"
         # for ATAC-seq
@@ -2257,5 +2219,49 @@ regionOLMean <- function(signalDT, signalGR, regionSet,
     return(signalAve)
 }
 
+##########################################################################
+# matrix scoring
+# 1. make a region set matrix. The dimensions are nrows=nfeatures of 
+# epigenetic data segmentation (e.g. ATAC consensus peaks), ncol=nregionsets. 
+# It has a 1 for data regions that are overlapped by a given region set 
+# and a zero for data regions that do not overlap the region set
+# This will produce an unweighted mean.
+# 2. Multiply the region set matrix times the loading/correlation matrix.
+# 3. Divide by total covered regions for that region set to get the mean. This
+# is the region set score.
 
+# @template signalCoord
+# @template GRList
+# @value Returns a matrix where each column corresponds to one region set
+# and rows are data regions
+olToMat = function(signalCoord, GRList) {
+    # calculate overlaps only once
+    # region set must be subject to fit with scoring functions
+    olList <- lapply(X = GRList, FUN = function(x) findOverlaps(query = signalCoord, 
+                                                                subject = x))
+    
+    # each column is a region set
+    rsMat = matrix(data = rep(0, length(GRList) * length(signalCoord)), 
+                   nrow=length(signalCoord))
+    for (i in seq_along(GRList)) {
+        rsMat[unique(queryHits(olList[[i]])), i] = 1
+    }
+    
+    colnames(rsMat) = names(GRList)
+    return(rsMat)
+    # totalRegionNumber = sapply(X = GRList, length)
+    # meanRegionSize = sapply(X = GRList, function(x) round(mean(width(x))))
+}
+rsMat = olToMat()
+
+dim(rsMat)
+loadings=loadings[, c("PC1", "PC2")]
+dim(loadings)
+
+loadings = abs(loadings)
+rsScoresMatrix = t(rsMat) %*% loadings
+covCount = colSums(rsMat)
+rsScoresMatrix = apply(rsScoresMatrix, MARGIN = 2, FUN = function(x) x/covCount)
+View(rsScoresMatrix[order(rsScoresMatrix[,"PC1"], decreasing = T),])
+View(rsScoresMatrix[order(rsScoresMatrix[,"PC2"], decreasing = T),])
 
