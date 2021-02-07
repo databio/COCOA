@@ -294,9 +294,9 @@ aggregateSignal <- function(signal,
     # if a lot of entries became 0
     
     # the scoring metrics that support matrix scoring
-    if (scoringMetric %in% c("simpleMean", 
+    if ((scoringMetric %in% c("simpleMean", 
                              "regionMean", 
-                             "proportionWeightedMean")) {
+                             "proportionWeightedMean")) & !is.null(rsOLMat)) {
         
         # dim(rsMat)
         # loadings<-loadings[, c("PC1", "PC2")]
@@ -312,18 +312,11 @@ aggregateSignal <- function(signal,
                                        MARGIN = 2, 
                                        FUN = function(x) x/covCount))
         results$signalCoverage <- covCount
-        # rsOLMat does not give the regionSetCoverage, totalRegionNumber
-        # or meanRegionSize
+
         
-        # add these columns?
-        # results[, signalCoverage := 0]
-        # results[, regionSetCoverage := 0]
-        # results[, totalRegionNumber := numOfRegions]
-        # results[, meanRegionSize := round(mean(width(regionSet)), 1)]
-        
-        
-        
-        
+        # don't add coverage columns since they are the same every time 
+        # and only need to be calculated once
+
     }
     
     
@@ -2251,47 +2244,151 @@ regionOLMean <- function(signalDT, signalGR, regionSet,
 # @template signalCoord
 # @template GRList
 # @template scoringMetric
-# @value Returns a matrix where each column corresponds to one region set
-# and rows are data regions. Weights depend on the scoringMetric
+# @value Returns a list with two items: 1. a weight matrix where each 
+# column corresponds to one region set
+# and rows are data regions. 2. A data.frame with size and coverage information
+# about the region sets.
+
+# Matrix weights depend on the scoringMetric
 # All signalCoord regions and region set regions should be run through function
 # at the same time so that there will be proper weighting if a region set 
 # region overlaps multiple signalCoord regions and a scoringMetric other than
 # "simpleMean" is being used.
-olToMat = function(signalCoord, GRList, scoringMetric) {
+# @examples data("brcaMCoord1")
+# data("nrf1_chr1")
+# data("esr1_chr1")
+# myGRL <- GRangesList(esr1_chr1, nrf1_chr1)
+# 
+olToMat = function(signalCoord, GRList, scoringMetric, maxRow=500000) {
+    
+
     # calculate overlaps only once
     # region set must be subject to fit with scoring functions
     olList <- lapply(X = GRList, FUN = function(x) findOverlaps(query = signalCoord, 
                                                                 subject = x))
     
     # each column is a region set
-    rsMat = matrix(data = rep(0, length(GRList) * length(signalCoord)), 
+    rsMat <- matrix(data = rep(0, length(GRList) * length(signalCoord)), 
                    nrow=length(signalCoord))
+    
+    nMat <- ceiling(length(signalCoord) / maxRow)
+    finalMatRows <- length(signalCoord) %% maxRow
+    if (finalMatRows == 0) {
+        finalMatRows = maxRow
+    }
+    # rep(x, 0) is fine if nMat=1
+    matRowNVec = c(rep(maxRow, nMat-1), finalMatRows)
+    rsMatList <- list()
+    if (nMat > 1) {
+        for (matCount in 1:(nMat-1)) {
+            rsMatList[[matCount]] = matrix(data=rep(0, maxRow * length(GRList), 
+                                                    nrow=maxRow))
+        }
+        # final matrix might not be the same size
+        rsMatList[[nMat]] = matrix(data=rep(0, finalMatRows * length(GRList), 
+                                                nrow=finalMatRows)) 
+  
+    } else { # nMat = 1
+        rsMatList[[nMat]] = matrix(data=rep(0, finalMatRows * length(GRList), 
+                                            nrow=finalMatRows)) 
+    }
+    #######################################################################
+    # tmpVec = rep(0, length(signalCoord))
     if (scoringMetric == "simpleMean") {
         for (i in seq_along(GRList)) {
-            rsMat[unique(queryHits(olList[[i]])), i] = 1
-        }
+            if (length(olList[[i]]) != 0) {
+                tmpCount = 1
+                tmpVec = rep(0, length(signalCoord))
+                # normalize by number so that matrix multiplication during COCOA scoring will produce mean
+                tmpVec[unique(queryHits(olList[[i]]))] <- 1 / length(unique(queryHits(olList[[i]])))   
+                
+                # for coordinate chunks
+                for (j in seq_along(rsMatList)) {
+                    rsMatList[[j]][, i] <- tmpVec[tmpCount:(tmpCount + matRowNVec[j]-1)]
+                    tmpCount = tmpCount + matRowNVec[j]
+                }
+            }
+          }
     } else if (scoringMetric == "regionMean") {
         # instead of 1 give weight proportional to how many signalCoord are 
         # overlapped 
         
         for (i in seq_along(GRList)) {
-        # aggregate number of overlaps by region set region
-            tmp = as.data.table(olList[[i]])
-            # want the count per region set number
-            tmp[, .N, by=subjectHits]
-        
-            # rsMat[unique(queryHits(olList[[i]])), i] = 1
+            if (length(olList[[i]]) != 0) {
+                tmpCount = 1
+                tmpVec = rep(0, length(signalCoord))
+                # aggregate number of overlaps by region set region
+                tmp <- as.data.table(olList[[i]])
+                # want the count per region set number
+                tmp[, rCount := (1/.N), , by=subjectHits]
+                normFactor <- sum(tmp$rCount)
+                tmpVec[tmp$queryHits] <- tmp$rCount / normFactor
+                
+                # for coordinate chunks
+                for (j in seq_along(rsMatList)) {
+                    rsMatList[[j]][, i] <- tmpVec[tmpCount:(tmpCount + matRowNVec[j]-1)]
+                    tmpCount = tmpCount + matRowNVec[j]
+                }
+            }
         }
         
     } else if (scoringMetric == "proportionWeightedMean") {
         
+        for (i in seq_along(GRList)) {
+            if (length(olList[[i]]) != 0) { 
+                tmpCount = 1
+                tmpVec = rep(0, length(signalCoord))
+                olap  <- pintersect(GRList[[i]][subjectHits(olList[[i]])],
+                                    signalCoord[queryHits(olList[[i]])])
+                pOlap <- width(olap) / width(GRList[[i]][subjectHits(olList[[i]])])
+                
+                # weighted average
+                denom <- sum(pOlap)
+    
+                # aggregate pOlap by signalCoord region
+                olDT <- data.table(queryHits = queryHits(olList[[i]]), 
+                                   pOlap=pOlap/denom)
+                normDT <- olDT[, .(coordSum := sum(pOlap)), by=queryHits)]
+                tmpVec[normDT$queryHits] <- normDT$coordSum
+                
+                # for coordinate chunks
+                for (j in seq_along(rsMatList)) {
+                    rsMatList[[j]][, i] <- tmpVec[tmpCount:(tmpCount + matRowNVec[j]-1)]
+                    tmpCount = tmpCount + matRowNVec[j]
+                }
+                
+                
+                # below comment outdated?
+                # some rows may be duplicated if a signalMat region overlapped multiple
+                # regions from signalGR but that is ok
+                # signalMat <- signalMat[queryHits(hits), ] # done in next step to prevent extra copying
+                
+                
+
+            }
+        }
     } else {
         stop("The given scoringMetric cannot be used with matrix scoring.")
     }
 
     
-    colnames(rsMat) = names(GRList)
-    return(rsMat)
+    lapply(X = rsMat, FUN = function(x) colnames(x) <- names(GRList))
+    
+    
+    totalRegionNumber <- vapply(X = GRList, FUN = length, FUN.VALUE = -1)
+    meanRegionSize <- 
+    # list item 2
+    rsInfo = data.frame(rsName=names(GRList), signalCoverage, 
+                        regionSetCoverage, totalRegionNumber, 
+                        meanRegionSize)
+    # results[, signalCoverage := 0]
+    # results[, regionSetCoverage := 0]
+    # results[, totalRegionNumber := numOfRegions]
+    # results[, meanRegionSize := round(mean(width(regionSet)), 1)]
+    
+    
+    # overlap matrix and region set coverage info as data.frame 
+    return(list(rsMatList, rsInfo))
     # totalRegionNumber = sapply(X = GRList, length)
     # meanRegionSize = sapply(X = GRList, function(x) round(mean(width(x))))
 }
