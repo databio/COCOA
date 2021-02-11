@@ -277,8 +277,25 @@ runCOCOAPerm <- function(genomicSignal,
     } else {
         pOlapList <- NULL
     }
+    #########################################################################
+    # create region set overlap matrix
+    # this code should be after code modifying "signal"
+    if (is.null(rsOLMat) && (scoringMetric %in% c("simpleMean", 
+                                                  "regionMean", 
+                                                  "proportionWeightedMean"))) {
+        olMatRes <- olToMat(signalListCoord = signalCoord,
+                            GRList = GRList, 
+                            scoringMetric = scoringMetric)
+        rsMatList <- olMatRes[[1]]
+        rsInfo <- olMatRes[[2]]
+        if (is.null(signalList)) {
+            signalMatList <- splitSignal(signal = signal, 
+                                         maxRow = nrow(rsMatList[[1]]))
+        }
+    }
     
-    #################
+    
+    #######################################################################
     
         
     indList <- list()
@@ -521,6 +538,8 @@ runCOCOA <- function(genomicSignal,
                     variationMetric = "cor", 
                     scoringMetric="default", verbose=TRUE,
                     absVal=TRUE, olList=NULL, pOlapList=NULL,
+                    rsMatList=NULL, 
+                    signalList=NULL, rsInfo=NULL,
                     centerGenomicSignal=TRUE,
                     centerTargetVar=TRUE, 
                     returnCovInfo=TRUE) {
@@ -544,6 +563,9 @@ runCOCOA <- function(genomicSignal,
     # reorder the sample labels
     targetVar <- data.frame(targetVar[sampleOrder, ])
     colnames(targetVar) <- featureNames
+    
+    
+    
     
     # calculate correlation
     featureLabelCor <- createCorFeatureMat(dataMat = genomicSignal, 
