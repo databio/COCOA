@@ -2381,10 +2381,10 @@ matScore <- function(rsMatList, signalMatList, rsInfo) {
     # signalMatList is features X target variables
     # multiply matrices
     scoreL <- mapply(FUN = function(x, y) t(x) %*% y, 
-                    x=rsMatList, y=signalMatList)
+                    x=rsMatList, y=signalMatList, SIMPLIFY = FALSE)
     # each item in scoreL is region sets X target variables
     # combine results. Already normalized to one so can just add to get mean.
-    scoreDF <- do.call("+", scoreL)
+    scoreDF <- Reduce("+", scoreL)
     
     resultsDF <- cbind(scoreDF, rsInfo)
     return(resultsDF)
