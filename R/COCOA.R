@@ -2375,7 +2375,7 @@ olToMat = function(signalCoord, GRList, scoringMetric, maxRow=500000) {
 }
 
 # multiply region set matrices with data matrices to get COCOA score
-matScore <- function(rsMatList, signalMatList, covInfo) {
+matScore <- function(rsMatList, signalMatList, rsInfo) {
     
     # rsMatList mats are features X region sets
     # signalMatList is features X target variables
@@ -2386,7 +2386,7 @@ matScore <- function(rsMatList, signalMatList, covInfo) {
     # combine results. Already normalized to one so can just add to get mean.
     scoreDF <- do.call("+", scoreL)
     
-    resultsDF <- cbind(scoreDF, covInfo)
+    resultsDF <- cbind(scoreDF, rsInfo)
     return(resultsDF)
 }
 
@@ -2409,5 +2409,4 @@ splitSignal <- function(signal, maxRow=500000) {
     
     return(signalList)
 }
-
 
