@@ -29,7 +29,6 @@
 #' @template signalCol
 #' @template scoringMetric
 #' @template absVal
-#' @template olList
 #' @param centerGenomicSignal Logical. Should rows in genomicSignal
 #' be centered based on
 #' their means? (subtracting row mean from each row)
@@ -136,7 +135,6 @@ runCOCOAPerm <- function(genomicSignal,
                          signalCol=c("PC1", "PC2"),
                          scoringMetric="default",
                          absVal=TRUE,
-                         olList=NULL,
                          centerGenomicSignal=TRUE,
                          centerTargetVar=TRUE,
                          variationMetric="cor",
@@ -160,7 +158,7 @@ runCOCOAPerm <- function(genomicSignal,
     }
     rsScores = rsScores[, colsToAnnotate] # prevents error that occurs if extra column is factor
     
-    # more efficient to only do once (not that high impact though)
+    # more efficient to only do once
     if (centerGenomicSignal) {
         cpgMeans <- rowMeans(genomicSignal, na.rm = TRUE)
         # centering before calculating correlation
@@ -207,76 +205,78 @@ runCOCOAPerm <- function(genomicSignal,
         }
     }
     
-    #################
-    if (is.null(olList)) {
-        
-        #######
-        # must take out NA rows before getting OL list. Otherwise later calculations 
-        # will use wrong indices. 
-        
-        # what happens if there are NAs or Inf in `signal`?
-        # any NAs that overlap the regionSet will cause the score to be NA
-        if (is(genomicSignal, "data.table")) {
-            naRows = apply(X = genomicSignal[, , with=FALSE, drop=FALSE], 
-                           MARGIN = 1, FUN = function(x) any(is.na(x)))
-        } else {
-            naRows = apply(X = genomicSignal[, , drop=FALSE], 
-                           MARGIN = 1, FUN = function(x) any(is.na(x)))    
-        }
-        
-        if (any(naRows)) {
-            genomicSignal <- genomicSignal[!naRows, ]
-            signalCoord <- signalCoord[!naRows]
-            warning("Removing rows with NA from `genomicSignal`")
-        }
-        
-        #################################################################
-        
-        # calculate overlaps only once
-        # region set must be subject to fit with scoring functions
-        olList <- lapply(X = GRList, FUN = function(x) findOverlaps(query = signalCoord, 
-                                                                 subject = x))
-        totalRegionNumber = sapply(X = GRList, length)
-        meanRegionSize = sapply(X = GRList, function(x) round(mean(width(x))))
-    }
-    
-    # also calculate coverage info
-    # @param rsOL 
-    calculateCovInfo <- function(rsOL, 
-                                 scoringMetric=scoringMetric, 
-                                 pOlap=NULL) {
-        
-        covInfo <- data.frame(signalCoverage=length(unique(queryHits(rsOL))), 
-                              regionSetCoverage=length(unique(subjectHits(rsOL))))
-        
-        if (scoringMetric == "proportionWeightedMean") {
-            
-            covInfo$sumProportionOverlap <- sum(pOlap)
-        }
-        
-    }
-    
-    covInfo <- lapply(X = olList, FUN = function(x) calculateCovInfo(rsOL=x, 
-                                                          scoringMetric = scoringMetric))
-    
-    
-    if (scoringMetric == "proportionWeightedMean") {
-        getPOlap <- function(rsOL, signalGR, regionSet) {
-            olap  <- pintersect(signalGR[queryHits(rsOL)],
-                                regionSet[subjectHits(rsOL)])
-            pOlap <- width(olap) / width(regionSet[subjectHits(rsOL)])
-            return(pOlap)
-        }
-        
-        # list
-        pOlapList <- mapply(FUN = function(x, y) getPOlap(rsOL = x, 
-                                                     signalGR=signalCoord, 
-                                                     regionSet = y), 
-                       x=olList, y=GRList, SIMPLIFY = FALSE)
-        covInfo$sumProportionOverlap <- sapply(X = pOlapList, FUN = sum)
-    } else {
-        pOlapList <- NULL
-    }
+    ########################################################################
+    # # deprecated. Now using matrix calculations instead
+    #
+    # if (is.null(olList)) {
+    #     
+    #     #######
+    #     # must take out NA rows before getting OL list. Otherwise later calculations 
+    #     # will use wrong indices. 
+    #     
+    #     # what happens if there are NAs or Inf in `signal`?
+    #     # any NAs that overlap the regionSet will cause the score to be NA
+    #     if (is(genomicSignal, "data.table")) {
+    #         naRows = apply(X = genomicSignal[, , with=FALSE, drop=FALSE], 
+    #                        MARGIN = 1, FUN = function(x) any(is.na(x)))
+    #     } else {
+    #         naRows = apply(X = genomicSignal[, , drop=FALSE], 
+    #                        MARGIN = 1, FUN = function(x) any(is.na(x)))    
+    #     }
+    #     
+    #     if (any(naRows)) {
+    #         genomicSignal <- genomicSignal[!naRows, ]
+    #         signalCoord <- signalCoord[!naRows]
+    #         warning("Removing rows with NA from `genomicSignal`")
+    #     }
+    #     
+    #     #################################################################
+    #     
+    #     # calculate overlaps only once
+    #     # region set must be subject to fit with scoring functions
+    #     olList <- lapply(X = GRList, FUN = function(x) findOverlaps(query = signalCoord, 
+    #                                                              subject = x))
+    #     totalRegionNumber = sapply(X = GRList, length)
+    #     meanRegionSize = sapply(X = GRList, function(x) round(mean(width(x))))
+    # }
+    # 
+    # # also calculate coverage info
+    # # @param rsOL 
+    # calculateCovInfo <- function(rsOL, 
+    #                              scoringMetric=scoringMetric, 
+    #                              pOlap=NULL) {
+    #     
+    #     covInfo <- data.frame(signalCoverage=length(unique(queryHits(rsOL))), 
+    #                           regionSetCoverage=length(unique(subjectHits(rsOL))))
+    #     
+    #     if (scoringMetric == "proportionWeightedMean") {
+    #         
+    #         covInfo$sumProportionOverlap <- sum(pOlap)
+    #     }
+    #     
+    # }
+    # 
+    # covInfo <- lapply(X = olList, FUN = function(x) calculateCovInfo(rsOL=x, 
+    #                                                       scoringMetric = scoringMetric))
+    # 
+    # 
+    # if (scoringMetric == "proportionWeightedMean") {
+    #     getPOlap <- function(rsOL, signalGR, regionSet) {
+    #         olap  <- pintersect(signalGR[queryHits(rsOL)],
+    #                             regionSet[subjectHits(rsOL)])
+    #         pOlap <- width(olap) / width(regionSet[subjectHits(rsOL)])
+    #         return(pOlap)
+    #     }
+    #     
+    #     # list
+    #     pOlapList <- mapply(FUN = function(x, y) getPOlap(rsOL = x, 
+    #                                                  signalGR=signalCoord, 
+    #                                                  regionSet = y), 
+    #                    x=olList, y=GRList, SIMPLIFY = FALSE)
+    #     covInfo$sumProportionOverlap <- sapply(X = pOlapList, FUN = sum)
+    # } else {
+    #     pOlapList <- NULL
+    # }
     #########################################################################
     # create region set overlap matrix
     # this code should be after code modifying "signal"
@@ -328,8 +328,8 @@ runCOCOAPerm <- function(genomicSignal,
                                 centerGenomicSignal = centerGenomicSignal,
                                 centerTargetVar = centerTargetVar,
                                 verbose=verbose,
-                                olList=olList,
-                                pOlapList=pOlapList,
+                                rsMatList = rsMatList,
+                                rsInfo = rsInfo,
                                 returnCovInfo = returnCovInfo)
                 message(y) # must be ahead of object that is saved as cache, not after
                 tmp
@@ -354,8 +354,8 @@ runCOCOAPerm <- function(genomicSignal,
                           scoringMetric=scoringMetric,
                           absVal=absVal,
                           verbose=verbose,
-                          olList=olList,
-                          pOlapList=pOlapList,
+                          rsMatList=rsMatList,
+                          rsInfo = rsInfo,
                           returnCovInfo = returnCovInfo)
             message(".")
             return(tmp)
@@ -486,8 +486,6 @@ runCOCOAPerm <- function(genomicSignal,
 #' @template scoringMetric
 #' @template verbose
 #' @template absVal
-#' @template olList
-#' @template pOlapList
 #' @param centerGenomicSignal Logical. Should rows in genomicSignal
 #' be centered based on
 #' their means? (subtracting row mean from each row)
@@ -537,13 +535,14 @@ runCOCOA <- function(genomicSignal,
                     sampleOrder=1:nrow(targetVar),
                     variationMetric = "cor", 
                     scoringMetric="default", verbose=TRUE,
-                    absVal=TRUE, olList=NULL, pOlapList=NULL,
+                    absVal=TRUE,
                     rsMatList=NULL, 
-                    signalList=NULL, rsInfo=NULL,
+                    rsInfo=NULL,
                     centerGenomicSignal=TRUE,
                     centerTargetVar=TRUE, 
                     returnCovInfo=TRUE) {
     
+    signalList <- NULL
     # if vector is given, return error
     if (is.null(dim(targetVar))) {
         stop("`targetVar` should be a matrix or data.frame")
@@ -580,13 +579,33 @@ runCOCOA <- function(genomicSignal,
         absVal <- FALSE    
     }
     
+    if (!is.null(rsMatList) && (scoringMetric %in% c("simpleMean", "regionMean", 
+                                "proportionWeightedMean"))) {
+        
+        if (is.null(rsMatList)) {
+            olMatRes <- olToMat(signalListCoord = signalCoord,
+                                GRList = GRList, 
+                                scoringMetric = scoringMetric)
+            rsMatList <- olMatRes[[1]]
+            rsInfo <- olMatRes[[2]]
+        }
+        if (is.null(signalList)) {
+            signalList <- splitSignal(signal = featureLabelCor, 
+                                         maxRow = nrow(rsMatList[[1]]))
+        }
+        
+    }
+    
     
     # run COCOA
     thisPermRes <- aggregateSignalGRList(signal=featureLabelCor, 
                            signalCoord=signalCoord, GRList=GRList, 
                            signalCol = signalCol, 
                            scoringMetric = scoringMetric, verbose = verbose,
-                           absVal = absVal, olList = olList, pOlapList=pOlapList,
+                           absVal = absVal, # olList = olList, pOlapList=pOlapList,
+                           rsMatList=rsMatList,
+                           rsInfo = rsInfo,
+                           signalList=signalList,
                            returnCovInfo=returnCovInfo)
     
     # return

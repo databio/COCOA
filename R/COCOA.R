@@ -108,7 +108,7 @@ if (getRversion() >= "2.15.1") {
 #' is "proportionWeightedMean". This vector should contain the proportion of 
 #' each regionSet region that is overlapped by a signalCoord region. The 
 #' order of pOlap should be the same as the overlaps in rsOL. 
-#' @param rsOLMat Matrix. 
+#' @param rsMatList Matrix. 
 #' @template returnCovInfo
 #' @template checkInput
 
@@ -150,8 +150,7 @@ aggregateSignal <- function(signal,
                             scoringMetric = "default",
                             verbose = FALSE,
                             absVal=TRUE, 
-                            rsOL=NULL, pOlap=NULL, 
-                            rsOLMat=NULL,
+                            rsOL=NULL, pOlap=NULL,
                             returnCovInfo=TRUE, 
                             .checkInput=TRUE) {
     
@@ -296,7 +295,7 @@ aggregateSignal <- function(signal,
     # the scoring metrics that support matrix scoring
     if ((scoringMetric %in% c("simpleMean", 
                              "regionMean", 
-                             "proportionWeightedMean")) & !is.null(rsOLMat)) {
+                             "proportionWeightedMean")) & !is.null(rsMatList)) {
         
         # dim(rsMat)
         # loadings<-loadings[, c("PC1", "PC2")]
@@ -489,9 +488,7 @@ aggregateSignal <- function(signal,
 # method. returns a 95% confidence interval from the Wilcoxon rank sum test
 # instead of p value.
 #' @template absVal
-#' @template olList
-#' @template pOlapList
-#' @param rsOLMat. 
+#' @param rsMatList. 
 #' @template returnCovInfo
 #' @return Data.frame of results, one row for each region set. 
 #' It has the following columns:
@@ -535,8 +532,8 @@ aggregateSignalGRList <- function(signal,
                      signalCoordType = "default",
                      scoringMetric = "default",
                      verbose = TRUE,
-                     absVal=TRUE, olList=NULL, 
-                     pOlapList=NULL, rsMatList=NULL, 
+                     absVal=TRUE, 
+                     rsMatList=NULL, 
                      signalList=NULL, rsInfo=NULL,
                      returnCovInfo=TRUE) {
 
@@ -547,8 +544,8 @@ aggregateSignalGRList <- function(signal,
                              signalCoord=signalCoord,
                              regionSet=NULL,
                              signalCol = signalCol,
-                             GRList=GRList,
-                             olList=olList)
+                             GRList=GRList)#,
+                             #olList=olList)
     
     ########## check that dimensions of inputs are consistent
     # length of signal coord = nrow of signal
@@ -639,30 +636,34 @@ aggregateSignalGRList <- function(signal,
         absVal <- FALSE
     }
     
-    # create region set overlap matrix
-    # this code should be after code modifying "signal"
-    if (is.null(rsOLMat) && (scoringMetric %in% c("simpleMean", 
-                                                  "regionMean", 
-                                                  "proportionWeightedMean"))) {
-        olMatRes <- olToMat(signalListCoord = signalCoord,
-                            GRList = GRList, 
-                            scoringMetric = scoringMetric)
-        rsMatList <- olMatRes[[1]]
-        rsInfo <- olMatRes[[2]]
-        if (is.null(signalList)) {
-            signalMatList <- splitSignal(signal = signal, 
-                                         maxRow = nrow(rsMatList[[1]]))
-        }
-    }
+    # ## if this function is only being run once, use data.table calculations
+    # # create region set overlap matrix
+    # # this code should be after code modifying "signal"
+    # if (scoringMetric %in% c("simpleMean", 
+    #                                               "regionMean", 
+    #                                               "proportionWeightedMean")) {
+    #     if (is.null(rsMatList)) {
+    #         olMatRes <- olToMat(signalListCoord = signalCoord,
+    #                             GRList = GRList, 
+    #                             scoringMetric = scoringMetric)
+    #         rsMatList <- olMatRes[[1]]
+    #         rsInfo <- olMatRes[[2]]
+    #     }
+    # 
+    #     if (is.null(signalList)) {
+    #         signalMatList <- splitSignal(signal = signal, 
+    #                                      maxRow = nrow(rsMatList[[1]]))
+    #     }
+    # }
     
     
-    if (!is.null(rsOLMat) && (scoringMetric %in% c("simpleMean", 
+    if (!is.null(rsMatList) && (scoringMetric %in% c("simpleMean", 
                                                    "regionMean", 
                                                    "proportionWeightedMean"))) {
         resultsDF <- matScore(rsMatList = rsMatList, 
                                 signalMatList=signalMatList, 
                               rsInfo=rsInfo)
-    } else if (is.null(olList)) {
+    } else { # not matrix COCOA. Old COCOA with data.table
         # apply over the list of region sets
         resultsList <- lapplyAlias(GRList,
                                    function(x) aggregateSignal(
@@ -675,62 +676,10 @@ aggregateSignalGRList <- function(signal,
                                        verbose = verbose,
                                        absVal = absVal, pOlap=NULL,
                                        returnCovInfo=returnCovInfo))
-        # resultsList <- mapply(FUN = function(x) aggregateSignal(
-        #     signal = signal,
-        #     signalCoord = signalCoord,
-        #     signalCoordType = signalCoordType,
-        #     regionSet = x,
-        #     signalCol = signalCol,
-        #     scoringMetric = scoringMetric,
-        #     verbose = verbose,
-        #     absVal = absVal, pOlap=y, 
-        #     returnCovInfo=returnCovInfo), x=GRList, y=pOlapList)
-        #wilcox.conf.int = wilcox.conf.int,
-    } else {
-        # # apply over the list of region sets
-        # resultsList <- lapplyAlias(olList,
-        #                            function(x) aggregateSignal(
-        #                                signal = signal,
-        #                                signalCoord = signalCoord,
-        #                                signalCoordType = signalCoordType,
-        #                                regionSet = NULL,
-        #                                signalCol = signalCol,
-        #                                scoringMetric = scoringMetric,
-        #                                verbose = verbose,
-        #                                absVal = absVal, 
-        #                                rsOL=x, pOlap=pOlapList, returnCovInfo=returnCovInfo))
-        # #wilcox.conf.int = wilcox.conf.int,
-        if (is.null(pOlapList)) {
-            # mapply does not work if pOlapList is null and other argument is not null
-            resultsList <- lapplyAlias(olList, FUN = function(x) aggregateSignal(
-                signal = signal,
-                signalCoord = signalCoord,
-                signalCoordType = signalCoordType,
-                regionSet = NULL,
-                signalCol = signalCol,
-                scoringMetric = scoringMetric,
-                verbose = verbose,
-                absVal = absVal, 
-                rsOL=x,
-                returnCovInfo=returnCovInfo))
-        } else {
-            resultsList <- mapply(FUN = function(x, y) aggregateSignal(
-                signal = signal,
-                signalCoord = signalCoord,
-                signalCoordType = signalCoordType,
-                regionSet = NULL,
-                signalCol = signalCol,
-                scoringMetric = scoringMetric,
-                verbose = verbose,
-                absVal = absVal, 
-                rsOL=x, pOlap=y,
-                returnCovInfo=returnCovInfo), 
-                x=olList, y=pOlapList)
-        }
-        
+    }
 
     }
-    if (!is.null(rsOLMat) && (scoringMetric %in% c("simpleMean", 
+    if (!is.null(rsMatList) && (scoringMetric %in% c("simpleMean", 
                                                    "regionMean", 
                                                    "proportionWeightedMean"))) {
         return(resultsDF)
