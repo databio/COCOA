@@ -582,13 +582,6 @@ runCOCOA <- function(genomicSignal,
     if (!is.null(rsMatList) && (scoringMetric %in% c("simpleMean", "regionMean", 
                                 "proportionWeightedMean"))) {
         
-        if (is.null(rsMatList)) {
-            olMatRes <- olToMat(signalListCoord = signalCoord,
-                                GRList = GRList, 
-                                scoringMetric = scoringMetric)
-            rsMatList <- olMatRes[[1]]
-            rsInfo <- olMatRes[[2]]
-        }
         if (is.null(signalList)) {
             signalList <- splitSignal(signal = featureLabelCor, 
                                          maxRow = nrow(rsMatList[[1]]))
