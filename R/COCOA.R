@@ -678,7 +678,6 @@ aggregateSignalGRList <- function(signal,
                                        returnCovInfo=returnCovInfo))
     }
 
-    }
     if (!is.null(rsMatList) && (scoringMetric %in% c("simpleMean", 
                                                    "regionMean", 
                                                    "proportionWeightedMean"))) {
@@ -2410,5 +2409,4 @@ splitSignal <- function(signal, maxRow=500000) {
     
     return(signalList)
 }
-
 
