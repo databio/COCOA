@@ -1,0 +1,14 @@
+citEntry(entry="article",
+         title = "COCOA: coordinate covariation analysis of epigenetic heterogeneity",
+         author = personList( as.person("John T. Lawson" ),
+           as.person("Jason P. Smith" ),
+           as.person("Stefan Bekiranov" ),
+           as.person("Francine E. Garrett-Bakelman" ),
+           as.person("Nathan C. Sheffield" )),
+         year = 2020,
+         journal = "Genome Biology",
+         volume = "21",
+         doi = "10.1186/s13059-020-02139-4",
+         url = "https://genomebiology.biomedcentral.com/articles/10.1186/s13059-020-02139-4",
+         textVersion = 
+         "Lawson, J.T., Smith, J.P., Bekiranov, S. et al. COCOA: coordinate covariation analysis of epigenetic heterogeneity. Genome Biol 21, 240 (2020). https://doi.org/10.1186/s13059-020-02139-4" )

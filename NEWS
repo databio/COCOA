@@ -1,6 +1,12 @@
 # Change log
 Notable changes to this project will be documented in this file.
 
+## [2.4.1] -- 2020-10-27
+
+    - Reference added for newly release COCOA paper
+    - New function plotAnnoScoreDist added to visualize trends in COCOA score results.
+    - Median scoring method added for calculating COCOA scores
+
 ## [2.0.0] -- 2019-10-30
 
     - Supervised analysis functionality added

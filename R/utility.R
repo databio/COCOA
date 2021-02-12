@@ -78,19 +78,22 @@ checkConvertInputClasses <- function(signal=NULL,
 getScoringMethods <- function(scoringContext = "both") {
     
     if (scoringContext == "singleBase") {
+        # must list all available methods
         sMethods <- c("default", "regionMean", "simpleMean", 
-                      "regionMedian")
+                      "regionMedian", "simpleMedian")
     } else if (scoringContext == "multiBase") {
         sMethods <- c("default", "simpleMean", 
-                      "proportionWeightedMean")
+                      "proportionWeightedMean", "simpleMedian")
     } else if (scoringContext == "both") {
+        # union not intersection
         sMethods <- c("default", "regionMean", "simpleMean", 
-                     "regionMedian",
+                     "regionMedian", "simpleMedian",
                      # "meanDiff", "rankSum", 
                      "proportionWeightedMean")
     } else if (scoringContext == "metaRegionProfile") {
         sMethods <- c("default", "regionMean", "simpleMean",
-                      "regionMedian", "proportionWeightedMean")
+                      "regionMedian", "simpleMedian", 
+                      "proportionWeightedMean")
     } else {
         stop("Invalid scoringContext specified")
     }

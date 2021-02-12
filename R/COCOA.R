@@ -37,7 +37,7 @@
 #' @importFrom ggplot2 ggplot aes facet_wrap geom_boxplot geom_jitter geom_line
 #'             theme_classic xlab ylab geom_hline ylim scale_color_discrete
 #'             scale_x_discrete scale_fill_brewer scale_color_manual
-#'             scale_color_brewer
+#'             scale_color_brewer theme element_line element_text geom_point
 #' @importFrom ComplexHeatmap Heatmap draw
 #' @import BiocGenerics S4Vectors IRanges GenomicRanges simpleCache
 #' @importFrom data.table ":=" setDT data.table setkey fread setnames 
@@ -72,7 +72,7 @@ if (getRversion() >= "2.15.1") {
     utils::globalVariables(c(
         ".", "..calcCols", "bin", "binID", "chr", "id", "colsToAnnotate", 
         "coordinateDT",
-        "coverage", "pOlap", "regionGroupID", "regionID", "theme", 
+        "coverage", "Group", "pOlap", "regionGroupID", "regionID", "theme", 
         "meanRegionSize", "regionSetCoverage", "rowIndex", "rsIndex",
         "rsRegionID", "totalRegionNumber", "signalCoverage", ".SD",
         "sumProportionOverlap")) 
@@ -187,7 +187,8 @@ aggregateSignal <- function(signal,
                          Check spelling and available options."))
         }
         
-        ###### check that signalCoordTypesignalCoordType is appropriate
+
+        ###### check that signalCoordType is appropriate
         if (!(signalCoordType %in% c("default", "singleBase", "multiBase"))) {
             stop(cleanws("signalCoordType not recognized. 
                          Check spelling/capitalization."))
@@ -250,8 +251,6 @@ aggregateSignal <- function(signal,
         
     }
         
-    # numOfRegions <- length(regionSet)
-    # totalCpGs    <- nrow(signal)
     
     # extreme positive or negative values both give important information
     # take absolute value or not
@@ -292,12 +291,29 @@ aggregateSignal <- function(signal,
         loadAgMain <- as.data.table(regionOLMean(signalDT = loadingDT, 
                                                  signalGR = signalCoord,
                                                  regionSet = regionSet,
-                                                 calcCols= signalCol, 
+                                                 calcCols= signalCol,
+                                                 metric = "mean",
                                                  rsOL = rsOL,
                                                  returnCovInfo=returnCovInfo))
         results <- .formatResults(loadAgMain, scoringMetric = scoringMetric, 
                                   regionSet=regionSet, signalCol = signalCol,
                                   returnCovInfo=returnCovInfo)
+    } else if (scoringMetric == "simpleMedian") {
+        # scoring singleBase and multiBase both with this function for
+        # simpleMedian
+        loadAgMain <- as.data.table(regionOLMean(signalDT = loadingDT, 
+                                                 signalGR = signalCoord,
+                                                 regionSet = regionSet,
+                                                 calcCols= signalCol,
+                                                 metric = "median", 
+                                                 rsOL=rsOL,
+                                                 returnCovInfo = returnCovInfo))
+        
+        results <- .formatResults(loadAgMain, scoringMetric = scoringMetric, 
+                                  regionSet=regionSet, signalCol = signalCol,
+                                  returnCovInfo=returnCovInfo)
+        
+        
     } else if (signalCoordType == "singleBase") {
         # do the actual aggregation
         if (scoringMetric == "regionMean") {
@@ -338,7 +354,8 @@ aggregateSignal <- function(signal,
                                       scoringMetric = scoringMetric,
                                       regionSet=regionSet, signalCol = signalCol,
                                       returnCovInfo=returnCovInfo)
-            
+
+        } 
         # } else if (scoringMetric == "meanDiff") {
         #     # if (is.null(pcLoadAv)) {
         #     #     # calculate (should already be absolute)
@@ -409,7 +426,7 @@ aggregateSignal <- function(signal,
         #             results <- as.data.table(wRes)
         #         }    
         #     #}
-        }  
+          
     } else {
         # signalCoordType == "multiBase"
         # for ATAC-seq
@@ -1572,6 +1589,11 @@ BSAggregate <- function(BSDT, regionsGRL, BSCoord=NULL, excludeGR=NULL,
             fo <- findOverlaps(query = bsgr, subject = regionsGR)
         }
         
+        if (length(subjectHits(fo)) < 1) {
+            warning("Insufficient overlap between signalCoord and the region set.")
+            return(NULL)
+        }
+        
     } else { 
         # Build a table to keep track of which regions belong to which group
         # BIOC note: sapply returns a list where each item is of different length
@@ -1581,6 +1603,11 @@ BSAggregate <- function(BSDT, regionsGRL, BSCoord=NULL, excludeGR=NULL,
         #     regionID=seq_len(regionsGR), 
         #     withinGroupID= as.vector(unlist(sapply(regionsGRL.length, seq))),
         #     regionGroupID=rep(seq_along(regionsGRL), regionsGRL.length))
+        
+        if (length(subjectHits(rsOL)) < 1) {
+            warning("Insufficient overlap between signalCoord and the region set.")
+            return(NULL)
+        }
         
         # only works for when one region set is given in regionsGRL (ie does
         # not work for metaregion profiles)
@@ -1612,11 +1639,6 @@ BSAggregate <- function(BSDT, regionsGRL, BSCoord=NULL, excludeGR=NULL,
 
     # message("Setting regionIDs...")
     BSDT <- BSDT[queryHits(fo),] #restrict the table to CpGs (or input region) in any region set.
-
-    if (NROW(BSDT) < 1) {
-        warning("No BSDT sites in the given region list; please expand your regionsGRL")
-        return(NULL)
-    }
 
     BSDT[,regionID:=subjectHits(fo)] #record which region they overlapped.
     #BSDT[queryHits(fo),regionID:=subjectHits(fo)]
@@ -2185,6 +2207,7 @@ regionOLWeightedMean <- function(signalMat, signalGR,
 # The region set to score.
 # @param calcCols character object. Column names. A mean will be calculated for 
 # each of these columns (columns should be numeric).
+# @param metric character. "mean" or "median"
 # @template rsOL
 # @template returnCovInfo
 # @value Returns data.frame with columns 'calcCols', signalCoverage col has
@@ -2194,7 +2217,7 @@ regionOLWeightedMean <- function(signalMat, signalGR,
 # Returns NULL if there is no overlap between signalGR and regionSet
 
 regionOLMean <- function(signalDT, signalGR, regionSet, 
-                         calcCols, rsOL=NULL, returnCovInfo=TRUE) {
+                         calcCols, metric="mean", rsOL=NULL, returnCovInfo=TRUE) {
 
     if (is.null(rsOL)) {
         hits  <- findOverlaps(query = signalGR, subject = regionSet)
@@ -2208,9 +2231,19 @@ regionOLMean <- function(signalDT, signalGR, regionSet,
 
     # some rows may be duplicated if a signalDT region overlapped multiple
     # regions from signalGR but that is ok
-    # mean of the overlapping signalDT values
-    signalAve <- as.data.frame(t(colMeans(signalDT[queryHits(hits), ..calcCols])))
 
+
+    if (metric == "mean") {
+        # mean of the overlapping signalDT values
+        signalAve <- as.data.frame(t(colMeans(signalDT[queryHits(hits),..calcCols])))
+    } else if (metric == "median") {
+        # median of the overlapping signalDT values
+        signalAve <- as.data.frame(t(apply(X = signalDT[queryHits(hits),..calcCols], 2, median)))
+        
+    } else {
+        stop("Error in regionOLMean function. Invalid metric specified.")
+    }
+    
     if (returnCovInfo) {
         # add columns for coverage info
         signalAve$signalCoverage    <- length(unique(queryHits(hits)))

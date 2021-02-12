@@ -133,8 +133,47 @@ test_that("aggregateSignal, scoring metrics, and aggregateSignalGRList", {
                    simpleMeanRes$regionSetCoverage, 
                    simpleMeanRes$totalRegionNumber, 
                    simpleMeanRes$meanRegionSize))
+    ###########################################################
+    # test simpleMedian scoring method
+    simpleMedRes <- COCOA:::aggregateSignal(signal = loadingMatW, 
+                                             signalCoord = coordinateDTW, 
+                                             regionSet = regionSetW, 
+                                             signalCol = c("PC2", "PC3"), 
+                                             scoringMetric = "simpleMedian")
     
+    PC2RC <- median(c(2, 0, 1))
+    PC3RC <- median(c(8, 6, 5))
+    expect_equal(c(PC2RC, PC3RC, 3, 2, 2, mean(width(regionSetW))), 
+                 c(simpleMedRes$PC2, simpleMedRes$PC3, simpleMedRes$signalCoverage, 
+                   simpleMedRes$regionSetCoverage, 
+                   simpleMedRes$totalRegionNumber, 
+                   simpleMedRes$meanRegionSize))
+    
+    ##########################################################
+    # test regionMedian scoring method
+    
+    # median first within region, then
+    # between regions
 
+    tmpCoordDTW = data.frame(chr=c(coordinateDTW$chr, "chr3"),
+                             start = c(coordinateDTW$start, 350),
+                             end = c(coordinateDTW$end, 350))
+    tmpLoadMatW = data.frame(PC2= c(loadingMatW[, "PC2"], 20), 
+                             PC3=c(loadingMatW[, "PC3"], 85))
+    regionMedRes <- COCOA:::aggregateSignal(signal = tmpLoadMatW, 
+                                            signalCoord = tmpCoordDTW, 
+                                            regionSet = regionSetW, 
+                                            signalCol = c("PC2", "PC3"), 
+                                            scoringMetric = "regionMedian")
+    PC2R <- median(c(2, median(c(0, 1, 20))))
+    PC3R <- median(c(8, median(c(6, 5, 85))))
+    expect_equal(c(PC2R, PC3R, 4, 2, 2, mean(width(regionSetW))), 
+                 c(regionMedRes$PC2, regionMedRes$PC3, regionMedRes$signalCoverage, 
+                   regionMedRes$regionSetCoverage, 
+                   regionMedRes$totalRegionNumber, 
+                   regionMedRes$meanRegionSize))
+    
+    #########################################################
     # # test mean difference scoring method
     # PC2Num <- mean(c(2, 0, 1)) - mean(c(1, 2, 3, 4))
     # PC3Num <- mean(c(8, 6, 5)) - mean(c(7, 4, 3, 10))
