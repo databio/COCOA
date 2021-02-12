@@ -643,7 +643,7 @@ aggregateSignalGRList <- function(signal,
     #                                               "regionMean", 
     #                                               "proportionWeightedMean")) {
     #     if (is.null(rsMatList)) {
-    #         olMatRes <- olToMat(signalListCoord = signalCoord,
+    #         olMatRes <- olToMat(signalCoord = signalCoord,
     #                             GRList = GRList, 
     #                             scoringMetric = scoringMetric)
     #         rsMatList <- olMatRes[[1]]
@@ -2409,4 +2409,5 @@ splitSignal <- function(signal, maxRow=500000) {
     
     return(signalList)
 }
+
 
