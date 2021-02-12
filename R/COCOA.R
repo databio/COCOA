@@ -661,7 +661,7 @@ aggregateSignalGRList <- function(signal,
                                                    "regionMean", 
                                                    "proportionWeightedMean"))) {
         resultsDF <- matScore(rsMatList = rsMatList, 
-                                signalMatList=signalMatList, 
+                                signalMatList=signalList, 
                               rsInfo=rsInfo)
     } else { # not matrix COCOA. Old COCOA with data.table
         # apply over the list of region sets
@@ -2409,4 +2409,3 @@ splitSignal <- function(signal, maxRow=500000) {
     
     return(signalList)
 }
-
