@@ -280,7 +280,7 @@ runCOCOAPerm <- function(genomicSignal,
     #########################################################################
     # create region set overlap matrix
     # this code should be after code modifying "signal"
-    if (is.null(rsOLMat) && (scoringMetric %in% c("simpleMean", 
+    if (is.null(rsMatList) && (scoringMetric %in% c("simpleMean", 
                                                   "regionMean", 
                                                   "proportionWeightedMean"))) {
         olMatRes <- olToMat(signalListCoord = signalCoord,
