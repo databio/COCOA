@@ -283,7 +283,7 @@ runCOCOAPerm <- function(genomicSignal,
     if (scoringMetric %in% c("simpleMean", 
                                                   "regionMean", 
                                                   "proportionWeightedMean")) {
-        olMatRes <- olToMat(signalListCoord = signalCoord,
+        olMatRes <- olToMat(signalCoord = signalCoord,
                             GRList = GRList, 
                             scoringMetric = scoringMetric)
         rsMatList <- olMatRes[[1]]
