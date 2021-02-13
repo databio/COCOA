@@ -2409,3 +2409,5 @@ splitSignal <- function(signal, maxRow=500000) {
     
     return(signalList)
 }
+
+
