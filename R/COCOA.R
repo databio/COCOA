@@ -152,7 +152,7 @@ aggregateSignal <- function(signal,
                             absVal=TRUE, 
                             rsOL=NULL, pOlap=NULL,
                             returnCovInfo=TRUE, 
-                            .checkInput=TRUE) {
+                            .checkInput=FALSE) {
     
     ################### checking inputs  #################################
     
@@ -188,6 +188,7 @@ aggregateSignal <- function(signal,
                          Check spelling and available options."))
         }
         
+
         ###### check that signalCoordType is appropriate
         if (!(signalCoordType %in% c("default", "singleBase", "multiBase"))) {
             stop(cleanws("signalCoordType not recognized. 
@@ -252,8 +253,6 @@ aggregateSignal <- function(signal,
     }
     ################### finished checking inputs #########################
         
-    numOfRegions <- length(regionSet)
-    totalCpGs    <- nrow(signal)
     
     
     #### UPDATE: only do this once, in outermost function possible #####
@@ -383,8 +382,7 @@ aggregateSignal <- function(signal,
                                       jExpr = aggrCommand,
                                       byRegionGroup = TRUE,
                                       splitFactor = NULL,
-                                      returnOLInfo = returnCovInfo,
-                                      rsOL=rsOL)
+                                      returnOLInfo = returnCovInfo)
             
             results <- .formatResults(loadAgMain, 
                                       scoringMetric = scoringMetric,
@@ -409,18 +407,16 @@ aggregateSignal <- function(signal,
                                       regionSet=regionSet, signalCol = signalCol,
                                       returnCovInfo=returnCovInfo)
             
-
         } 
     }
     
     # signalOLMetrics() # make sure it works with no overlap
     if (verbose) {
-        message("|")
+        message(":", appendLF=FALSE)
     }
         
     return(as.data.frame(results))
 }
-
 
 # format results of scoring functions in aggregateSignal()
 .formatResults <- function(loadAgMain, scoringMetric, 
@@ -1097,7 +1093,7 @@ BSBinAggregate <- function(BSDT, rangeDT, binCount,
     #     binnedBSDT <- binnedBSDT[readCount > minReads,]
     # }
     if (verbose) {
-        message("|")
+        message(".", appendLF=FALSE)
     }
     
     return(binnedBSDT)
@@ -2170,14 +2166,14 @@ regionOLMean <- function(signalDT, signalGR, regionSet,
 
     # some rows may be duplicated if a signalDT region overlapped multiple
     # regions from signalGR but that is ok
-    signalDT  <- signalDT[queryHits(hits), ]
+
 
     if (metric == "mean") {
         # mean of the overlapping signalDT values
-        signalAve <- as.data.frame(t(colMeans(signalDT[,..calcCols])))
+        signalAve <- as.data.frame(t(colMeans(signalDT[queryHits(hits),..calcCols])))
     } else if (metric == "median") {
         # median of the overlapping signalDT values
-        signalAve <- as.data.frame(t(apply(X = signalDT[,..calcCols], 2, median)))
+        signalAve <- as.data.frame(t(apply(X = signalDT[queryHits(hits),..calcCols], 2, median)))
         
     } else {
         stop("Error in regionOLMean function. Invalid metric specified.")
