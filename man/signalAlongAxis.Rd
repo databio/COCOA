@@ -14,6 +14,8 @@ signalAlongAxis(
   topXVariables = NULL,
   variableScores = NULL,
   decreasing = TRUE,
+  regionAnnoGRList = NULL,
+  plotRegionMean = FALSE,
   cluster_columns = FALSE,
   cluster_rows = FALSE,
   row_title = "Sample",
@@ -72,6 +74,14 @@ nrow(genomicSignal)). Only used if topXVariables is given. The highest
 
 \item{decreasing}{Logical. Whether samples should be sorted in 
 decreasing order of `orderByCol` or not (FALSE is increasing order).}
+
+\item{regionAnnoGRList}{GRangesList. Each GRanges in the list should be
+a genomic annotation. These will be displayed above or below the heatmap.}
+
+\item{plotRegionMean}{Logical. If TRUE, the genomicSignal will be averaged
+for each region in regionSet and those region averages 
+will be plotted instead of the
+original variables in genomicSignal.}
 
 \item{cluster_columns}{Logical. Whether to cluster columns 
 (the genomic signal, e.g. DNA methylation values for each CpG).}

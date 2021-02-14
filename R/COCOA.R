@@ -107,8 +107,7 @@ if (getRversion() >= "2.15.1") {
 #' @param pOlap Numeric vector. Only used if rsOL is given and scoringMetric
 #' is "proportionWeightedMean". This vector should contain the proportion of 
 #' each regionSet region that is overlapped by a signalCoord region. The 
-#' order of pOlap should be the same as the overlaps in rsOL. 
-#' @param rsMatList Matrix. 
+#' order of pOlap should be the same as the overlaps in rsOL.
 #' @template returnCovInfo
 #' @template checkInput
 
@@ -287,38 +286,8 @@ aggregateSignal <- function(signal,
     
     ###########################################################################
     # scoring
-    
-    # would rounding speed up aggregation?, potentially make a sparse matrix
-    # if a lot of entries became 0
-    
-    # the scoring metrics that support matrix scoring
-    if ((scoringMetric %in% c("simpleMean", 
-                             "regionMean", 
-                             "proportionWeightedMean")) & !is.null(rsMatList)) {
-        
-        # dim(rsMat)
-        # loadings<-loadings[, c("PC1", "PC2")]
-        # dim(loadings)
-        # 
-        # loadings <- abs(loadings)
-        
-        # sum per region set
-        rsScoresMatrix <- t(rsMat) %*% loadings
-        # normalize for regions covered (for average)
-        covCount <- colSums(rsMat) 
-        results <- as.data.frame(apply(rsScoresMatrix, 
-                                       MARGIN = 2, 
-                                       FUN = function(x) x/covCount))
-        results$signalCoverage <- covCount
 
-        
-        # don't add coverage columns since they are the same every time 
-        # and only need to be calculated once
-
-    }
-    
-    
-    # works for both singleBase and multiBase (UPDATE: did, but not matrix scoring)
+    # works for both singleBase and multiBase
     if (scoringMetric == "simpleMean") {
 
         loadAgMain <- as.data.table(regionOLMean(signalDT = loadingDT, 
@@ -484,7 +453,7 @@ aggregateSignal <- function(signal,
 # method. returns a 95% confidence interval from the Wilcoxon rank sum test
 # instead of p value.
 #' @template absVal
-#' @param rsMatList. 
+#' @template rsMatList
 #' @template returnCovInfo
 #' @return Data.frame of results, one row for each region set. 
 #' It has the following columns:
