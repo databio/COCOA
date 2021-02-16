@@ -646,7 +646,7 @@ aggregateSignalGRList <- function(signal,
     if (!is.null(rsMatList) && (scoringMetric %in% c("simpleMean", 
                                                    "regionMean", 
                                                    "proportionWeightedMean"))) {
-        return(resultsDF)
+        return(as.data.frame(resultsDF))
     } else {
         resultsDT <- do.call(rbind, resultsList) 
         resultsDF <- as.data.frame(resultsDT) 
@@ -654,9 +654,10 @@ aggregateSignalGRList <- function(signal,
     }
 }    
 
-# @param dataMat columns of dataMat should be samples/patients, rows should be genomic signal
-# (each row corresponds to one genomic coordinate/range)
-# @param featureMat Rows should be samples, columns should be "features" 
+# @param dataMat rows of dataMat should be samples/patients, 
+# columns should be genomic signal
+# (each column corresponds to one genomic coordinate/range)
+# @param featureMat Matrix. Rows should be samples, columns should be "features" 
 # (whatever you want to get correlation with: eg PC scores),
 # all columns in featureMat will be used (subset when passing to function
 # in order to not use all columns)
@@ -680,15 +681,15 @@ createCorFeatureMat <- function(dataMat, featureMat,
                                centerDataMat=TRUE, centerFeatureMat = TRUE, 
                                testType="cor", covariate=NULL) {
     
-    featureMat <- as.matrix(featureMat) # copies?
+    # featureMat <- as.matrix(featureMat) # copies?
     featureNames <- colnames(featureMat)
     nFeatures <- ncol(featureMat)
     nDataDims <- nrow(dataMat)
     
     if (centerDataMat) {
-        cpgMeans <- rowMeans(dataMat, na.rm = TRUE)
+        cpgMeans <- colMeans(dataMat, na.rm = TRUE)
         # centering before calculating correlation
-        dataMat <- apply(X = dataMat, MARGIN = 2, function(x) x - cpgMeans)
+        dataMat <- apply(X = dataMat, MARGIN = 1, function(x) x - cpgMeans)
         
     }
     
@@ -702,7 +703,7 @@ createCorFeatureMat <- function(dataMat, featureMat,
     }
     
     # avoid this copy and/or delay transpose until after calculating correlation?
-    dataMat <- as.data.frame(t(dataMat)) # copies
+     # dataMat <- as.data.frame(t(dataMat)) # copies, expect transposed form as input instead
     
     
     if (testType == "cor") {
@@ -2252,8 +2253,10 @@ olToMat = function(signalCoord, GRList, scoringMetric, maxRow=500000) {
                     rsMatList[[j]][, i] <- tmpVec[tmpCount:(tmpCount + matRowNVec[j]-1)]
                     tmpCount = tmpCount + matRowNVec[j]
                 } 
-            } 
-          }
+            }
+        }
+        # put in correct orientation for matrix multiplication to prevent transposition
+        rsMatList <- lapply(rsMatList, FUN = t) # transpose
     } else if (scoringMetric == "regionMean") {
         # instead of 1 give weight proportional to how many signalCoord are 
         # overlapped 
@@ -2278,6 +2281,8 @@ olToMat = function(signalCoord, GRList, scoringMetric, maxRow=500000) {
                 }
             }
         }
+        # put in correct orientation for matrix multiplication to prevent transposition
+        rsMatList <- lapply(rsMatList, FUN = t) # transpose
         
     } else if (scoringMetric == "proportionWeightedMean") {
         sumProportionOverlap = rep(0, length(GRList))
@@ -2297,9 +2302,9 @@ olToMat = function(signalCoord, GRList, scoringMetric, maxRow=500000) {
     
                 # aggregate pOlap by signalCoord region
                 olDT <- data.table(queryHits = queryHits(olList[[i]]), 
-                                   pOlap=pOlap/denom)
+                                   pOlap=pOlap)
                 normDT <- olDT[, .(coordSum = sum(pOlap)), by=queryHits]
-                tmpVec[normDT$queryHits] <- normDT$coordSum
+                tmpVec[normDT$queryHits] <- normDT$coordSum / denom
                 
                 # for coordinate chunks
                 for (j in seq_along(rsMatList)) {
@@ -2314,6 +2319,8 @@ olToMat = function(signalCoord, GRList, scoringMetric, maxRow=500000) {
                 # signalMat <- signalMat[queryHits(hits), ] # done in next step to prevent extra copying
             }
         }
+        # put in correct orientation for matrix multiplication to prevent transposition
+        rsMatList <- lapply(rsMatList, FUN = t) # transpose
     } else {
         stop("The given scoringMetric cannot be used with matrix scoring.")
     }
@@ -2340,12 +2347,14 @@ olToMat = function(signalCoord, GRList, scoringMetric, maxRow=500000) {
 }
 
 # multiply region set matrices with data matrices to get COCOA score
+# rsMatList mats should have rows as region sets and cols as features
+# ^ so data won't have to be copied during transpose
 matScore <- function(rsMatList, signalMatList, rsInfo) {
     
     # rsMatList mats are features X region sets
     # signalMatList is features X target variables
     # multiply matrices
-    scoreL <- mapply(FUN = function(x, y) t(x) %*% y, 
+    scoreL <- mapply(FUN = function(x, y) x %*% y, 
                     x=rsMatList, y=signalMatList, SIMPLIFY = FALSE)
     # each item in scoreL is region sets X target variables
     # combine results. Already normalized to one so can just add to get mean.

@@ -134,6 +134,34 @@ runCOCOA <- function(genomicSignal,
     }
     rsScores = rsScores[, colsToAnnotate] # prevents error that occurs if extra column is factor
     
+    
+    checkConvertInputClasses(signal=genomicSignal,
+                             signalCoord=signalCoord,
+                             regionSet=NULL,
+                             signalCol=signalCol,
+                             rsOL=NULL)
+    
+    # detect signalCoordType
+    # when signalCoord is a GRanges object
+    if (any(start(signalCoord) != end(signalCoord))) {
+        signalCoordType <- "multiBase"
+    } else {
+        signalCoordType <- "singleBase"
+    }
+    
+    
+    # if "default" scoring method is given, choose based on signalCoordType
+    if (scoringMetric == "default") {
+        if (signalCoordType == "singleBase") {
+            scoringMetric <- "regionMean"   
+        } else if (signalCoordType == "multiBase") {
+            scoringMetric <- "proportionWeightedMean"
+        } else {
+            stop(cleanws("signalCoordType not recognized. 
+                         Check spelling/capitalization."))
+        }
+    }
+    
     # more efficient to only do once
     if (centerGenomicSignal) {
         cpgMeans <- rowMeans(genomicSignal, na.rm = TRUE)
@@ -153,34 +181,9 @@ runCOCOA <- function(genomicSignal,
         centerTargetVar <- FALSE
     }
     
+    # must be transposed now so it is not (and not copied) during each permutation
+    genomicSignal <- t(genomicSignal)
 
-    checkConvertInputClasses(signal=genomicSignal,
-                             signalCoord=signalCoord,
-                             regionSet=NULL,
-                             signalCol=signalCol,
-                             rsOL=NULL)
-    
-        # detect signalCoordType
-        # when signalCoord is a GRanges object
-        if (any(start(signalCoord) != end(signalCoord))) {
-            signalCoordType <- "multiBase"
-        } else {
-            signalCoordType <- "singleBase"
-        }
-
-    
-    # if "default" scoring method is given, choose based on signalCoordType
-    if (scoringMetric == "default") {
-        if (signalCoordType == "singleBase") {
-            scoringMetric <- "regionMean"   
-        } else if (signalCoordType == "multiBase") {
-            scoringMetric <- "proportionWeightedMean"
-        } else {
-            stop(cleanws("signalCoordType not recognized. 
-                         Check spelling/capitalization."))
-        }
-    }
-    
     ########################################################################
     # create region set overlap matrix
     # this code should be after code modifying "signal"
