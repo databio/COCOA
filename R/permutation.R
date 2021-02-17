@@ -195,6 +195,7 @@ runCOCOA <- function(genomicSignal,
                             scoringMetric = scoringMetric)
         rsMatList <- olMatRes[[1]]
         rsInfo <- olMatRes[[2]]
+        GRList <- NULL
     }
     
     
@@ -527,7 +528,7 @@ runCOCOA <- function(genomicSignal,
         
         if (is.null(signalList)) {
             signalList <- splitSignal(signal = featureLabelCor, 
-                                         maxRow = nrow(rsMatList[[1]]))
+                                         maxRow = ncol(rsMatList[[1]]))
         }
         
     }
