@@ -65,33 +65,33 @@ test_that("olToMat", {
                                GRList = myGRL, scoringMetric = "simpleMean", maxRow = 2)
     # each column (region set) should be normalized to equal 1
     oneVec <- c(regionSet1 = 1, regionSet2 = 1)
-    expect_equal(colSums(do.call(rmOLMat[[1]], what = rbind)), oneVec)
+    expect_equal(rowSums(do.call(rmOLMat[[1]], what = cbind)), oneVec)
     rs1Ex <- rep(0.2, 6)
     rs1Ex[4] <- 0
-    rs1Act <- do.call(rmOLMat[[1]], what = rbind)[, "regionSet1"]
+    rs1Act <- do.call(rmOLMat[[1]], what = cbind)["regionSet1", ]
     expect_equal(rs1Act, rs1Ex)
     rs2Ex <- c(0, 0.5, 0.5, 0, 0, 0)
-    rs2Act <- do.call(rmOLMat[[1]], what = rbind)[, "regionSet2"]
+    rs2Act <- do.call(rmOLMat[[1]], what = cbind)["regionSet2", ]
     expect_equal(rs2Act, rs2Ex)
     
     rmOLMat <- COCOA:::olToMat(signalCoord = COCOA:::dtToGr(regionCoordDT), 
                                GRList = myGRL, scoringMetric = "proportionWeightedMean", 
                                maxRow = 2)
-    expect_equal(colSums(do.call(rmOLMat[[1]], what = rbind)), oneVec)
+    expect_equal(rowSums(do.call(rmOLMat[[1]], what = cbind)), oneVec)
     # proportion of regionSet region overlapped by each signalCoord region
     rs1Ex <- c(101/400+101/201, 51/201, 1, 0, 26/51, 151/451)
     rs1Ex <- rs1Ex / sum(rs1Ex)
-    rs1Act <- do.call(rmOLMat[[1]], what = rbind)[, "regionSet1"]
+    rs1Act <- do.call(rmOLMat[[1]], what = cbind)["regionSet1", ]
     expect_equal(rs1Ex, rs1Act)
     
     # DNA methylation like data
     rmOLMat <- COCOA:::olToMat(signalCoord = COCOA:::dtToGr(coordinateDT), 
                                GRList = myGRL, scoringMetric = "regionMean", maxRow = 6)
-    expect_equal(colSums(do.call(rmOLMat[[1]], what = rbind)), oneVec)
+    expect_equal(rowSums(do.call(rmOLMat[[1]], what = cbind)), oneVec)
     # proportion of regionSet region overlapped by each signalCoord region
     rs2Ex <- c(rep(0,5), 0.5, 0.5, 0, 1, rep(0,11), 1, 0, 0.5, 0.5, rep(0,8))
     rs2Ex <- rs2Ex / sum(rs2Ex)
-    rs2Act <- do.call(rmOLMat[[1]], what = rbind)[, "regionSet2"]
+    rs2Act <- do.call(rmOLMat[[1]], what = cbind)["regionSet2", ]
     expect_equal(rs2Ex, rs2Act)
     
 })

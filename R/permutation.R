@@ -194,7 +194,7 @@ runCOCOA <- function(genomicSignal,
                                                   "proportionWeightedMean")) {
         olMatRes <- olToMat(signalCoord = signalCoord,
                             GRList = GRList, 
-                            scoringMetric = scoringMetric)
+                            scoringMetric = scoringMetric, minRSCov=minRSCov)
         rsMatList <- olMatRes[[1]]
         rsInfo <- olMatRes[[2]]
         GRList <- NULL
