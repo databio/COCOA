@@ -26,6 +26,7 @@ runCOCOA(
   force = FALSE,
   verbose = TRUE,
   returnCovInfo = FALSE,
+  minRSCov = 100,
   ...
 )
 }
@@ -173,6 +174,9 @@ be calculated and included in function output: regionSetCoverage,
 signalCoverage, totalRegionNumber, and meanRegionSize. For the
 proportionWeightedMean scoring method, 
 sumProportionOverlap will also be calculated.}
+
+\item{minRSCov}{integer. Region sets must have at least "minRSCov" regions
+covered at least partially by epigenetic data to be scored.}
 
 \item{...}{Character. Optional additional arguments for simpleCache.}
 }

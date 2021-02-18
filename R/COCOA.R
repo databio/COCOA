@@ -654,9 +654,10 @@ aggregateSignalGRList <- function(signal,
     }
 }    
 
-# @param dataMat rows of dataMat should be samples/patients, 
+# @param dataMat If noNA=FALSE, rows of dataMat should be samples/patients, 
 # columns should be genomic signal
-# (each column corresponds to one genomic coordinate/range)
+# (each column corresponds to one genomic coordinate/range). If noNA=TRUE, rows
+# and columns should be flipped.
 # @param featureMat Matrix. Rows should be samples, columns should be "features" 
 # (whatever you want to get correlation with: eg PC scores),
 # all columns in featureMat will be used (subset when passing to function
@@ -669,6 +670,11 @@ aggregateSignalGRList <- function(signal,
 # "spearmanCor (Spearman correlation)
 # "pcor" (partial correlation), "cov" (covariance (Pearson)),
 # @param covariate
+# @param alreadyCenteredDM logical. Whether dataMat has already been centered. If
+# known, can do matrix multiplication to calculate covariance (and correlation
+# if scaling has been done)
+# @param noNA logical. Assume there might be NA, Inf or NaN. If TRUE, the 
+# function will use matrix multiplication which is faster than cor/cov
 #
 # If a row in dataMat has 0 stand. deviation, correlation will be set to 0
 # instead of NA as would be done by cor()
@@ -679,7 +685,10 @@ aggregateSignalGRList <- function(signal,
 # featureMat = matrix(rnorm(20), 10, 2)
 createCorFeatureMat <- function(dataMat, featureMat, 
                                centerDataMat=TRUE, centerFeatureMat = TRUE, 
-                               testType="cor", covariate=NULL) {
+                               testType="cor", covariate=NULL, 
+                               alreadyCenteredDM=FALSE, alreadyScaledDM=FALSE,
+                               alreadyCenteredFM=FALSE, alreadyScaledFM=FALSE, 
+                               noNA=FALSE) {
     
     # featureMat <- as.matrix(featureMat) # copies?
     featureNames <- colnames(featureMat)
@@ -690,6 +699,7 @@ createCorFeatureMat <- function(dataMat, featureMat,
         cpgMeans <- colMeans(dataMat, na.rm = TRUE)
         # centering before calculating correlation
         dataMat <- apply(X = dataMat, MARGIN = 1, function(x) x - cpgMeans)
+        alreadyCenteredDM <- TRUE
         
     }
     
@@ -700,42 +710,58 @@ createCorFeatureMat <- function(dataMat, featureMat,
         if (dim(featureMat)[1] == 1) {
             featureMat <- t(featureMat)
         }
+        alreadyCenteredFM <- TRUE
     }
     
     # avoid this copy and/or delay transpose until after calculating correlation?
      # dataMat <- as.data.frame(t(dataMat)) # copies, expect transposed form as input instead
     
-    
-    if (testType == "cor") {
-        # create feature correlation matrix with PCs (rows: features/CpGs, columns:PCs)
-        # how much do features correlate with each PC?
-        
-        # put epigenetic data first in cor()
-        featurePCCor <- cor(dataMat, featureMat, use="pairwise.complete.obs", method="pearson")
-
-    } else if (testType == "spearmanCor") {
-        # xtfrm(x) ranking
-        featurePCCor <- cor(dataMat, featureMat, use="pairwise.complete.obs", method="spearman")
-
-    # } else if (testType == "pcor") {
-    #     # partial correlation (account for covariates), ppcor package
-    #     
-    #     featurePCCor <- apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 2, 
-    #                                                                        FUN = function(x) pcor.test(x = x, y=y,
-    #                                                                                                    z=covariate,
-    #                                                                                                    method="pearson")$estimate))
-    #     
-    } else if (testType == "cov") {
-        featurePCCor <- cov(dataMat, featureMat, use="pairwise.complete.obs")
-
+    # spearman not implemented yet
+    if (noNA & (testType != "spearmanCor")) {
+        if (testType == "cor") {
+            # create feature correlation matrix with PCs (rows: features/CpGs, columns:PCs)
+            # how much do features correlate with each PC?
+            
+            # put epigenetic data first in cor()
+            featurePCCor <- dataMat %*% featureMat ## UPDATE
+            
+        } else if (testType == "cov") {
+            featurePCCor <- dataMat %*% featureMat ## UDPATE
+            
+        } else {
+            stop("invalid testType")
+        }
     } else {
-        stop("invalid testType")
+        if (testType == "cor") {
+            # create feature correlation matrix with PCs (rows: features/CpGs, columns:PCs)
+            # how much do features correlate with each PC?
+            
+            # put epigenetic data first in cor()
+            featurePCCor <- cor(dataMat, featureMat, use="pairwise.complete.obs", method="pearson")
+            
+        } else if (testType == "spearmanCor") {
+            # xtfrm(x) ranking
+            featurePCCor <- cor(dataMat, featureMat, use="pairwise.complete.obs", method="spearman")
+            
+            # } else if (testType == "pcor") {
+            #     # partial correlation (account for covariates), ppcor package
+            #     
+            #     featurePCCor <- apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 2, 
+            #                                                                        FUN = function(x) pcor.test(x = x, y=y,
+            #                                                                                                    z=covariate,
+            #                                                                                                    method="pearson")$estimate))
+            #     
+        } else if (testType == "cov") {
+            featurePCCor <- cov(dataMat, featureMat, use="pairwise.complete.obs")
+            
+        } else {
+            stop("invalid testType")
+        }
+        # if standard deviation of the data was zero, NA will be produced
+        # set to 0 because no standard deviation means no correlation with attribute of interest
+        featurePCCor[is.na(featurePCCor)] <- 0
     }
     
-    
-    # if standard deviation of the data was zero, NA will be produced
-    # set to 0 because no standard deviation means no correlation with attribute of interest
-    featurePCCor[is.na(featurePCCor)] <- 0
     colnames(featurePCCor) <- featureNames
     
     return(featurePCCor)
@@ -749,7 +775,7 @@ createCorFeatureMat <- function(dataMat, featureMat,
 #' This profile can show enrichment 
 #' of genomic signals with high feature contribution scores 
 #' in the region set but not in the
-#' surrounding genome, suggesting that variation is linked specifically
+#' surrounding genome, suggiiiesting that variation is linked specifically
 #' to that region set. 
 #' 
 #' All regions in a given region set 

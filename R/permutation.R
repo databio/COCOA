@@ -68,6 +68,8 @@
 #' for fitting that specific gamma distribution.
 #' @template verbose
 #' @template returnCovInfo
+#' @param minRSCov integer. Region sets must have at least "minRSCov" regions
+#' covered at least partially by epigenetic data to be scored.
 #' @param ... Character. Optional additional arguments for simpleCache.
 #'
 #' 
@@ -123,7 +125,7 @@ runCOCOA <- function(genomicSignal,
                          realScoreInDist=TRUE,
                          force=FALSE,
                          verbose=TRUE,
-                         returnCovInfo=FALSE, ...) {
+                         returnCovInfo=FALSE, minRSCov=100, ...) {
     
     
     colsToAnnotate <- signalCol
@@ -237,9 +239,9 @@ runCOCOA <- function(genomicSignal,
             
         helperFun <- function(x, y, ...) {
             # for (i in (length(rsPermScores) + 1):nPerm) {
-            onePermCacheName <- paste0("rsPermScores_", nPerm, "Perm_", variationMetric, "_", dataID, "_Cache", y)
+            onePermCacheName <- paste0("rsPermScores_", variationMetric, "_", dataID, "_Cache", y)
             # create sub caches, one for each permutation
-            simpleCache(onePermCacheName, cacheSubDir = paste0("rsPermScores_", nPerm, "Perm_", variationMetric, "_", dataID), {
+            simpleCache(onePermCacheName, cacheSubDir = paste0("rsPermScores_", variationMetric, "_", dataID), {
                 
                 tmp <- .runCOCOA_old(sampleOrder=x,
                                 genomicSignal=genomicSignal,
