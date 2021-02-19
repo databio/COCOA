@@ -662,10 +662,6 @@ aggregateSignalGRList <- function(signal,
 # (whatever you want to get correlation with: eg PC scores),
 # all columns in featureMat will be used (subset when passing to function
 # in order to not use all columns)
-# @param centerDataMat logical object. Should rows in dataMat be centered based on
-# their means? (subtracting row mean from each row)
-# @param centerFeatureMat logical. Should columns in featureMat be centered based
-# on their means? (subtract column mean from each column)
 # @param testType character object. Can be "cor" (Pearson correlation),
 # "spearmanCor (Spearman correlation)
 # "pcor" (partial correlation), "cov" (covariance (Pearson)),
@@ -683,8 +679,7 @@ aggregateSignalGRList <- function(signal,
 # columns are the columns of featureMat
 # @examples dataMat = matrix(rnorm(50), 5, 10)
 # featureMat = matrix(rnorm(20), 10, 2)
-createCorFeatureMat <- function(dataMat, featureMat, 
-                               centerDataMat=TRUE, centerFeatureMat = TRUE, 
+createCorFeatureMat <- function(dataMat, featureMat,
                                testType="cor", covariate=NULL, 
                                alreadyCenteredDM=FALSE, alreadyScaledDM=FALSE,
                                alreadyCenteredFM=FALSE, alreadyScaledFM=FALSE, 
@@ -694,40 +689,47 @@ createCorFeatureMat <- function(dataMat, featureMat,
     featureNames <- colnames(featureMat)
     nFeatures <- ncol(featureMat)
     nDataDims <- nrow(dataMat)
-    
-    if (centerDataMat) {
-        cpgMeans <- colMeans(dataMat, na.rm = TRUE)
-        # centering before calculating correlation
-        dataMat <- apply(X = dataMat, MARGIN = 1, function(x) x - cpgMeans)
-        alreadyCenteredDM <- TRUE
-        
-    }
-    
-    if (centerFeatureMat) {
-        featureMeans <- colMeans(featureMat, na.rm = TRUE)
-        # centering before calculating correlation(also, t() converts to matrix)
-        featureMat <- t(apply(X = t(featureMat), MARGIN = 2, function(x) x - featureMeans))
-        if (dim(featureMat)[1] == 1) {
-            featureMat <- t(featureMat)
-        }
-        alreadyCenteredFM <- TRUE
-    }
+
     
     # avoid this copy and/or delay transpose until after calculating correlation?
      # dataMat <- as.data.frame(t(dataMat)) # copies, expect transposed form as input instead
     
     # spearman not implemented yet
     if (noNA & (testType != "spearmanCor")) {
+        if (!alreadyCenteredFM) {
+            featureMeans <- colMeans(featureMat, na.rm = TRUE)
+            # centering before calculating correlation(also, t() converts to matrix)
+            featureMat <- t(apply(X = t(featureMat), MARGIN = 2, function(x) x - featureMeans))
+            if (dim(featureMat)[1] == 1) {
+                featureMat <- t(featureMat)
+            }
+        }
+        if (!alreadyCenteredDM) {
+            # more efficient to only do once
+            cpgMeans <- rowMeans(dataMat, na.rm = TRUE)
+            # centering before calculating correlation
+            dataMat <- apply(X = dataMat, MARGIN = 2, function(x) x - cpgMeans)
+        }
+        
+        ##### cor or cov calculations
         if (testType == "cor") {
+            if (!alreadyScaledFM) {
+                featureMat <- scale(x = featureMat, center = FALSE, scale = TRUE)
+            }
+            if (!alreadyScaledDM) {
+                featSD <- apply(X = dataMat, MARGIN = 1, FUN = sd)
+                featSD[featSD == 0] = 1 # 0 sd if no variation, 1 will leave unchanged and not cause error
+                dataMat <- dataMat / featSD
+            }
+            
             # create feature correlation matrix with PCs (rows: features/CpGs, columns:PCs)
             # how much do features correlate with each PC?
             
-            # put epigenetic data first in cor()
-            featurePCCor <- dataMat %*% featureMat ## UPDATE
+            # put epigenetic data first, inner dimensions are samples
+            featurePCCor <- dataMat %*% featureMat
             
         } else if (testType == "cov") {
-            featurePCCor <- dataMat %*% featureMat ## UDPATE
-            
+            featurePCCor <- dataMat %*% featureMat
         } else {
             stop("invalid testType")
         }

@@ -13,8 +13,6 @@ runCOCOA(
   signalCol = c("PC1", "PC2"),
   scoringMetric = "default",
   absVal = TRUE,
-  centerGenomicSignal = TRUE,
-  centerTargetVar = TRUE,
   variationMetric = "cor",
   nPerm = 0,
   useSimpleCache = TRUE,
@@ -113,14 +111,6 @@ will decrease (if there may be anticorrelation between
 regions in a region set). Choose FALSE if you expect regions in a 
 given region set to all change in the same direction (all be positively
 correlated with each other).}
-
-\item{centerGenomicSignal}{Logical. Should rows in genomicSignal
-be centered based on
-their means? (subtracting row mean from each row)}
-
-\item{centerTargetVar}{Logical. Should columns in targetVar be 
-centered based
-on their means? (subtract column mean from each column)}
 
 \item{variationMetric}{Character. The metric to use to quantify the
 association between each feature in genomicSignal and each target

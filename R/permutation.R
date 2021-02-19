@@ -29,12 +29,6 @@
 #' @template signalCol
 #' @template scoringMetric
 #' @template absVal
-#' @param centerGenomicSignal Logical. Should rows in genomicSignal
-#' be centered based on
-#' their means? (subtracting row mean from each row)
-#' @param centerTargetVar Logical. Should columns in targetVar be 
-#' centered based
-#' on their means? (subtract column mean from each column)
 #' @param dataID Character. A unique identifier for this dataset 
 #' (for saving results with simpleCache)
 #' @template variationMetric
@@ -113,8 +107,6 @@ runCOCOA <- function(genomicSignal,
                          signalCol=c("PC1", "PC2"),
                          scoringMetric="default",
                          absVal=TRUE,
-                         centerGenomicSignal=TRUE,
-                         centerTargetVar=TRUE,
                          variationMetric="cor",
                          nPerm=0,
                          useSimpleCache=TRUE,
@@ -127,6 +119,11 @@ runCOCOA <- function(genomicSignal,
                          verbose=TRUE,
                          returnCovInfo=FALSE, minRSCov=100, ...) {
     
+    # if doing matrix calculations of cor/cov, center and/or scale only once ahead of time
+    alreadyCenteredFM <- FALSE
+    alreadyCenteredDM <- FALSE
+    alreadyScaledFM <- FALSE
+    alreadyScaledDM <- FALSE
     
     colsToAnnotate <- signalCol
     allResultsList <- list()
@@ -164,15 +161,18 @@ runCOCOA <- function(genomicSignal,
         }
     }
     
-    # more efficient to only do once
-    if (centerGenomicSignal) {
+    # if no NA, NaN or +/-Inf, can do matrix correlation calculations
+    # different COCOA step than matrix scoring of region sets
+    noNA <- all(is.finite(genomicSignal))
+    if (noNA & (variationMetric %in% c("cov", "cor"))) {
+        
+        # more efficient to only do once
         cpgMeans <- rowMeans(genomicSignal, na.rm = TRUE)
         # centering before calculating correlation
         genomicSignal <- apply(X = genomicSignal, MARGIN = 2, function(x) x - cpgMeans)
         # don't do later
-        centerGenomicSignal <- FALSE
-    }
-    if (centerTargetVar) {
+        alreadyCenteredDM <- TRUE
+        
         featureMeans <- colMeans(targetVar, na.rm = TRUE)
         # centering before calculating correlation (also, t() converts to matrix)
         targetVar <- t(apply(X = t(targetVar), MARGIN = 2, function(x) x - featureMeans))
@@ -180,18 +180,44 @@ runCOCOA <- function(genomicSignal,
             targetVar <- t(targetVar)
         }
         # don't do later
-        centerTargetVar <- FALSE
+        alreadyCenteredFM <- TRUE
     }
+    if (noNA & (variationMetric == "cor")) {
+        targetVar <- scale(x = targetVar, center = FALSE, scale = TRUE)
+        alreadyScaledFM <- TRUE
+        
+        featSD <- apply(X = genomicSignal, MARGIN = 1, FUN = sd)
+        featSD[featSD == 0] = 1 # 0 sd if no variation, 1 will leave unchanged and not cause error
+        genomicSignal <- genomicSignal / featSD
+        alreadyScaledDM <- TRUE
+    }
+        
     
-    # must be transposed now so it is not (and not copied) during each permutation
-    genomicSignal <- t(genomicSignal)
+    # matrix-based region set scoring only works for mean-based scoringMetric's
+    if (scoringMetric %in% c("simpleMean", 
+                             "regionMean", 
+                             "proportionWeightedMean")) {
+        doRSMatScore <- TRUE
+    } else {
+        doRSMatScore <- FALSE
+    }
+     
+    
+    
+    if (!noNA) {
+        # orientation for "cor()" and "cov()"
+        # for these functions, samples need to be rows for both objects
+        # must be transposed now so it is not (and not copied) during each permutation
+        genomicSignal <- t(genomicSignal) 
+    }
+    # for matrix correlation, samples should be rows for only one object (genSig and tarVar)
+    # data is already in correct orientation
+
 
     ########################################################################
     # create region set overlap matrix
     # this code should be after code modifying "signal"
-    if (scoringMetric %in% c("simpleMean", 
-                                                  "regionMean", 
-                                                  "proportionWeightedMean")) {
+    if (doRSMatScore) {
         olMatRes <- olToMat(signalCoord = signalCoord,
                             GRList = GRList, 
                             scoringMetric = scoringMetric, minRSCov=minRSCov)
@@ -224,12 +250,15 @@ runCOCOA <- function(genomicSignal,
                                      variationMetric = variationMetric,
                                      scoringMetric=scoringMetric,
                                      absVal=absVal,
-                                     centerGenomicSignal = centerGenomicSignal,
-                                     centerTargetVar = centerTargetVar,
                                      verbose=verbose,
                                      rsMatList = rsMatList,
                                      rsInfo = rsInfo,
-                                     returnCovInfo = returnCovInfo)
+                                     returnCovInfo = returnCovInfo,
+                                     noNA=noNA,
+                                     alreadyCenteredDM = alreadyCenteredDM,  
+                                     alreadyScaledDM = alreadyScaledDM, 
+                                     alreadyCenteredFM = alreadyCenteredFM, 
+                                     alreadyScaledFM = alreadyScaledFM)
                 rsScores
             }, assignToVariable="rsScores")
         }
@@ -252,12 +281,15 @@ runCOCOA <- function(genomicSignal,
                                 variationMetric = variationMetric,
                                 scoringMetric=scoringMetric,
                                 absVal=absVal,
-                                centerGenomicSignal = centerGenomicSignal,
-                                centerTargetVar = centerTargetVar,
                                 verbose=verbose,
                                 rsMatList = rsMatList,
                                 rsInfo = rsInfo,
-                                returnCovInfo = returnCovInfo)
+                                returnCovInfo = returnCovInfo,
+                                noNA=noNA,
+                                alreadyCenteredDM = alreadyCenteredDM,  
+                                alreadyScaledDM = alreadyScaledDM, 
+                                alreadyCenteredFM = alreadyCenteredFM, 
+                                alreadyScaledFM = alreadyScaledFM)
                 message(y) # must be ahead of object that is saved as cache, not after
                 tmp
                 
@@ -280,12 +312,15 @@ runCOCOA <- function(genomicSignal,
                                       variationMetric = variationMetric,
                                       scoringMetric=scoringMetric,
                                       absVal=absVal,
-                                      centerGenomicSignal = centerGenomicSignal,
-                                      centerTargetVar = centerTargetVar,
                                       verbose=verbose,
                                       rsMatList = rsMatList,
                                       rsInfo = rsInfo,
-                                      returnCovInfo = returnCovInfo)
+                                      returnCovInfo = returnCovInfo,
+                                      noNA=noNA,
+                                      alreadyCenteredDM = alreadyCenteredDM,  
+                                      alreadyScaledDM = alreadyScaledDM, 
+                                      alreadyCenteredFM = alreadyCenteredFM, 
+                                      alreadyScaledFM = alreadyScaledFM)
         }
         
         
@@ -302,7 +337,12 @@ runCOCOA <- function(genomicSignal,
                           verbose=verbose,
                           rsMatList=rsMatList,
                           rsInfo = rsInfo,
-                          returnCovInfo = returnCovInfo)
+                          returnCovInfo = returnCovInfo,
+                          noNA=noNA,
+                          alreadyCenteredDM = alreadyCenteredDM,  
+                          alreadyScaledDM = alreadyScaledDM, 
+                          alreadyCenteredFM = alreadyCenteredFM, 
+                          alreadyScaledFM = alreadyScaledFM)
             message(":", appendLF=FALSE)
             return(tmp)
         }
@@ -432,12 +472,6 @@ runCOCOA <- function(genomicSignal,
 # @template scoringMetric
 # @template verbose
 # @template absVal
-# @param centerGenomicSignal Logical. Should rows in genomicSignal
-# be centered based on
-# their means? (subtracting row mean from each row)
-# @param centerTargetVar Logical. Should columns in targetVar be 
-# centered based
-# on their means? (subtract column mean from each column)
 # @template returnCovInfo
 # @return data.frame. The output of aggregateSignalGRList for one permutation.
 # @examples
@@ -484,9 +518,12 @@ runCOCOA <- function(genomicSignal,
                     absVal=TRUE,
                     rsMatList=NULL, 
                     rsInfo=NULL,
-                    centerGenomicSignal=TRUE,
-                    centerTargetVar=TRUE, 
-                    returnCovInfo=TRUE) {
+                    returnCovInfo=TRUE,
+                    alreadyCenteredDM = FALSE,  
+                    alreadyScaledDM = FALSE, 
+                    alreadyCenteredFM = FALSE, 
+                    alreadyScaledFM = FALSE,
+                    noNA=FALSE) {
     
     signalList <- NULL
     # if vector is given, return error
@@ -514,10 +551,13 @@ runCOCOA <- function(genomicSignal,
     
     # calculate correlation
     featureLabelCor <- createCorFeatureMat(dataMat = genomicSignal, 
-                                          featureMat = targetVar, 
-                                          centerDataMat = centerGenomicSignal, 
-                                          centerFeatureMat = centerTargetVar,
-                                          testType = variationMetric)
+                                          featureMat = targetVar,
+                                          testType = variationMetric,
+                                          noNA=noNA, 
+                                          alreadyCenteredDM = alreadyCenteredDM,  
+                                          alreadyScaledDM = alreadyScaledDM, 
+                                          alreadyCenteredFM = alreadyCenteredFM, 
+                                          alreadyScaledFM = alreadyScaledFM)
     
     # more efficient to do only once instead of for each region set later on
     if (absVal) {
