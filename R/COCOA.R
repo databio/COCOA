@@ -710,6 +710,12 @@ createCorFeatureMat <- function(dataMat, featureMat,
             # centering before calculating correlation
             dataMat <- apply(X = dataMat, MARGIN = 2, function(x) x - cpgMeans)
         }
+        if (!is(featureMat, "matrix")) {
+            featureMat <- as.matrix(featureMat)
+        }
+        if (!is(dataMat, "matrix")) {
+            dataMat <- as.matrix(dataMat)
+        }
         
         ##### cor or cov calculations
         if (testType == "cor") {

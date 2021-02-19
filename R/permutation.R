@@ -536,18 +536,13 @@ runCOCOA <- function(genomicSignal,
     }
     
     
-    # subset to only signalCol
-    targetVar <- targetVar[, signalCol, drop=FALSE]
-    
     # because names are dropped for a single column data.frame when indexing
     # single col data.frame is automatically converted to numeric
-    featureNames <- colnames(targetVar)
-    # reorder the sample labels
-    targetVar <- data.frame(targetVar[sampleOrder, ])
-    colnames(targetVar) <- featureNames
+    # drop=FALSE
     
-    
-    
+    # subset to only signalCol and reorder sample labels
+    targetVar <- targetVar[sampleOrder, signalCol, drop=FALSE]
+
     
     # calculate correlation
     featureLabelCor <- createCorFeatureMat(dataMat = genomicSignal, 
