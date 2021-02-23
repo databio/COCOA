@@ -687,8 +687,6 @@ createCorFeatureMat <- function(dataMat, featureMat,
     
     # featureMat <- as.matrix(featureMat) # copies?
     featureNames <- colnames(featureMat)
-    nFeatures <- ncol(featureMat)
-    nDataDims <- nrow(dataMat)
 
     
     # avoid this copy and/or delay transpose until after calculating correlation?
@@ -696,10 +694,18 @@ createCorFeatureMat <- function(dataMat, featureMat,
     
     # spearman not implemented yet
     if (noNA & (testType != "spearmanCor")) {
+        # for matrix correlation, dataMat will be given with rows as features 
+        # and cols as samples
+        # featureMat has the same orientation for noNA=T or F
+        
+        # must normalize covariation and correlation by sample number (n-1)
+        nSamples <- nrow(featureMat)
+        
         if (!alreadyCenteredFM) {
             featureMeans <- colMeans(featureMat, na.rm = TRUE)
             # centering before calculating correlation(also, t() converts to matrix)
-            featureMat <- t(apply(X = t(featureMat), MARGIN = 2, function(x) x - featureMeans))
+            # apply also converts to matrix here I believe
+            featureMat <- apply(X = featureMat, MARGIN = 1, function(x) x - featureMeans)
             if (dim(featureMat)[1] == 1) {
                 featureMat <- t(featureMat)
             }
@@ -732,10 +738,10 @@ createCorFeatureMat <- function(dataMat, featureMat,
             # how much do features correlate with each PC?
             
             # put epigenetic data first, inner dimensions are samples
-            featurePCCor <- dataMat %*% featureMat
+            featurePCCor <- (dataMat %*% featureMat) / (nSamples - 1)
             
         } else if (testType == "cov") {
-            featurePCCor <- dataMat %*% featureMat
+            featurePCCor <- (dataMat %*% featureMat) / (nSamples - 1)
         } else {
             stop("invalid testType")
         }
