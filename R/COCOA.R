@@ -705,7 +705,7 @@ createCorFeatureMat <- function(dataMat, featureMat,
             featureMeans <- colMeans(featureMat, na.rm = TRUE)
             # centering before calculating correlation(also, t() converts to matrix)
             # apply also converts to matrix here I believe
-            featureMat <- apply(X = featureMat, MARGIN = 1, function(x) x - featureMeans)
+            featureMat <- t(apply(X = featureMat, MARGIN = 1, function(x) x - featureMeans))
             if (dim(featureMat)[1] == 1) {
                 featureMat <- t(featureMat)
             }
