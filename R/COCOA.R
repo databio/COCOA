@@ -646,10 +646,15 @@ aggregateSignalGRList <- function(signal,
     if (!is.null(rsMatList) && (scoringMetric %in% c("simpleMean", 
                                                    "regionMean", 
                                                    "proportionWeightedMean"))) {
+        resultsDF[, signalCol] <- gammaNormalize(rsScores=resultsDF[, signalCol],
+                                                 featureVals=signal[, signalCol])
         return(as.data.frame(resultsDF))
     } else {
         resultsDT <- do.call(rbind, resultsList) 
         resultsDF <- as.data.frame(resultsDT) 
+        resultsDF[, signalCol] <- gammaNormalize(rsScores=resultsDF[, signalCol],
+                                                 featureVals=signal[, signalCol])
+        
         return(resultsDF)   
     }
 }    

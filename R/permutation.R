@@ -638,7 +638,39 @@ permListToOneNullDist <- function(resultsList, rsInd) {
     return(rsNullDist)
 }
 
+# for gammaNormalize()
+pGammaSingle <- function(scoreVec, oneDist) {
+    
+    pValVec <- pgamma(q = scoreVec, shape = oneDist$estimate["shape"], 
+           rate = oneDist$estimate["rate"], 
+           lower.tail = FALSE) # lower.tail=FALSE means 1-x is given
+    return(pValVec)
+}
 
+# get gamma p-value for each region set based on feature values
+# of all CpGs. This is done to normalize for the mean and variance of
+# permutation feature value distributions
+# @param featureVals matrix/data.frame. Should 
+gammaNormalize <- function(rsScores, featureVals, method="mme", force=FALSE) {
+    
+    # estimate distribution parameters
+    # returns a list where each item is a gamma dist for a column of featureVals
+    gList <- fitGammaNullDist(nullDistDF = featureVals, 
+                                 method=method, 
+                                 force=force)
+
+    ####  get p-val for score
+    pValList = list()
+    # once for each column
+    for (i in 1:ncol(rsScores)) {
+        pValList[[i]] <- as.data.frame(pGammaSingle(scoreVec = as.numeric(rsScores[, i]), 
+                                                    oneDist = gList[[i]]))
+    }
+        
+    pValDF <- as.data.frame(do.call("cbind", pValList))
+    colnames(pValDF) <- colnames(rsScores)
+    return(pValDF)
+}
 
 
 
