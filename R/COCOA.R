@@ -582,14 +582,24 @@ aggregateSignalGRList <- function(signal,
         }
     }
     
-    # convert object class outside aggregateSignal to extra prevent copying
-    # (one scoring method needs `signal` as a matrix though)
-    if (!is(signal, "data.table") && (scoringMetric != "proportionWeightedMean")) {
-        signal <- as.data.table(signal)
-    } else if (!is(signal, "matrix") && (scoringMetric == "proportionWeightedMean")) {
-        signal <- as.matrix(signal)
+    if (is.null(signalList)) {
+        # data.table is only used for non-matrix COCOA (legacy)
+        
+        # convert object class outside aggregateSignal to extra prevent copying
+        # (one scoring method needs `signal` as a matrix though)
+        if (!is(signal, "data.table") && (scoringMetric != "proportionWeightedMean")) {
+            signal <- as.data.table(signal)
+        } else if (!is(signal, "matrix") && (scoringMetric == "proportionWeightedMean")) {
+            signal <- as.matrix(signal)
+        }
+        
+    } else {
+        # needed for gamma normalization
+        if (!is(signal, "matrix")) {
+            signal <- as.matrix(signal)
+        }
     }
-    
+
 
     # take absolute value outside aggregateSignal to prevent extra copying
     if (absVal) {
