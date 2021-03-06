@@ -243,33 +243,33 @@ runCOCOA <- function(genomicSignal,
         # generate random indices for shuffling of samples
         # because a for loop is used, if nPerm is increased, the original
         # items in indList will be the same. Keep for loop.
-        for (i in 1:nPerm) {
+        for (i in seq(nPerm)) {
             indList[[i]] <- sample(1:nrow(targetVar), nrow(targetVar))
         }
     }
-
+    
     if (useSimpleCache) {
         
         if (is.null(rsScores)) {
             simpleCache(paste0("rsScores_", variationMetric, "_", dataID), {
                 rsScores <- .runCOCOA_old(sampleOrder=1:nrow(targetVar),
-                                     genomicSignal=genomicSignal,
-                                     signalCoord=signalCoord,
-                                     GRList=GRList,
-                                     signalCol=colsToAnnotate,
-                                     targetVar=targetVar,
-                                     variationMetric = variationMetric,
-                                     scoringMetric=scoringMetric,
-                                     absVal=absVal,
-                                     verbose=verbose,
-                                     rsMatList = rsMatList,
-                                     rsInfo = rsInfo,
-                                     returnCovInfo = returnCovInfo,
-                                     noNA=noNA,
-                                     alreadyCenteredDM = alreadyCenteredDM,  
-                                     alreadyScaledDM = alreadyScaledDM, 
-                                     alreadyCenteredFM = alreadyCenteredFM, 
-                                     alreadyScaledFM = alreadyScaledFM)
+                                          genomicSignal=genomicSignal,
+                                          signalCoord=signalCoord,
+                                          GRList=GRList,
+                                          signalCol=colsToAnnotate,
+                                          targetVar=targetVar,
+                                          variationMetric = variationMetric,
+                                          scoringMetric=scoringMetric,
+                                          absVal=absVal,
+                                          verbose=verbose,
+                                          rsMatList = rsMatList,
+                                          rsInfo = rsInfo,
+                                          returnCovInfo = returnCovInfo,
+                                          noNA=noNA,
+                                          alreadyCenteredDM = alreadyCenteredDM,  
+                                          alreadyScaledDM = alreadyScaledDM, 
+                                          alreadyCenteredFM = alreadyCenteredFM, 
+                                          alreadyScaledFM = alreadyScaledFM)
                 rsScores
             }, assignToVariable="rsScores")
         }
@@ -312,7 +312,7 @@ runCOCOA <- function(genomicSignal,
                 rsPermScores = mapply(FUN = helperFun, x=indList, y=seq_along(indList), ..., SIMPLIFY=FALSE)
                 rsPermScores
                 
-            }, assignToVariable="rsPermScores", cacheDir=cacheDir, ...)    
+            }, assignToVariable="rsPermScores", cacheDir=cacheDir, ...)  
         }
     } else {
         
@@ -338,31 +338,32 @@ runCOCOA <- function(genomicSignal,
         }
         
         if (nPerm > 0) {
-        helperFun2 <- function(x) {
-            tmp <- .runCOCOA_old(sampleOrder=x,
-                          genomicSignal=genomicSignal,
-                          signalCoord=signalCoord,
-                          GRList=GRList,
-                          signalCol=colsToAnnotate,
-                          targetVar=targetVar,
-                          variationMetric = variationMetric,
-                          scoringMetric=scoringMetric,
-                          absVal=absVal,
-                          verbose=verbose,
-                          rsMatList=rsMatList,
-                          rsInfo = rsInfo,
-                          returnCovInfo = returnCovInfo,
-                          noNA=noNA,
-                          alreadyCenteredDM = alreadyCenteredDM,  
-                          alreadyScaledDM = alreadyScaledDM, 
-                          alreadyCenteredFM = alreadyCenteredFM, 
-                          alreadyScaledFM = alreadyScaledFM)
-            message(":", appendLF=FALSE)
-            return(tmp)
+            helperFun2 <- function(x) {
+                tmp <- .runCOCOA_old(sampleOrder=x,
+                                     genomicSignal=genomicSignal,
+                                     signalCoord=signalCoord,
+                                     GRList=GRList,
+                                     signalCol=colsToAnnotate,
+                                     targetVar=targetVar,
+                                     variationMetric = variationMetric,
+                                     scoringMetric=scoringMetric,
+                                     absVal=absVal,
+                                     verbose=verbose,
+                                     rsMatList=rsMatList,
+                                     rsInfo = rsInfo,
+                                     returnCovInfo = returnCovInfo,
+                                     noNA=noNA,
+                                     alreadyCenteredDM = alreadyCenteredDM,  
+                                     alreadyScaledDM = alreadyScaledDM, 
+                                     alreadyCenteredFM = alreadyCenteredFM, 
+                                     alreadyScaledFM = alreadyScaledFM)
+                message(":", appendLF=FALSE)
+                return(tmp)
+            }
+            
+            rsPermScores <- lapply(X = indList, helperFun2)
+            
         }
-        
-        rsPermScores <- lapply(X = indList, helperFun2)
- 
     }
     
     
@@ -1003,23 +1004,3 @@ getPermStatSingle <- function(rsScore, nullDist,
 }
 
 
-##############################################################################
-############### old ###################
-
-# Run COCOA permutations to get null distributions for each region set.
-# For one permutation, there are several steps: 
-# First, we shuffle the sample labels. Second, we calculate the association
-# between the epigenetic data and the shuffled sample labels using the 
-# chosen metric (e.g. correlation). Third, the resulting feature coefficients
-# are used as input to the aggregateSignalGRList function to score each region set.
-# This process is repeated `nPerm` times.
-# 
-# @param groupByRS logical
-
-# @return A list where each item is a data.frame with the null 
-# distribution for a single region set. The length of the list
-# is equal to the number of region sets. The number of rows of 
-# each data.frame is equal to the number of permutations.
-# getNullDist <- function(groupByRS=TRUE) {
-#     
-# }
