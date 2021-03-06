@@ -662,6 +662,9 @@ aggregateSignalGRList <- function(signal,
     } else {
         resultsDT <- do.call(rbind, resultsList) 
         resultsDF <- as.data.frame(resultsDT) 
+        if (is(signal, "data.frame")) {
+            signal <- as.matrix(signal)
+        }
         resultsDF[, signalCol] <- gammaNormalize(rsScores=resultsDF[, signalCol],
                                                  featureVals=signal[, signalCol])
         

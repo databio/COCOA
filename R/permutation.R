@@ -67,13 +67,15 @@
 #' @param ... Character. Optional additional arguments for simpleCache.
 #'
 #' 
-#' @return Returns a list with the following 4 items: 1. a list of length nPerm
+#' @return Returns a list with the following 5 items: 1. a data.frame with
+#' the region set scores.
+#' 2. a list of length nPerm
 #' where each item is a data.frame of the COCOA scores from a single 
 #' permutation. Each data.frame is the output of `runCOCOA()` 
-#' 2. a data.table/data.frame of empirical p-values (the
-#' output of `getPermStat`) 3. a 
+#' 3. a data.table/data.frame of empirical p-values (the
+#' output of `getPermStat`) 4. a 
 #' data.table/data.frame of z-scores (the output of `getPermStat`. 
-#' 4. a data.frame of p-values based on
+#' 5. a data.frame of p-values based on
 #' the gamma approximation (the output of getGammaPVal(). 
 #' @examples 
 #' data("esr1_chr1")
@@ -224,18 +226,27 @@ runCOCOA <- function(genomicSignal,
         rsMatList <- olMatRes[[1]]
         rsInfo <- olMatRes[[2]]
         GRList <- NULL
+        if (!is.null(rsScores)) {
+            if (nrow(rsInfo) != nrow(rsScores)) {
+                stop("rsScores should be filtered beforehand to remove region sets with less than minRSCov coverage.")
+            }
+        }
+        
+        ## NOTE: there might be an error if rsScores is given but not screened by minRSCov
     }
     
     
     #######################################################################
     
-        
-    indList <- list()
-    # generate random indices for shuffling of samples
-    for (i in 1:nPerm) {
-        indList[[i]] <- sample(1:nrow(targetVar), nrow(targetVar))
+    if (nPerm > 0) {
+        indList <- list()
+        # generate random indices for shuffling of samples
+        # because a for loop is used, if nPerm is increased, the original
+        # items in indList will be the same. Keep for loop.
+        for (i in 1:nPerm) {
+            indList[[i]] <- sample(1:nrow(targetVar), nrow(targetVar))
+        }
     }
-    # replicate(10, sample(seq_len(nrow(targetVar)))
 
     if (useSimpleCache) {
         
@@ -263,43 +274,46 @@ runCOCOA <- function(genomicSignal,
             }, assignToVariable="rsScores")
         }
         
-        # create the main permutation cache
-        simpleCache(paste0("rsPermScores_", nPerm, "Perm_", variationMetric, "_", dataID), {
-            
-        helperFun <- function(x, y, ...) {
-            # for (i in (length(rsPermScores) + 1):nPerm) {
-            onePermCacheName <- paste0("rsPermScores_", variationMetric, "_", dataID, "_Cache", y)
-            # create sub caches, one for each permutation
-            simpleCache(onePermCacheName, cacheSubDir = paste0("rsPermScores_", variationMetric, "_", dataID), {
+        
+        if (nPerm > 0) {
+            # create the main permutation cache
+            simpleCache(paste0("rsPermScores_", nPerm, "Perm_", variationMetric, "_", dataID), {
                 
-                tmp <- .runCOCOA_old(sampleOrder=x,
-                                genomicSignal=genomicSignal,
-                                signalCoord=signalCoord,
-                                GRList=GRList,
-                                signalCol=colsToAnnotate,
-                                targetVar=targetVar,
-                                variationMetric = variationMetric,
-                                scoringMetric=scoringMetric,
-                                absVal=absVal,
-                                verbose=verbose,
-                                rsMatList = rsMatList,
-                                rsInfo = rsInfo,
-                                returnCovInfo = returnCovInfo,
-                                noNA=noNA,
-                                alreadyCenteredDM = alreadyCenteredDM,  
-                                alreadyScaledDM = alreadyScaledDM, 
-                                alreadyCenteredFM = alreadyCenteredFM, 
-                                alreadyScaledFM = alreadyScaledFM)
-                message(y) # must be ahead of object that is saved as cache, not after
-                tmp
+                helperFun <- function(x, y, ...) {
+                    # for (i in (length(rsPermScores) + 1):nPerm) {
+                    onePermCacheName <- paste0("rsPermScores_", variationMetric, "_", dataID, "_Cache", y)
+                    # create sub caches, one for each permutation
+                    simpleCache(onePermCacheName, cacheSubDir = paste0("rsPermScores_", variationMetric, "_", dataID), {
+                        
+                        tmp <- .runCOCOA_old(sampleOrder=x,
+                                             genomicSignal=genomicSignal,
+                                             signalCoord=signalCoord,
+                                             GRList=GRList,
+                                             signalCol=colsToAnnotate,
+                                             targetVar=targetVar,
+                                             variationMetric = variationMetric,
+                                             scoringMetric=scoringMetric,
+                                             absVal=absVal,
+                                             verbose=verbose,
+                                             rsMatList = rsMatList,
+                                             rsInfo = rsInfo,
+                                             returnCovInfo = returnCovInfo,
+                                             noNA=noNA,
+                                             alreadyCenteredDM = alreadyCenteredDM,  
+                                             alreadyScaledDM = alreadyScaledDM, 
+                                             alreadyCenteredFM = alreadyCenteredFM, 
+                                             alreadyScaledFM = alreadyScaledFM)
+                        message(y) # must be ahead of object that is saved as cache, not after
+                        tmp
+                        
+                    }, cacheDir=cacheDir, assignToVariable="tmp", ...)
+                    return(tmp)
+                }
+                rsPermScores = mapply(FUN = helperFun, x=indList, y=seq_along(indList), ..., SIMPLIFY=FALSE)
+                rsPermScores
                 
-            }, cacheDir=cacheDir, assignToVariable="tmp", ...)
-            return(tmp)
+            }, assignToVariable="rsPermScores", cacheDir=cacheDir, ...)    
         }
-        rsPermScores = mapply(FUN = helperFun, x=indList, y=seq_along(indList), ..., SIMPLIFY=FALSE)
-        rsPermScores
-            
-        }, assignToVariable="rsPermScores", cacheDir=cacheDir, ...)    
     } else {
         
         if (is.null(rsScores)) {
@@ -323,7 +337,7 @@ runCOCOA <- function(genomicSignal,
                                       alreadyScaledFM = alreadyScaledFM)
         }
         
-        
+        if (nPerm > 0) {
         helperFun2 <- function(x) {
             tmp <- .runCOCOA_old(sampleOrder=x,
                           genomicSignal=genomicSignal,
@@ -415,6 +429,7 @@ runCOCOA <- function(genomicSignal,
         
     }
     
+    allResultsList$rsScores <- rsScores
     allResultsList$permRSScores <- rsPermScores
     allResultsList$empiricalPVals <- rsPVals
     allResultsList$zScores <- rsZScores
