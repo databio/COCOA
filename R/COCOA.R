@@ -1473,37 +1473,37 @@ getTopRegions <- function(signal,
 # 
 BSAggregate <- function(BSDT, regionsGRL, BSCoord=NULL, excludeGR=NULL, 
                         regionsGRL.length = NULL, splitFactor=NULL, 
-                        keepCols=NULL, sumCols=NULL, 
-                        jExpr=NULL, byRegionGroup=FALSE, 
+                        keepCols=NULL, sumCols=NULL, jExpr=NULL,
+                        jExprA=NULL, jExprB=NULL, byRegionGroup=FALSE, 
                         keep.na=FALSE, returnSD=FALSE, 
                         returnOLInfo=FALSE, meanPerRegion=FALSE,
                         returnQuantile=FALSE, rsOL=NULL) {
 
     # Assert that regionsGRL is a GRL.
     # If regionsGRL is given as a GRanges, we convert to GRL
-    if(is(regionsGRL, "GRanges")) {
-        regionsGRL <- GRangesList(regionsGRL)
-    } else if (!is(regionsGRL, "GRangesList") && is.null(rsOL)) {
-        stop("regionsGRL is not a GRanges or GRangesList object")
-    }
+    # if(is(regionsGRL, "GRanges")) {
+    #     regionsGRL <- GRangesList(regionsGRL)
+    # } else if (!is(regionsGRL, "GRangesList") && is.null(rsOL)) {
+    #     stop("regionsGRL is not a GRanges or GRangesList object")
+    # }
 
     # will cause error if BSDT is only a data.frame
-    if (is(BSDT, "data.frame") & !is(BSDT, "data.table")) {
-        BSDT <- as.data.table(BSDT)
-    } 
-    if (!is(BSDT, "data.table"))  {
-        stop("BSDT must be a data.table")
-    }
+    # if (is(BSDT, "data.frame") & !is(BSDT, "data.table")) {
+    #     BSDT <- as.data.table(BSDT)
+    # } 
+    # if (!is(BSDT, "data.table"))  {
+    #     stop("BSDT must be a data.table")
+    # }
 
-    if(! is.null(excludeGR)) {
-        BSDT <- BSFilter(BSDT, minReads=0, excludeGR)
-    }
+    # if(! is.null(excludeGR)) {
+    #     BSDT <- BSFilter(BSDT, minReads=0, excludeGR)
+    # }
 
-    if (returnQuantile) {
-        # keep all data so quantiles can be calculated
-        # later code will change BSDT
-        origBSDT <- data.table::copy(BSDT)
-    }
+    # if (returnQuantile) {
+    #     # keep all data so quantiles can be calculated
+    #     # later code will change BSDT
+    #     origBSDT <- data.table::copy(BSDT)
+    # }
     # TODO: BSdtToGRanges needs to include end coordinate!!!
     if (is.null(BSCoord)) {
         bsgr <- BSdtToGRanges(list(BSDT))
@@ -1565,12 +1565,12 @@ BSAggregate <- function(BSDT, regionsGRL, BSCoord=NULL, excludeGR=NULL,
         #TODO: if overlap method is single, but "end" is present, find center
         # and set that to start!
         # if (all(start(bsgr[[1]]) != end(bsgr[[length(unique(queryHits(hits)))1]]))) {
-        if (all(start(bsgr) != end(bsgr))) {
-            stop("BSDT start and end coordinates are not the same. Choose a different aggrMethod.")
-        } else {
+        # if (all(start(bsgr) != end(bsgr))) {
+        #     stop("BSDT start and end coordinates are not the same. Choose a different aggrMethod.")
+        # } else {
             # fo <- findOverlaps(query = bsgr[[1]], subject = regionsGR)
             fo <- findOverlaps(query = bsgr, subject = regionsGR)
-        }
+        # }
         
     } else { 
         # Build a table to keep track of which regions belong to which group
@@ -1649,7 +1649,8 @@ BSAggregate <- function(BSDT, regionsGRL, BSCoord=NULL, excludeGR=NULL,
 
     # Now actually do the aggregate: (aggregate within each region)
     # message("Combining...")
-    bsCombined <- BSDT[,eval(parse(text=jExpr)), by=eval(parse(text=byString))]
+    message(byString)
+    bsCombined <- BSDT[,eval(parse(text=jExprA)), by=eval(parse(text=byString))]
     setkey(bsCombined, regionID)
 
     if (meanPerRegion) {
@@ -1672,6 +1673,8 @@ BSAggregate <- function(BSDT, regionsGRL, BSCoord=NULL, excludeGR=NULL,
         }
         return(avPerRegion)
     }
+
+    # At this intermediate step, we can count the number of signals
     # Now aggregate across groups.
     # I do this in 2 steps to avoid assigning regions to groups,
     # which takes awhile. I think this preserves memory and is faster.
@@ -1691,8 +1694,9 @@ BSAggregate <- function(BSDT, regionsGRL, BSCoord=NULL, excludeGR=NULL,
             byStringGroup <- "list(regionGroupID)"
         }
         # aggregate by regionGroupID (region set/GRanges in regionsGRL)
-        bsCombined=bsCombined[,eval(parse(text=jExpr)), 
+        bsCombined=bsCombined[,eval(parse(text=jExprB)), 
                               by=eval(parse(text=byStringGroup))]
+          message(byStringGroup)
         if (returnOLInfo) {
             bsCombined[, signalCoverage := signalCoverage]
             bsCombined[, regionSetCoverage := regionSetCoverage]

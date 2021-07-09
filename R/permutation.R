@@ -428,29 +428,23 @@ runCOCOAPerm <- function(genomicSignal,
 
 #' Run COCOA: quantify inter-sample variation, score region sets
 #' 
-#' This is a convenience function that does the two steps of COCOA: 
-#' quantifying the epigenetic variation and scoring the region sets. 
-#' This function will return the real COCOA scores if using the default
-#' `sampleOrder` parameter values. This
-#' function also makes it easy to generate null distributions in order to
-#' evaluate the statistical significance of the real COCOA results.
-#' You can use the sampleOrder parameter to shuffle the samples,
-#' then run COCOA to get fake scores for each region set. By doing 
-#' this many times, you can build a null distribution for each 
-#' region set composed of the region set's random scores from each
-#' permutation. There are multiple options for quantifying the
-#' epigenetic variation, specified by the `variationMetric` parameter.
-#' Quantifying the variation for the real/non-permuted COCOA 
-#' scores should be done with the same 
-#' variation metric as is used for the random permutations. For an
-#' unsupervised analysis using dimensionality reduction, first, the
-#' dimensionality reduction is done outside `runCOCOA`, then the
-#' latent factors/principal components are input to `runCOCOA` as the
-#' sample labels (targetVar parameter) when calculating both the real and 
-#' also the permutated region set scores. For a supervised analysis, 
-#' the target variables/phenotypes are the targetVar.
-#' See the vignettes for examples.  
-#' 
+#' A convenience function that does the two steps of COCOA: it 1) quantifies
+#' the epigenetic variation; and 2) scores the region sets. This function
+#' returns the real COCOA scores if using the default `sampleOrder` parameter
+#' value. With the sampleOrder parameter, you can shuffle the samples, then
+#' run COCOA to get permuted scores for each region set, which generates null
+#' distributions to evaluate statistical significance.
+#'
+#' There are multiple options for quantifying the epigenetic variation,
+#' specified by the `variationMetric` parameter. Quantifying the variation for
+#' the real/non-permuted COCOA  scores should be done with the same  variation
+#' metric as is used for the random permutations. For an unsupervised analysis
+#' using dimensionality reduction, first, the dimensionality reduction is done
+#' outside `runCOCOA`, then the latent factors/principal components are input
+#' to `runCOCOA` as the sample labels (targetVar parameter) when calculating
+#' both the real and  also the permutated region set scores. For a supervised
+#' analysis,  the target variables/phenotypes are the targetVar. See the
+#' vignettes for examples.   
 #' @param sampleOrder numeric. A vector of length (number of samples). If
 #' sampleOrder is 1:(number of samples) then this function will return the
 #' real COCOA scores.
