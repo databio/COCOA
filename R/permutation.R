@@ -168,15 +168,20 @@ runCOCOAPerm <- function(genomicSignal,
         # don't do later
         centerGenomicSignal <- FALSE
     }
+                               
     if (centerTargetVar) {
-        featureMeans <- colMeans(targetVar, na.rm = TRUE)
-        # centering before calculating correlation (also, t() converts to matrix)
-        targetVar <- t(apply(X = t(targetVar), MARGIN = 2, function(x) x - featureMeans))
-        if (dim(targetVar)[1] == 1) {
-            targetVar <- t(targetVar)
+        if (all(is.numeric(targetVar))) {
+            featureMeans <- colMeans(targetVar, na.rm = TRUE)
+            # centering before calculating correlation (also, t() converts to matrix)
+            targetVar <- t(apply(X = t(targetVar), MARGIN = 2, function(x) x - featureMeans))
+            if (dim(targetVar)[1] == 1) {
+                targetVar <- t(targetVar)
+            }
+            # don't do later
+            centerTargetVar <- FALSE
+        } else {
+            cat("Error: 'targetVar' must contain only numeric data.\n")
         }
-        # don't do later
-        centerTargetVar <- FALSE
     }
     
 
