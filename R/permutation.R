@@ -128,6 +128,17 @@
 #' 
 #' @export
 
+# Function to detect signalCoordType
+detectSignalCoordType <- function(signalCoord) {
+    if (any(start(signalCoord) != end(signalCoord))) {
+        return("multiBase")
+    } else if (length(signalCoord) == 1) {
+        return("singleBase")
+    } else {
+        stop("Unable to determine signalCoordType. Please check the input.")
+    }
+}
+
 runCOCOAPerm <- function(genomicSignal,
                          signalCoord,
                          GRList,
@@ -193,24 +204,22 @@ runCOCOAPerm <- function(genomicSignal,
     
         # detect signalCoordType
         # when signalCoord is a GRanges object
-        if (any(start(signalCoord) != end(signalCoord))) {
-            signalCoordType <- "multiBase"
-        } else {
-            signalCoordType <- "singleBase"
-        }
-
-    
-    # if "default" scoring method is given, choose based on signalCoordType
-    if (scoringMetric == "default") {
-        if (signalCoordType == "singleBase") {
-            scoringMetric <- "regionMean"   
-        } else if (signalCoordType == "multiBase") {
-            scoringMetric <- "proportionWeightedMean"
-        } else {
-            stop(cleanws("signalCoordType not recognized. 
-                         Check spelling/capitalization."))
-        }
-    }
+        if (is(signalCoord, "GRanges")) {
+          signalCoordType <- detectSignalCoordType(signalCoord)
+      } else {
+          stop("Error: 'signalCoord' must be a GRanges object.")
+      }
+      
+      # if "default" scoring method is given, choose based on signalCoordType
+      if (scoringMetric == "default") {
+          if (signalCoordType == "singleBase") {
+              scoringMetric <- "regionMean"   
+          } else if (signalCoordType == "multiBase") {
+              scoringMetric <- "proportionWeightedMean"
+          } else {
+              stop("Error: signalCoordType not recognized. Check spelling/capitalization.")
+          }
+      }
     
     #################
     if (is.null(olList)) {
