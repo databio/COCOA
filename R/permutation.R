@@ -541,7 +541,7 @@ runCOCOA <- function(genomicSignal,
     
     
     # subset to only signalCol
-    targetVar <- targetVar[, signalCol, drop=FALSE]
+    targetVar <- as.data.frame(targetVar[, signalCol, drop=FALSE])
     
     # because names are dropped for a single column data.frame when indexing
     # single col data.frame is automatically converted to numeric
