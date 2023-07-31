@@ -71,15 +71,16 @@
 #' @template returnCovInfo
 #' @param ... Character. Optional additional arguments for simpleCache.
 #'
-#' 
-#' @return Returns a list with the following 4 items: 1. a list of length nPerm
-#' where each item is a data.frame of the COCOA scores from a single 
-#' permutation. Each data.frame is the output of `runCOCOA()` 
+#' @return Returns a list with the following 4 items: 
+#' 1. a list of length nPerm where each item is a data.frame 
+#' of the COCOA scores from a single permutation. 
+#' Each data.frame is the output of `runCOCOA()` 
 #' 2. a data.table/data.frame of empirical p-values (the
-#' output of `getPermStat`) 3. a 
-#' data.table/data.frame of z-scores (the output of `getPermStat`. 
-#' 4. a data.frame of p-values based on
-#' the gamma approximation (the output of getGammaPVal(). 
+#' output of `getPermStat`) 
+#' 3. a data.table/data.frame of z-scores (the output of `getPermStat`. 
+#' 4. a data.frame of p-values based on the gamma approximation 
+#' (the output of getGammaPVal(). 
+#' 
 #' @examples 
 #' data("esr1_chr1")
 #' data("nrf1_chr1")
@@ -442,28 +443,15 @@ runCOCOAPerm <- function(genomicSignal,
 
 #' Run COCOA: quantify inter-sample variation, score region sets
 #' 
-#' This is a convenience function that does the two steps of COCOA: 
-#' quantifying the epigenetic variation and scoring the region sets. 
-#' This function will return the real COCOA scores if using the default
-#' `sampleOrder` parameter values. This
-#' function also makes it easy to generate null distributions in order to
-#' evaluate the statistical significance of the real COCOA results.
-#' You can use the sampleOrder parameter to shuffle the samples,
-#' then run COCOA to get fake scores for each region set. By doing 
-#' this many times, you can build a null distribution for each 
-#' region set composed of the region set's random scores from each
-#' permutation. There are multiple options for quantifying the
-#' epigenetic variation, specified by the `variationMetric` parameter.
-#' Quantifying the variation for the real/non-permuted COCOA 
-#' scores should be done with the same 
-#' variation metric as is used for the random permutations. For an
-#' unsupervised analysis using dimensionality reduction, first, the
-#' dimensionality reduction is done outside `runCOCOA`, then the
-#' latent factors/principal components are input to `runCOCOA` as the
-#' sample labels (targetVar parameter) when calculating both the real and 
-#' also the permutated region set scores. For a supervised analysis, 
-#' the target variables/phenotypes are the targetVar.
-#' See the vignettes for examples.  
+#' Run COCOA easily with two steps: quantify epigenetic variation and score 
+#' region sets. Get real COCOA scores with default settings. Generate null 
+#' distributions by shuffling samples and running COCOA multiple times 
+#' to evaluate statistical significance. Choose different options for 
+#' epigenetic variation using the variationMetric parameter. For unsupervised 
+#' analysis, perform dimensionality reduction first and use the output 
+#' as sample labels in runCOCOA. For supervised analysis, use target 
+#' variables/phenotypes as targetVar. Check vignettes for examples.
+#' 
 #' 
 #' @param sampleOrder numeric. A vector of length (number of samples). If
 #' sampleOrder is 1:(number of samples) then this function will return the
@@ -592,22 +580,20 @@ runCOCOA <- function(genomicSignal,
 #' This function will take a list of results of permutation tests that included
 #' many region sets and return a list of data.frames where each data.frame
 #' contains the null distribution for a single region set.
-#' The function can 
-#' also convert in the reverse order from a list of null distributions to a 
-#' list of COCOA results. 
+#' The function can also convert in the reverse order from 
+#' a list of null distributions to a list of COCOA results. 
+#'  
 #' @param rsScoresList each item in the list is a data.frame, one item for
 #' each permutation with the results of that permutation. Each row in the 
 #' data.frame is a region set. All data.frames should be the same size and
 #' each data.frame's rows should be in the same order
-#' @return a list of data.frames. If given a list where each item is 
-#' a data.frame with results from one COCOA permutation, this function
-#' will return a list of data.frames where each data.frame contains the
-#' null distributions for a single region set. The output data.frames will
-#' have the same columns as the input data.frames. If given a list where each
-#' item is a data.frame with the null distribution/s for a single region
-#' set, this function will return a list where each item is a data.frame
-#' with one row for each region set (e.g. a data.frame with results for
-#' a single COCOA permutation).
+#'                       
+#' @return a list of data.frames. The function returns a list of data.frames. 
+#' If the input is a list of data.frames from COCOA permutations, the output 
+#' will be a list of data.frames containing null distributions for each region set, 
+#' with the same columns as the input data.frames. If the input is a list of data.frames 
+#' with null distributions for individual region sets, the output will be a list of data.frames, 
+#' each with one row for each region set, representing results for a single COCOA permutation.
 #' 
 #' @examples
 #' # six region sets (rows), 2 signals (columns)
@@ -826,20 +812,19 @@ pGammaList <- function(scoreVec, fitDistrList) {
 #' 
 #' This function starts with real COCOA scores for each
 #' region set and null distributions for each
-#' region set that come
-#' from running COCOA on permuted data. Then this function uses the
-#' null distributions to get an empirical p-value or z-score for
-#' each region set. See vignettes for the workflow that leads to
-#' this function. The calculation of the p-value/z-score does not 
+#' region set that comes from running COCOA on permuted data. 
+#' Then this function uses the null distributions to get 
+#' an empirical p-value or z-score for each region set. 
+#' See vignettes for the workflow that leads to this function. 
+#' The calculation of the p-value/z-score does not 
 #' include the real region set score in the null distribution.
 #'
 #' @template rsScores 
 #' @param nullDistList List. one item per region set. Each item is a 
-#' data.frame with the 
-#' null distribution/s for a single region set. Each column in the data.frame
-#' is for a target variable (e.g. PC or phenotype), which is given
-#' by the `signalCol` parameter (each target variable has a different
-#' null distribution for a given region set).
+#' data.frame with the null distribution/s for a single region set. 
+#' Each column in the data.frame is for a target variable 
+#' (e.g. PC or phenotype), which is given by the `signalCol` parameter 
+#' (each target variable has a different null distribution for a given region set).
 #' @templateVar usesRSScores TRUE
 #' @template signalCol 
 #' @param testType Character. "greater", "lesser", "two-sided" Whether to
