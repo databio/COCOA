@@ -111,23 +111,18 @@ if (getRversion() >= "2.15.1") {
 #' @template returnCovInfo
 #' @template checkInput
 
-#' @return A data.frame with one row and the following 
-#' columns: one column for each item of signalCol with names given
-#' by signalCol. These columns have scores for the region set for each signalCol.
-#' Other columns: signalCoverage (formerly cytosine_coverage) which
-#' has number of epigenetic features that overlapped at all with regionSet,
-#' regionSetCoverage which has number of regions from regionSet
-#' that overlapped any of the epigenetic features, 
-#' totalRegionNumber that has
-#' number of regions in regionSet, meanRegionSize that has average
-#' size in base pairs of regions in regionSet, the average is based on
-#' all regions in regionSet and not just ones that overlap.
-#' For "multiBase" data, if the "proportionWeightedMean" scoring metric 
-#' is used, then the output will also have a "sumProportionOverlap" column.
-#' During this scoring method, the proportion overlap between each signalCoord
-#' region and overlapping regionSet region is calculated. This column is
-#' the sum of all those proportion overlaps and is another way to quantify
-#' coverage of regionSet in addition to regionSetCoverage.
+#' @return a data.frame with various columns: 
+#' One column for each item of signalCol, representing scores for the region set for each signalCol.
+#' Columns: signalCoverage (cytosine_coverage) shows the number of epigenetic features that overlapped with the region set.
+#' regionSetCoverage: indicates the number of regions from regionSet that overlapped with any of the epigenetic features.
+#' totalRegionNumber: represents the number of regions in regionSet.
+#' meanRegionSize: gives the average size (in base pairs) of regions in regionSet.
+#' 
+#' For "multiBase" data using the "proportionWeightedMean" scoring metric, 
+#' the output will also include a "sumProportionOverlap" column. 
+#' This column represents the sum of proportion overlaps between 
+#' each signalCoord region and overlapping regionSet region, 
+#' providing an additional measure of regionSet coverage.
 #' 
 #' @examples
 #' data("brcaATACCoord1")
@@ -525,16 +520,16 @@ aggregateSignal <- function(signal,
 #' @template returnCovInfo
 #' @return Data.frame of results, one row for each region set. 
 #' It has the following columns:
-#' one column for each item of signalCol with names given
-#' by signalCol. These columns have scores for the region set for each signalCol.
+#' one column for each item of signalCol with names given by signalCol. 
+#' These columns have scores for the region set for each signalCol.
 #' Other columns: signalCoverage (formerly cytosine_coverage) which
 #' has number of epigenetic features that overlapped at all with regionSet,
 #' regionSetCoverage which has number of regions from regionSet
 #' that overlapped any of the epigenetic features, 
-#' totalRegionNumber that has
-#' number of regions in regionSet, meanRegionSize that has average
-#' size in base pairs of regions in regionSet, the average is based on
-#' all regions in regionSet and not just ones that overlap.
+#' totalRegionNumber that has number of regions in regionSet, 
+#' meanRegionSize that has average size in base pairs of regions in regionSet, 
+#' the average is based on all regions in regionSet and not just ones that overlap.
+#'   
 #' For "multiBase" data, if the "proportionWeightedMean" scoring metric 
 #' is used, then the output will also have a "sumProportionOverlap" column.
 #' During this scoring method, the proportion overlap between each signalCoord
@@ -849,24 +844,21 @@ createCorFeatureMat <- function(dataMat, featureMat,
 #' 
 #' All regions in a given region set 
 #' are combined into a single aggregate profile. Regions in `regionSet` 
-#' should be
-#' expanded on each side to include a wider area of the genome around
+#' should be expanded on each side to include a wider area of the genome around
 #' the regions of interest (see example and vignettes). 
 #' To make the profile, first we optionally take 
 #' the absolute value of `signal` (`absVal` parameter). 
 #' Then each expanded regionSet region is
 #' split into `binNum` bins. The corresponding 
-#' bins from each region
-#' (e.g. all bin1's, all bin2's, etc.) are grouped.  
-#' All overlapping values from `signal` are 
-#' aggregated in each bin group according to the `aggrMethod` parameter to 
-#' get a meta-region profile. Since DNA strand information is not considered, 
+#' bins from each region (e.g. all bin1's, all bin2's, etc.) are grouped.  
+#' All overlapping values from `signal` are aggregated in each bin group 
+#' according to the `aggrMethod` parameter to get a meta-region profile. 
+#' Since DNA strand information is not considered, 
 #' the profile is averaged symmetrically around the center.
-#' A peak in the middle of this profile suggests
-#' that variability is specific to the region set of interest and is 
-#' not a product of the surrounding genome. A region set can still be
-#' significant even if it does not have a peak. For example, some
-#' histone modification region sets may be in large genomic blocks
+#' A peak in the middle of this profile suggests that variability is specific 
+#' to the region set of interest and is not a product of the surrounding genome. 
+#' A region set can still be significant even if it does not have a peak. 
+#' For example, some histone modification region sets may be in large genomic blocks
 #' and not show a peak, despite having variation across samples.
 #'
 #' @template signal
