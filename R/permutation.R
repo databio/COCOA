@@ -473,6 +473,7 @@ runCOCOAPerm <- function(genomicSignal,
 #' @template absVal
 #' @template olList
 #' @template pOlapList
+#' @permutations numeric -- specify the number of permutations. Leave NULL for no permutations (NULL by default).
 #' @param centerGenomicSignal Logical. Should rows in genomicSignal
 #' be centered based on
 #' their means? (subtracting row mean from each row)
