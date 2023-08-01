@@ -520,6 +520,7 @@ runCOCOA <- function(genomicSignal,
                     signalCoord, GRList, signalCol,
                     targetVar, 
                     sampleOrder=1:nrow(targetVar),
+                    permutations=NULL,
                     variationMetric = "cor", 
                     scoringMetric="default", verbose=TRUE,
                     absVal=TRUE, olList=NULL, pOlapList=NULL,
@@ -559,7 +560,23 @@ runCOCOA <- function(genomicSignal,
         featureLabelCor <- abs(featureLabelCor)
         absVal <- FALSE    
     }
-    
+
+    # permutations loop
+    if (!is.null(permutations)) {
+        permResults <- list()
+        for (i in 1:permutations) {
+            permSampleOrder <- sample(1:nrow(targetVar))
+            permFeatureLabelCor <- featureLabelCor[permSampleOrder,]
+            thisPermRes <- aggregateSignalGRList(signal=permFeatureLabelCor, 
+                                                 signalCoord=signalCoord, GRList=GRList, 
+                                                 signalCol = signalCol, 
+                                                 scoringMetric = scoringMetric, verbose = verbose,
+                                                 absVal = absVal, olList = olList, pOlapList=pOlapList,
+                                                 returnCovInfo=returnCovInfo)
+            permResults[[i]] <- thisPermRes
+        }
+        return(permResults)
+    }
     
     # run COCOA
     thisPermRes <- aggregateSignalGRList(signal=featureLabelCor, 
