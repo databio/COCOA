@@ -474,6 +474,7 @@ runCOCOAPerm <- function(genomicSignal,
 #' @template olList
 #' @template pOlapList
 #' @permutations numeric -- specify the number of permutations. Leave NULL for no permutations (NULL by default).
+#' @cores numeric -- specify the number of cores, default: cores=1
 #' @param centerGenomicSignal Logical. Should rows in genomicSignal
 #' be centered based on
 #' their means? (subtracting row mean from each row)
@@ -517,17 +518,20 @@ runCOCOAPerm <- function(genomicSignal,
 #'                           variationMetric="cor")
 #' randomRSScores
 #' @export
+# Load the required library
+library(parallel)
+
 runCOCOA <- function(genomicSignal, 
                     signalCoord, GRList, signalCol,
                     targetVar, 
                     sampleOrder=1:nrow(targetVar),
-                    permutations=NULL,
                     variationMetric = "cor", 
                     scoringMetric="default", verbose=TRUE,
                     absVal=TRUE, olList=NULL, pOlapList=NULL,
                     centerGenomicSignal=TRUE,
                     centerTargetVar=TRUE, 
-                    returnCovInfo=TRUE) {
+                    returnCovInfo=TRUE,
+                    cores=1) { 
     
     # if vector is given, return error
     if (is.null(dim(targetVar))) {
@@ -561,36 +565,35 @@ runCOCOA <- function(genomicSignal,
         featureLabelCor <- abs(featureLabelCor)
         absVal <- FALSE    
     }
-
-    # permutations loop
-    if (!is.null(permutations)) {
-        permResults <- list()
-        for (i in 1:permutations) {
-            permSampleOrder <- sample(1:nrow(targetVar))
-            permFeatureLabelCor <- featureLabelCor[permSampleOrder,]
-            thisPermRes <- aggregateSignalGRList(signal=permFeatureLabelCor, 
-                                                 signalCoord=signalCoord, GRList=GRList, 
-                                                 signalCol = signalCol, 
-                                                 scoringMetric = scoringMetric, verbose = verbose,
-                                                 absVal = absVal, olList = olList, pOlapList=pOlapList,
-                                                 returnCovInfo=returnCovInfo)
-            permResults[[i]] <- thisPermRes
-        }
-        return(permResults)
-    }
     
-    # run COCOA
-    thisPermRes <- aggregateSignalGRList(signal=featureLabelCor, 
-                           signalCoord=signalCoord, GRList=GRList, 
-                           signalCol = signalCol, 
-                           scoringMetric = scoringMetric, verbose = verbose,
-                           absVal = absVal, olList = olList, pOlapList=pOlapList,
-                           returnCovInfo=returnCovInfo)
+    
+    # run COCOA with parallel processing
+    if (cores > 1) {
+        cl <- makeCluster(cores)
+        clusterEvalQ(cl, library(CoCoh))
+        thisPermRes <- parLapply(cl, GRList, function(GR) {
+            aggregateSignalGRList(signal=featureLabelCor, 
+                                  signalCoord=signalCoord, GRList=GR, 
+                                  signalCol = signalCol, 
+                                  scoringMetric = scoringMetric, verbose = verbose,
+                                  absVal = absVal, olList = olList, pOlapList=pOlapList,
+                                  returnCovInfo=returnCovInfo)
+        })
+        stopCluster(cl)
+    } else {
+        thisPermRes <- aggregateSignalGRList(signal=featureLabelCor, 
+                                             signalCoord=signalCoord, GRList=GRList, 
+                                             signalCol = signalCol, 
+                                             scoringMetric = scoringMetric, verbose = verbose,
+                                             absVal = absVal, olList = olList, pOlapList=pOlapList,
+                                             returnCovInfo=returnCovInfo)
+    }
     
     # return
     return(thisPermRes)
     
 }
+
 
 
 #' Converts COCOA permutation results to null distributions and vice versa
