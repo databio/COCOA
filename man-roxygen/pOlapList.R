@@ -1,9 +1,5 @@
-#' @param pOlapList list. This parameter is only used if the scoring metric is
-#' "proportionWeightedMean" and olList is also provided as an argument. Each
-#' item of the list should be a vector that contains the proportion overlap 
-#' between signalCoord and regions from one region set (one item of GRList).
-#' Specifically, each value should be the proportion of the region set region 
-#' that is overlapped
-#' by a signalCoord region.
-#' The proportion overlap values should be in the same order as the overlaps
-#' given by olList for the corresponding region set.  
+#' @param pOlapList list of vectors containing the proportion overlap 
+#' values between signalCoord and regions from one region set in olList, 
+#' used when the scoring metric is "proportionWeightedMean." Ensure that 
+#' the order of proportion overlap values corresponds to the order of 
+#' overlaps in olList for the respective region set. 
