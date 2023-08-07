@@ -9,25 +9,11 @@
 #' "simpleMean", and "simpleMedian". The default is "proportionWeightedMean".
 #' "regionMean" is a weighted
 #' average of the signal, weighted by region (absolute value of signal 
-#' if absVal=TRUE). First the signal is
-#' averaged within each regionSet region, 
-#' then all the regions are averaged. With
-#' "regionMean" method, be cautious in interpretation for
-#' region sets with low number of regions that overlap signalCoord. The
-#' "regionMedian" method is the same as "regionMean" but the median is taken
-#' at each step instead of the mean.
-#' The "simpleMean"
-#' method is just the unweighted average of all (absolute) signal values that
-#' overlap the given region set. For multiBase data, this includes
-#' signal regions that overlap a regionSet region at all (1 base
-#' overlap or more) and the signal for each overlapping region is
-#' given the same weight for the average regardless of how much it overlaps.
-#' The "simpleMedian" method is the same as "simpleMean" but takes the median 
-#' instead of the mean. 
-#' "proportionWeightedMean" is a weighted average of all signalCoord 
-#' regions that overlap with regionSet regions. For each signalCoord region
-#' that overlaps with a regionSet region, we calculate what proportion
-#' of the regionSet region is covered. Then this proportion is used to
-#' weight the signal value when calculating the mean. 
-#' The denominator of the mean
-#' is the sum of all the proportion overlaps.
+#' if absVal=TRUE). The methods for averaging signal values within region sets are:
+#' "regionMean": Average the signal within each regionSet region, then average all regions.
+#' "regionMedian": Take the median within each regionSet region, then median across all regions.
+#' "simpleMean": Unweighted average of all overlapping signal values for each regionSet region.
+#' "simpleMedian": Take the median of all overlapping signal values for each regionSet region.
+#' "proportionWeightedMean": Weighted average of signal values, considering the proportion 
+#' of each signalCoord region that overlaps with a regionSet region. The weights are 
+#' based on the proportion overlaps.
