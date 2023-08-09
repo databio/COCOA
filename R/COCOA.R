@@ -742,6 +742,12 @@ aggregateSignalGRList <- function(signal,
     # rsName <- row.names(resultsDT)
     resultsDF <- as.data.frame(resultsDT) #, row.names = rsName)
 
+    # Convert the first column to numeric for proper sorting
+    resultsDT[, 1] <- as.numeric(resultsDT[, 1])
+
+    # Sort the results based on the first column
+    resultsDF <- resultsDF[order(-resultsDF[, 1]), ]                          
+
     return(resultsDF)
 }    
 
