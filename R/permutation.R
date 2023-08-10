@@ -180,7 +180,15 @@ runCOCOAPerm <- function(genomicSignal,
         # don't do later
         centerGenomicSignal <- FALSE
     }
+
+    # check that targetVar is not empty
+    if (centerTargetVar) {
+        if (nrow(targetVarDF) == 0) {
+            stop("Error: targetVarDF is empty. Make sure it contains at least one row.")
+            }
+    } 
                                
+    # check if targetVar contains numeric data                           
     if (centerTargetVar) {
         if (all(is.numeric(targetVar))) {
             featureMeans <- colMeans(targetVar, na.rm = TRUE)
@@ -193,6 +201,10 @@ runCOCOAPerm <- function(genomicSignal,
             centerTargetVar <- FALSE
         } else {
             cat("Error: 'targetVar' must contain only numeric data.\n")
+            
+            # Find non-numeric columns and display their indexes
+            nonNumericCols <- which(!is.numeric(targetVar))
+            cat("Columns with non-numeric data: ", paste(nonNumericCols,collapse = ", "), "\n")            
         }
     }
     
@@ -532,6 +544,11 @@ runCOCOA <- function(genomicSignal,
                     centerTargetVar=TRUE, 
                     returnCovInfo=TRUE,
                     cores=1) { 
+    
+    # check if targetVar is empty
+    if (is.null(targetVar) || length(targetVar) == 0) {
+        stop("`targetVar` is empty")
+    }
     
     # if vector is given, return error
     if (is.null(dim(targetVar))) {
