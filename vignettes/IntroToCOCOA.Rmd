@@ -153,19 +153,18 @@ By shuffling the sample phenotypes and calculating fake COCOA scores, we can cre
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
 set.seed(100)
 
-nPerm <- 5
-permRSScores <- list()
+permutations <- 5 # Specify the number of permutations 
 
-for (i in 1:nPerm) {
-    # shuffling sample labels
-    sampleOrder <- sample(1:nrow(targetVarDF), nrow(targetVarDF))
-    permRSScores[[i]] <- runCOCOA(sampleOrder=sampleOrder, 
-                           genomicSignal=brcaMethylData1, 
-                           signalCoord=brcaMCoord1, 
-                           GRList=GRList,
-                           signalCol=myPhen, 
-                           targetVar=targetVarDF, 
-                           variationMetric="cor")
+permRSScores <- runCOCOA(genomicSignal = brcaMethylData1, 
+                         signalCoord = brcaMCoord1, 
+                         GRList = GRList,
+                         signalCol = myPhen, 
+                         targetVar = targetVarDF, 
+                         variationMetric = "cor",
+                         permutations = permutations,
+                         cores=1)
+
+for (i in 1:permutations) {
     permRSScores[[i]]$regionSetName <- regionSetNames
 }
 
