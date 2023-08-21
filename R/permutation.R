@@ -585,6 +585,9 @@ runCOCOA <- function(genomicSignal,
     }
     
     
+    # list for results
+    permResults <- list()
+    
     # Loop through permutations
     for (i in 1:permutations) {
         # Shuffling sample labels
@@ -593,31 +596,32 @@ runCOCOA <- function(genomicSignal,
 
         # Run COCOA with parallel processing (if cores > 1)
         if (cores > 1) {
-            cl <- makeCluster(cores)
-            clusterEvalQ(cl, library(CoCoh))
-            thisPermRes <- parLapply(cl, GRList, function(GR) {
-                aggregateSignalGRList(signal = featureLabelCor, 
-                                      signalCoord = signalCoord, GRList = GR, 
-                                      signalCol = signalCol, 
-                                      scoringMetric = scoringMetric, verbose = verbose,
-                                      absVal = absVal, olList = olList, pOlapList = pOlapList,
-                                      returnCovInfo = returnCovInfo)
-            })
-            stopCluster(cl)
-
+        cl <- makeCluster(cores)
+        clusterEvalQ(cl, library(CoCoh))
+        thisPermRes <- parLapply(cl, GRList, function(GR) {
+            aggregateSignalGRList(signal = featureLabelCor, 
+                                signalCoord = signalCoord, GRList = GR, 
+                                signalCol = signalCol, 
+                                scoringMetric = scoringMetric, verbose = verbose,
+                                absVal = absVal, olList = olList, pOlapList = pOlapList,
+                                returnCovInfo = returnCovInfo)
+        })
+        stopCluster(cl)
         } else {
-            thisPermRes <- aggregateSignalGRList(signal = featureLabelCor, 
-                                                 signalCoord = signalCoord, GRList = GRList, 
-                                                 signalCol = signalCol, 
-                                                 scoringMetric = scoringMetric, verbose = verbose,
-                                                 absVal = absVal, olList = olList, pOlapList = pOlapList,
-                                                 returnCovInfo = returnCovInfo)
+        thisPermRes <- aggregateSignalGRList(signal = featureLabelCor, 
+                                            signalCoord = signalCoord, GRList = GRList, 
+                                            signalCol = signalCol, 
+                                            scoringMetric = scoringMetric, verbose = verbose,
+                                            absVal = absVal, olList = olList, pOlapList = pOlapList,
+                                            returnCovInfo = returnCovInfo)
         }
 
-    }
-    
+        # Store this permutation's result in the list
+        permResults[[i]] <- thisPermRes
+        
+    } 
     # Return the list of permutation results
-    return(thisPermRes)
+    return(permResults)
 }
 
 
