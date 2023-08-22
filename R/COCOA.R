@@ -107,7 +107,7 @@ if (getRversion() >= "2.15.1") {
 #' @param pOlap Numeric vector. Only used if rsOL is given and scoringMetric
 #' is "proportionWeightedMean". This vector should contain the proportion of 
 #' each regionSet region that is overlapped by a signalCoord region. The 
-#' order of pOlap should be the same as the overlaps in rsOL. 
+#' order of pOlap should be the same as the overlaps in rsOL.
 #' @template returnCovInfo
 #' @template checkInput
 
@@ -149,7 +149,7 @@ aggregateSignal <- function(signal,
                             scoringMetric = "default",
                             verbose = FALSE,
                             absVal=TRUE, 
-                            rsOL=NULL, pOlap=NULL, 
+                            rsOL=NULL, pOlap=NULL,
                             returnCovInfo=TRUE, 
                             .checkInput=FALSE) {
     
@@ -250,8 +250,11 @@ aggregateSignal <- function(signal,
         }
         
     }
+    ################### finished checking inputs #########################
         
     
+    
+    #### UPDATE: only do this once, in outermost function possible #####
     # extreme positive or negative values both give important information
     # take absolute value or not
     if (absVal) {
@@ -277,17 +280,16 @@ aggregateSignal <- function(signal,
     } else {
         loadingDT  <- signal[, signalCol, drop=FALSE]
     }
-    
+    ######## UPDATE: can above code be done only once, like input checking?
+    ########
 
     
     ###########################################################################
     # scoring
-    
-    # would rounding speed up aggregation?, potentially make a sparse matrix
-    # if a lot of entries became 0
-    
+
     # works for both singleBase and multiBase
     if (scoringMetric == "simpleMean") {
+
         loadAgMain <- as.data.table(regionOLMean(signalDT = loadingDT, 
                                                  signalGR = signalCoord,
                                                  regionSet = regionSet,
@@ -298,6 +300,7 @@ aggregateSignal <- function(signal,
         results <- .formatResults(loadAgMain, scoringMetric = scoringMetric, 
                                   regionSet=regionSet, signalCol = signalCol,
                                   returnCovInfo=returnCovInfo)
+
     } else if (scoringMetric == "simpleMedian") {
         # scoring singleBase and multiBase both with this function for
         # simpleMedian
@@ -356,77 +359,7 @@ aggregateSignal <- function(signal,
                                       returnCovInfo=returnCovInfo)
 
         } 
-        # } else if (scoringMetric == "meanDiff") {
-        #     # if (is.null(pcLoadAv)) {
-        #     #     # calculate (should already be absolute)
-        #     #     pcLoadAv <- apply(X = loadingDT[, signalCol, with=FALSE], 
-        #     #                       MARGIN = 2, FUN = mean)
-        #     # }
-        #     loadMetrics <- signalOLMetrics(dataDT=loadingDT, regionSet=regionSet,
-        #                                    signalCol = signalCol,
-        #                                    metrics=c("mean", "sd"), 
-        #                                    alsoNonOLMet=TRUE)
-        #     if (is.null(loadMetrics)) {
-        #         results <- as.data.table(t(rep(NA, length(signalCol))))
-        #         setnames(results, signalCol)
-        #         results[, signalCoverage := 0]
-        #         results[, regionSetCoverage := 0]
-        #         results[, totalRegionNumber := numOfRegions]
-        #         results[, meanRegionSize := round(mean(width(regionSet)), 1)]
-        #     } else {
-        #         # calculate mean difference
-        #         # pooled standard deviation
-        #         sdPool <- sqrt((loadMetrics$sd_OL^2 + loadMetrics$sd_nonOL^2) / 2)
-        #         
-        #         # mean difference
-        #         # error if signalCoverage > (1/2) * totalCpGs
-        #         meanDiff <- (loadMetrics$mean_OL - loadMetrics$mean_nonOL) / 
-        #             (sdPool * sqrt((1 / loadMetrics$signalCoverage) - (1 / (totalCpGs - loadMetrics$signalCoverage))))
-        #         results <- as.data.table(t(meanDiff))
-        #         colnames(results) <- loadMetrics$testCol
-        #         
-        #         # add information about degree of overlap
-        #         results <- cbind(results, loadMetrics[1, .SD, .SDcols = c("signalCoverage", "regionSetCoverage", "totalRegionNumber", "meanRegionSize")]) 
-        #     }
-        #     
-        # } else if (scoringMetric == "rankSum") {
-        #     
-        #     # if (wilcox.conf.int) {
-        #     #     # returns confidence interval
-        #     #     wRes <- rsWilcox(dataDT = loadingDT, regionSet=regionSet, 
-        #     #                      signalCol = signalCol, 
-        #     #                      conf.int = wilcox.conf.int)
-        #     #     
-        #     #     if (is.null(wRes)) {
-        #     #         results <- as.data.table(t(rep(NA, length(signalCol) * 2)))
-        #     #         setnames(results, paste0(rep(signalCol, each=2), 
-        #     #                                  c("_low", "_high")))
-        #     #         results[, signalCoverage := 0]
-        #     #         results[, regionSetCoverage := 0]
-        #     #         results[, totalRegionNumber := numOfRegions]
-        #     #         results[, meanRegionSize := round(mean(width(regionSet)), 1)]
-        #     #     } else {
-        #     #         results <- as.data.table(wRes)
-        #     #     }    
-        #     #     
-        #     # } else {
-        #         # returns p value
-        #         # one sided test since I took the absolute value of the loadings 
-        #         wRes <- rsWilcox(dataDT = loadingDT, regionSet=regionSet, 
-        #                          signalCol = signalCol, alternative="greater")
-        #         
-        #         if (is.null(wRes)) {
-        #             results <- as.data.table(t(rep(NA, length(signalCol))))
-        #             setnames(results, signalCol)
-        #             results[, signalCoverage := 0]
-        #             results[, regionSetCoverage := 0]
-        #             results[, totalRegionNumber := numOfRegions]
-        #             results[, meanRegionSize := round(mean(width(regionSet)), 1)]
-        #         } else {
-        #             results <- as.data.table(wRes)
-        #         }    
-        #     #}
-          
+
     } else {
         # signalCoordType == "multiBase"
         # for ATAC-seq
@@ -520,8 +453,7 @@ aggregateSignal <- function(signal,
 # method. returns a 95% confidence interval from the Wilcoxon rank sum test
 # instead of p value.
 #' @template absVal
-#' @template olList
-#' @template pOlapList
+#' @template rsMatList
 #' @template returnCovInfo
 #' @return Data.frame of results, one row for each region set. 
 #' It has the following columns:
@@ -565,8 +497,10 @@ aggregateSignalGRList <- function(signal,
                      signalCoordType = "default",
                      scoringMetric = "default",
                      verbose = TRUE,
-                     absVal=TRUE, olList=NULL, 
-                     pOlapList=NULL, returnCovInfo=TRUE) {
+                     absVal=TRUE, 
+                     rsMatList=NULL, 
+                     signalList=NULL, rsInfo=NULL,
+                     returnCovInfo=TRUE) {
 
     ################### checking inputs  #################################
     
@@ -575,8 +509,8 @@ aggregateSignalGRList <- function(signal,
                              signalCoord=signalCoord,
                              regionSet=NULL,
                              signalCol = signalCol,
-                             GRList=GRList,
-                             olList=olList)
+                             GRList=GRList)#,
+                             #olList=olList)
     
     ########## check that dimensions of inputs are consistent
     # length of signal coord = nrow of signal
@@ -648,14 +582,24 @@ aggregateSignalGRList <- function(signal,
         }
     }
     
-    # convert object class outside aggregateSignal to extra prevent copying
-    # (one scoring method needs `signal` as a matrix though)
-    if (!is(signal, "data.table") && (scoringMetric != "proportionWeightedMean")) {
-        signal <- as.data.table(signal)
-    } else if (!is(signal, "matrix") && (scoringMetric == "proportionWeightedMean")) {
-        signal <- as.matrix(signal)
+    if (is.null(signalList)) {
+        # data.table is only used for non-matrix COCOA (legacy)
+        
+        # convert object class outside aggregateSignal to extra prevent copying
+        # (one scoring method needs `signal` as a matrix though)
+        if (!is(signal, "data.table") && (scoringMetric != "proportionWeightedMean")) {
+            signal <- as.data.table(signal)
+        } else if (!is(signal, "matrix") && (scoringMetric == "proportionWeightedMean")) {
+            signal <- as.matrix(signal)
+        }
+        
+    } else {
+        # needed for gamma normalization
+        if (!is(signal, "matrix")) {
+            signal <- as.matrix(signal)
+        }
     }
-    
+
 
     # take absolute value outside aggregateSignal to prevent extra copying
     if (absVal) {
@@ -667,7 +611,34 @@ aggregateSignalGRList <- function(signal,
         absVal <- FALSE
     }
     
-    if (is.null(olList)) {
+    # ## if this function is only being run once, use data.table calculations
+    # # create region set overlap matrix
+    # # this code should be after code modifying "signal"
+    # if (scoringMetric %in% c("simpleMean", 
+    #                                               "regionMean", 
+    #                                               "proportionWeightedMean")) {
+    #     if (is.null(rsMatList)) {
+    #         olMatRes <- olToMat(signalCoord = signalCoord,
+    #                             GRList = GRList, 
+    #                             scoringMetric = scoringMetric)
+    #         rsMatList <- olMatRes[[1]]
+    #         rsInfo <- olMatRes[[2]]
+    #     }
+    # 
+    #     if (is.null(signalList)) {
+    #         signalMatList <- splitSignal(signal = signal, 
+    #                                      maxRow = nrow(rsMatList[[1]]))
+    #     }
+    # }
+    
+    
+    if (!is.null(rsMatList) && (scoringMetric %in% c("simpleMean", 
+                                                   "regionMean", 
+                                                   "proportionWeightedMean"))) {
+        resultsDF <- matScore(rsMatList = rsMatList, 
+                                signalMatList=signalList, 
+                              rsInfo=rsInfo)
+    } else { # not matrix COCOA. Old COCOA with data.table
         # apply over the list of region sets
         resultsList <- lapplyAlias(GRList,
                                    function(x) aggregateSignal(
@@ -680,90 +651,44 @@ aggregateSignalGRList <- function(signal,
                                        verbose = verbose,
                                        absVal = absVal, pOlap=NULL,
                                        returnCovInfo=returnCovInfo))
-        # resultsList <- mapply(FUN = function(x) aggregateSignal(
-        #     signal = signal,
-        #     signalCoord = signalCoord,
-        #     signalCoordType = signalCoordType,
-        #     regionSet = x,
-        #     signalCol = signalCol,
-        #     scoringMetric = scoringMetric,
-        #     verbose = verbose,
-        #     absVal = absVal, pOlap=y, 
-        #     returnCovInfo=returnCovInfo), x=GRList, y=pOlapList)
-        #wilcox.conf.int = wilcox.conf.int,
-    } else {
-        # # apply over the list of region sets
-        # resultsList <- lapplyAlias(olList,
-        #                            function(x) aggregateSignal(
-        #                                signal = signal,
-        #                                signalCoord = signalCoord,
-        #                                signalCoordType = signalCoordType,
-        #                                regionSet = NULL,
-        #                                signalCol = signalCol,
-        #                                scoringMetric = scoringMetric,
-        #                                verbose = verbose,
-        #                                absVal = absVal, 
-        #                                rsOL=x, pOlap=pOlapList, returnCovInfo=returnCovInfo))
-        # #wilcox.conf.int = wilcox.conf.int,
-        if (is.null(pOlapList)) {
-            # mapply does not work if pOlapList is null and other argument is not null
-            resultsList <- lapplyAlias(olList, FUN = function(x) aggregateSignal(
-                signal = signal,
-                signalCoord = signalCoord,
-                signalCoordType = signalCoordType,
-                regionSet = NULL,
-                signalCol = signalCol,
-                scoringMetric = scoringMetric,
-                verbose = verbose,
-                absVal = absVal, 
-                rsOL=x,
-                returnCovInfo=returnCovInfo))
-        } else {
-            resultsList <- mapply(FUN = function(x, y) aggregateSignal(
-                signal = signal,
-                signalCoord = signalCoord,
-                signalCoordType = signalCoordType,
-                regionSet = NULL,
-                signalCol = signalCol,
-                scoringMetric = scoringMetric,
-                verbose = verbose,
-                absVal = absVal, 
-                rsOL=x, pOlap=y,
-                returnCovInfo=returnCovInfo), 
-                x=olList, y=pOlapList)
-        }
-        
-
     }
-    
-    resultsDT <- do.call(rbind, resultsList) 
 
-    # # add names if they are present
-    # if (!is.null(names(GRList))) {
-    #     # resultsDT[, rsName := names(GRList)]
-    #     row.names(resultsDT) <- names(GRList)
-    # }
-
-    # rsName <- row.names(resultsDT)
-    resultsDF <- as.data.frame(resultsDT) #, row.names = rsName)
-
-    return(resultsDF)
+    if (!is.null(rsMatList) && (scoringMetric %in% c("simpleMean", 
+                                                   "regionMean", 
+                                                   "proportionWeightedMean"))) {
+        # resultsDF[, signalCol] <- gammaNormalize(rsScores=resultsDF[, signalCol],
+        #                                          featureVals=signal[, signalCol])
+        return(as.data.frame(resultsDF))
+    } else {
+        resultsDT <- do.call(rbind, resultsList) 
+        resultsDF <- as.data.frame(resultsDT) 
+        # if (is(signal, "data.frame")) {
+        #     signal <- as.matrix(signal)
+        # }
+        # resultsDF[, signalCol] <- gammaNormalize(rsScores=resultsDF[, signalCol],
+        #                                          featureVals=signal[, signalCol])
+        # 
+        return(resultsDF)   
+    }
 }    
 
-# @param dataMat columns of dataMat should be samples/patients, rows should be genomic signal
-# (each row corresponds to one genomic coordinate/range)
-# @param featureMat Rows should be samples, columns should be "features" 
+# @param dataMat If noNA=FALSE, rows of dataMat should be samples/patients, 
+# columns should be genomic signal
+# (each column corresponds to one genomic coordinate/range). If noNA=TRUE, rows
+# and columns should be flipped.
+# @param featureMat Matrix. Rows should be samples, columns should be "features" 
 # (whatever you want to get correlation with: eg PC scores),
 # all columns in featureMat will be used (subset when passing to function
 # in order to not use all columns)
-# @param centerDataMat logical object. Should rows in dataMat be centered based on
-# their means? (subtracting row mean from each row)
-# @param centerFeatureMat logical. Should columns in featureMat be centered based
-# on their means? (subtract column mean from each column)
 # @param testType character object. Can be "cor" (Pearson correlation),
 # "spearmanCor (Spearman correlation)
 # "pcor" (partial correlation), "cov" (covariance (Pearson)),
 # @param covariate
+# @param alreadyCenteredDM logical. Whether dataMat has already been centered. If
+# known, can do matrix multiplication to calculate covariance (and correlation
+# if scaling has been done)
+# @param noNA logical. Assume there might be NA, Inf or NaN. If TRUE, the 
+# function will use matrix multiplication which is faster than cor/cov
 #
 # If a row in dataMat has 0 stand. deviation, correlation will be set to 0
 # instead of NA as would be done by cor()
@@ -772,65 +697,103 @@ aggregateSignalGRList <- function(signal,
 # columns are the columns of featureMat
 # @examples dataMat = matrix(rnorm(50), 5, 10)
 # featureMat = matrix(rnorm(20), 10, 2)
-createCorFeatureMat <- function(dataMat, featureMat, 
-                               centerDataMat=TRUE, centerFeatureMat = TRUE, 
-                               testType="cor", covariate=NULL) {
+createCorFeatureMat <- function(dataMat, featureMat,
+                               testType="cor", covariate=NULL, 
+                               alreadyCenteredDM=FALSE, alreadyScaledDM=FALSE,
+                               alreadyCenteredFM=FALSE, alreadyScaledFM=FALSE, 
+                               noNA=FALSE) {
     
-    featureMat <- as.matrix(featureMat)
+    # featureMat <- as.matrix(featureMat) # copies?
     featureNames <- colnames(featureMat)
-    nFeatures <- ncol(featureMat)
-    nDataDims <- nrow(dataMat)
-    
-    if (centerDataMat) {
-        cpgMeans <- rowMeans(dataMat, na.rm = TRUE)
-        # centering before calculating correlation
-        dataMat <- apply(X = dataMat, MARGIN = 2, function(x) x - cpgMeans)
-        
-    }
-    
-    if (centerFeatureMat) {
-        featureMeans <- colMeans(featureMat, na.rm = TRUE)
-        # centering before calculating correlation(also, t() converts to matrix)
-        featureMat <- t(apply(X = t(featureMat), MARGIN = 2, function(x) x - featureMeans))
-        if (dim(featureMat)[1] == 1) {
-            featureMat <- t(featureMat)
-        }
-    }
+
     
     # avoid this copy and/or delay transpose until after calculating correlation?
-    dataMat <- as.data.frame(t(dataMat))
+     # dataMat <- as.data.frame(t(dataMat)) # copies, expect transposed form as input instead
     
-    
-    if (testType == "cor") {
-        # create feature correlation matrix with PCs (rows: features/CpGs, columns:PCs)
-        # how much do features correlate with each PC?
+    # spearman not implemented yet
+    if (noNA & (testType != "spearmanCor")) {
+        # for matrix correlation, dataMat will be given with rows as features 
+        # and cols as samples
+        # featureMat has the same orientation for noNA=T or F
         
-        # put epigenetic data first in cor()
-        featurePCCor <- cor(dataMat, featureMat, use="pairwise.complete.obs", method="pearson")
-
-    } else if (testType == "spearmanCor") {
-        # xtfrm(x) ranking
-        featurePCCor <- cor(dataMat, featureMat, use="pairwise.complete.obs", method="spearman")
-
-    # } else if (testType == "pcor") {
-    #     # partial correlation (account for covariates), ppcor package
-    #     
-    #     featurePCCor <- apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 2, 
-    #                                                                        FUN = function(x) pcor.test(x = x, y=y,
-    #                                                                                                    z=covariate,
-    #                                                                                                    method="pearson")$estimate))
-    #     
-    } else if (testType == "cov") {
-        featurePCCor <- cov(dataMat, featureMat, use="pairwise.complete.obs")
-
+        # must normalize covariation and correlation by sample number (n-1)
+        nSamples <- nrow(featureMat)
+        
+        if (!alreadyCenteredFM) {
+            featureMeans <- colMeans(featureMat, na.rm = TRUE)
+            # centering before calculating correlation(also, t() converts to matrix)
+            # apply also converts to matrix here I believe
+            featureMat <- t(apply(X = featureMat, MARGIN = 1, function(x) x - featureMeans))
+            if (dim(featureMat)[1] == 1) {
+                featureMat <- t(featureMat)
+            }
+        }
+        if (!alreadyCenteredDM) {
+            # more efficient to only do once
+            cpgMeans <- rowMeans(dataMat, na.rm = TRUE)
+            # centering before calculating correlation
+            dataMat <- apply(X = dataMat, MARGIN = 2, function(x) x - cpgMeans)
+        }
+        if (!is(featureMat, "matrix")) {
+            featureMat <- as.matrix(featureMat)
+        }
+        if (!is(dataMat, "matrix")) {
+            dataMat <- as.matrix(dataMat)
+        }
+        
+        ##### cor or cov calculations
+        if (testType == "cor") {
+            if (!alreadyScaledFM) {
+                featureMat <- scale(x = featureMat, center = FALSE, scale = TRUE)
+            }
+            if (!alreadyScaledDM) {
+                featSD <- apply(X = dataMat, MARGIN = 1, FUN = sd)
+                featSD[featSD == 0] = 1 # 0 sd if no variation, 1 will leave unchanged and not cause error
+                dataMat <- dataMat / featSD
+            }
+            
+            # create feature correlation matrix with PCs (rows: features/CpGs, columns:PCs)
+            # how much do features correlate with each PC?
+            
+            # put epigenetic data first, inner dimensions are samples
+            featurePCCor <- (dataMat %*% featureMat) / (nSamples - 1)
+            
+        } else if (testType == "cov") {
+            featurePCCor <- (dataMat %*% featureMat) / (nSamples - 1)
+        } else {
+            stop("invalid testType")
+        }
     } else {
-        stop("invalid testType")
+        if (testType == "cor") {
+            # create feature correlation matrix with PCs (rows: features/CpGs, columns:PCs)
+            # how much do features correlate with each PC?
+            
+            # put epigenetic data first in cor()
+            featurePCCor <- cor(dataMat, featureMat, use="pairwise.complete.obs", method="pearson")
+            
+        } else if (testType == "spearmanCor") {
+            # xtfrm(x) ranking
+            featurePCCor <- cor(dataMat, featureMat, use="pairwise.complete.obs", method="spearman")
+            
+            # } else if (testType == "pcor") {
+            #     # partial correlation (account for covariates), ppcor package
+            #     
+            #     featurePCCor <- apply(X = featureMat, MARGIN = 2, function(y) apply(X = dataMat, 2, 
+            #                                                                        FUN = function(x) pcor.test(x = x, y=y,
+            #                                                                                                    z=covariate,
+            #                                                                                                    method="pearson")$estimate))
+            #     
+        } else if (testType == "cov") {
+            featurePCCor <- cov(dataMat, featureMat, use="pairwise.complete.obs")
+            
+        } else {
+            stop("invalid testType")
+        }
+        # if standard deviation of the data was zero, NA will be produced
+        # set to 0 because no standard deviation means no correlation with attribute of interest
+        featurePCCor[is.na(featurePCCor)] <- 0
     }
     
-    
-    # if standard deviation of the data was zero, NA will be produced
-    # set to 0 because no standard deviation means no correlation with attribute of interest
-    featurePCCor[is.na(featurePCCor)] <- 0
     colnames(featurePCCor) <- featureNames
     
     return(featurePCCor)
@@ -844,7 +807,7 @@ createCorFeatureMat <- function(dataMat, featureMat,
 #' This profile can show enrichment 
 #' of genomic signals with high feature contribution scores 
 #' in the region set but not in the
-#' surrounding genome, suggesting that variation is linked specifically
+#' surrounding genome, suggiiiesting that variation is linked specifically
 #' to that region set. 
 #' 
 #' All regions in a given region set 
@@ -2253,5 +2216,237 @@ regionOLMean <- function(signalDT, signalGR, regionSet,
     return(signalAve)
 }
 
+##########################################################################
+# matrix scoring
+# 1. make a region set matrix. The dimensions are nrows=nfeatures of 
+# epigenetic data segmentation (e.g. ATAC consensus peaks), ncol=nregionsets. 
+# It has a 1 for data regions that are overlapped by a given region set 
+# and a zero for data regions that do not overlap the region set
+# This will produce an unweighted mean.
+# 2. Multiply the region set matrix times the loading/correlation matrix.
+# 3. Divide by total covered regions for that region set to get the mean. This
+# is the region set score.
+
+# @template signalCoord
+# @template GRList
+# @template scoringMetric
+# @value Returns a list with two items: 1. a weight matrix where each 
+# column corresponds to one region set
+# and rows are data regions. 2. A data.frame with size and coverage information
+# about the region sets.
+
+# Matrix weights depend on the scoringMetric
+# All signalCoord regions and region set regions should be run through function
+# at the same time so that there will be proper weighting if a region set 
+# region overlaps multiple signalCoord regions and a scoringMetric other than
+# "simpleMean" is being used.
+# @examples data("brcaMCoord1")
+# data("nrf1_chr1")
+# data("esr1_chr1")
+# myGRL <- GRangesList(esr1_chr1, nrf1_chr1)
+# res = olToMat(signalCoord=, GRList=myGRL, scoringMetric="regionMean")
+# olMatList <- res[[1]]
+# coverageInfo <- res[[2]]
+# 
+olToMat = function(signalCoord, GRList, scoringMetric, 
+                   maxRow=500000, minRSCov=0) {
+
+    # input checks
+    if (is.null(names(GRList))) {
+        names(GRList) <- paste0("regionSet", seq_along(GRList))
+    }
+    ###########################################################################
+
+    # calculate overlaps only once
+    # region set must be subject to fit with scoring functions
+    olList <- lapply(X = GRList, FUN = function(x) findOverlaps(query = signalCoord, 
+                                                                subject = x))
+    
+    regionSetCoverage <- rep(0, length(GRList))
+    signalCoverage <- rep(0, length(GRList))
+    
+    regionSetCoverage <- vapply(X = olList, 
+                                FUN = function(x) length(unique(subjectHits(x))), 
+                                FUN.VALUE = -1)
+    keepInd <- which(regionSetCoverage >= minRSCov)
+    rsNames <- names(GRList)[keepInd]
+    regionSetCoverage <- regionSetCoverage[keepInd]
+    signalCoverage <- vapply(X = olList[keepInd], 
+                             FUN = function(x) length(unique(queryHits(x))), 
+                             FUN.VALUE = -1)
+    
+    # # each column is a region set
+    # rsMat <- matrix(data = rep(0, length(GRList) * length(signalCoord)), 
+    #                nrow=length(signalCoord))
+    # 
+    nMat <- ceiling(length(signalCoord) / maxRow)
+    finalMatRows <- length(signalCoord) %% maxRow
+    if (finalMatRows == 0) {
+        finalMatRows = maxRow
+    }
+    # rep(x, 0) is fine if nMat=1
+    matRowNVec = c(rep(maxRow, nMat-1), finalMatRows)
+    rsMatList <- list()
+    if (nMat > 1) {
+        for (matCount in 1:(nMat-1)) {
+            rsMatList[[matCount]] = matrix(data=rep(0, maxRow * length(keepInd)), 
+                                                    nrow=maxRow)
+            colnames(rsMatList[[matCount]]) <- rsNames
+        }
+        # final matrix might not be the same size
+        rsMatList[[nMat]] = matrix(data=rep(0, finalMatRows * length(keepInd)), 
+                                                nrow=finalMatRows)
+        colnames(rsMatList[[nMat]]) <- rsNames
+  
+    } else { # nMat = 1
+        rsMatList[[nMat]] = matrix(data=rep(0, finalMatRows * length(keepInd)), 
+                                            nrow=finalMatRows) 
+        colnames(rsMatList[[nMat]]) <- rsNames
+    }
+    
+
+    
+    #######################################################################
+    # calculate scores and assign to matrices in chunks
+    if (scoringMetric == "simpleMean") {
+        for (i in seq_along(keepInd)) {
+            
+            if (signalCoverage[i] != 0) {
+                tmpCount = 1
+                tmpVec = rep(0, length(signalCoord))
+                # normalize by number so that matrix multiplication during COCOA scoring will produce mean
+                tmpVec[unique(queryHits(olList[[keepInd[i]]]))] <- 1 / signalCoverage[i]  
+                
+                # for coordinate chunks
+                for (j in seq_along(rsMatList)) {
+                    rsMatList[[j]][, i] <- tmpVec[tmpCount:(tmpCount + matRowNVec[j]-1)]
+                    tmpCount = tmpCount + matRowNVec[j]
+                } 
+            }
+        }
+        # put in correct orientation for matrix multiplication to prevent transposition
+        rsMatList <- lapply(rsMatList, FUN = t) # transpose
+    } else if (scoringMetric == "regionMean") {
+        # instead of 1 give weight proportional to how many signalCoord are 
+        # overlapped 
+        
+        for (i in seq_along(keepInd)) {
+            if (signalCoverage[i] != 0) {
+                tmpCount = 1
+                tmpVec = rep(0, length(signalCoord))
+                # aggregate number of overlaps by region set region
+                tmp <- as.data.table(olList[[keepInd[i]]])
+                # want the count per region set number
+                tmp[, rCount := (1/.N), , by=subjectHits]
+                normFactor <- sum(tmp$rCount)
+                tmpVec[tmp$queryHits] <- tmp$rCount / normFactor
+                
+                # for coordinate chunks
+                for (j in seq_along(rsMatList)) {
+                    rsMatList[[j]][, i] <- tmpVec[tmpCount:(tmpCount + matRowNVec[j]-1)]
+                    tmpCount = tmpCount + matRowNVec[j]
+                }
+            }
+        }
+        # put in correct orientation for matrix multiplication to prevent transposition
+        rsMatList <- lapply(rsMatList, FUN = t) # transpose
+        
+    } else if (scoringMetric == "proportionWeightedMean") {
+        sumProportionOverlap = rep(0, length(keepInd))
+        for (i in seq_along(keepInd)) {
+            if (signalCoverage[i] != 0) {
+                tmpCount = 1
+                tmpVec = rep(0, length(signalCoord))
+                olap  <- pintersect(GRList[[keepInd[i]]][subjectHits(olList[[keepInd[i]]])],
+                                    signalCoord[queryHits(olList[[keepInd[i]]])])
+                pOlap <- width(olap) / width(GRList[[keepInd[i]]][subjectHits(olList[[keepInd[i]]])])
+                
+                # weighted average
+                denom <- sum(pOlap)
+                sumProportionOverlap[i] = denom
+    
+                # aggregate pOlap by signalCoord region
+                olDT <- data.table(queryHits = queryHits(olList[[keepInd[i]]]), 
+                                   pOlap=pOlap)
+                normDT <- olDT[, .(coordSum = sum(pOlap)), by=queryHits]
+                tmpVec[normDT$queryHits] <- normDT$coordSum / denom
+                
+                # for coordinate chunks
+                for (j in seq_along(rsMatList)) {
+                    rsMatList[[j]][, i] <- tmpVec[tmpCount:(tmpCount + matRowNVec[j]-1)]
+                    tmpCount = tmpCount + matRowNVec[j]
+                }
+                
+                
+                # below comment outdated?
+                # some rows may be duplicated if a signalMat region overlapped multiple
+                # regions from signalGR but that is ok
+                # signalMat <- signalMat[queryHits(hits), ] # done in next step to prevent extra copying
+            }
+        }
+        # put in correct orientation for matrix multiplication to prevent transposition
+        rsMatList <- lapply(rsMatList, FUN = t) # transpose
+    } else {
+        stop("The given scoringMetric cannot be used with matrix scoring.")
+    }
+    
+    totalRegionNumber <- vapply(X = GRList[keepInd], FUN = length, FUN.VALUE = -1)
+    meanRegionSize <- vapply(X = GRList[keepInd], FUN = function(x) mean(width(x)), 
+                             FUN.VALUE = -1)
+    # list item 2
+    if (scoringMetric == "proportionWeightedMean") {
+        rsInfo = data.frame(rsName=rsNames, signalCoverage, 
+                            regionSetCoverage, sumProportionOverlap, 
+                            totalRegionNumber, 
+                            meanRegionSize)
+    } else {
+        rsInfo = data.frame(rsName=rsNames, signalCoverage, 
+                            regionSetCoverage, totalRegionNumber, 
+                            meanRegionSize)
+    }
+
+    # overlap matrix list and region set coverage info as data.frame 
+    return(list(rsMatList, rsInfo))
+    # totalRegionNumber = sapply(X = GRList, length)
+    # meanRegionSize = sapply(X = GRList, function(x) round(mean(width(x))))
+}
+
+# multiply region set matrices with data matrices to get COCOA score
+# rsMatList mats should have rows as region sets and cols as features
+# ^ so data won't have to be copied during transpose
+matScore <- function(rsMatList, signalMatList, rsInfo) {
+    
+    # rsMatList mats are features X region sets
+    # signalMatList is features X target variables
+    # multiply matrices
+    scoreL <- mapply(FUN = function(x, y) x %*% y, 
+                    x=rsMatList, y=signalMatList, SIMPLIFY = FALSE)
+    # each item in scoreL is region sets X target variables
+    # combine results. Already normalized to one so can just add to get mean.
+    scoreDF <- Reduce("+", scoreL)
+    
+    resultsDF <- cbind(scoreDF, rsInfo)
+    return(resultsDF)
+}
+
+splitSignal <- function(signal, maxRow=500000) {
+    
+    signalList <- list()
+    nMat <- ceiling(nrow(signal) / maxRow)
+
+    finalMatRows <- nrow(signal) %% maxRow
+    if (finalMatRows == 0) {
+        finalMatRows = maxRow
+    }
+    # rep(x, 0) is fine if nMat=1
+    matRowNVec = c(rep(maxRow, nMat-1), finalMatRows)
+    tmpCount = 1
+    for (j in seq(nMat)) {
+        signalList[[j]] <- signal[tmpCount:(tmpCount + matRowNVec[j]-1), ]
+        tmpCount = tmpCount + matRowNVec[j]
+    }
+    
+    return(signalList)
+}
 
 

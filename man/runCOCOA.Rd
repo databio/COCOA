@@ -2,24 +2,30 @@
 % Please edit documentation in R/permutation.R
 \name{runCOCOA}
 \alias{runCOCOA}
-\title{Run COCOA: quantify inter-sample variation, score region sets}
+\title{Run COCOA permutations to get p-values}
 \usage{
 runCOCOA(
   genomicSignal,
   signalCoord,
   GRList,
-  signalCol,
   targetVar,
-  sampleOrder = 1:nrow(targetVar),
-  variationMetric = "cor",
+  rsScores = NULL,
+  signalCol = c("PC1", "PC2"),
   scoringMetric = "default",
-  verbose = TRUE,
   absVal = TRUE,
-  olList = NULL,
-  pOlapList = NULL,
-  centerGenomicSignal = TRUE,
-  centerTargetVar = TRUE,
-  returnCovInfo = TRUE
+  variationMetric = "cor",
+  nPerm = 0,
+  useSimpleCache = TRUE,
+  cacheDir = getwd(),
+  dataID = "",
+  testType = "greater",
+  gammaFitMethod = "mme",
+  realScoreInDist = TRUE,
+  force = FALSE,
+  verbose = TRUE,
+  returnCovInfo = FALSE,
+  minRSCov = 100,
+  ...
 )
 }
 \arguments{
@@ -44,32 +50,26 @@ the same biological annotation). The region set database
 must be from the same reference genome
 as the coordinates for the actual data/samples (signalCoord).}
 
+\item{targetVar}{Matrix or data.frame. Rows should be samples. 
+Columns should be the target variables 
+(whatever variable you want to test for association with
+the epigenetic signal: e.g. PC scores),}
+
+\item{rsScores}{data.frame. A data.frame with region set
+scores. The output of the 'aggregateSignalGRList' function.
+Each row is a region set. One column for each sample
+variable of interest (e.g. PC or sample phenotype).
+Also can have columns with info on the overlap between the 
+region set and the epigenetic data. 
+Rows should be in the same order as the region sets in GRList
+(the list of region sets used to create rsScores.)}
+
 \item{signalCol}{A character vector with the names of the sample variables
 of interest/target variables (e.g. PCs or sample phenotypes). 
 
 The columns in `sampleLabels` for which to calculate
 the variation related to the epigenetic data
 (e.g. correlation) and then to run COCOA on.}
-
-\item{targetVar}{Matrix or data.frame. Rows should be samples. 
-Columns should be the target variables 
-(whatever variable you want to test for association with
-the epigenetic signal: e.g. PC scores),}
-
-\item{sampleOrder}{numeric. A vector of length (number of samples). If
-sampleOrder is 1:(number of samples) then this function will return the
-real COCOA scores.
-To generate random COCOA scores in order to make 
-null distributions, shuffle the samples in a random order.
-E.g. sampleOrder = sample(1:ncol(genomicSignal), ncol(genomicSignal))
-where ncol(genomicSignal) is the number of samples. 
-Set the seed with set.seed() before making sampleOrder to ensure reproducibility.}
-
-\item{variationMetric}{Character. The metric to use to quantify the
-association between each feature in genomicSignal and each target
-variable in sampleLabels.
-Either "cor" (Pearson correlation), 
-"cov" (covariation), or "spearmanCor" (Spearman correlation).}
 
 \item{scoringMetric}{A character object with the scoring metric.
 There are different methods available for 
@@ -104,10 +104,6 @@ weight the signal value when calculating the mean.
 The denominator of the mean
 is the sum of all the proportion overlaps.}
 
-\item{verbose}{A "logical" object. Whether progress 
-of the function should be shown. One
-bar indicates the region set is completed.}
-
 \item{absVal}{Logical. If TRUE, take the absolute value of values in
 signal. Choose TRUE if you think there may be some 
 genomic loci in a region set that will increase and others
@@ -116,39 +112,51 @@ regions in a region set). Choose FALSE if you expect regions in a
 given region set to all change in the same direction (all be positively
 correlated with each other).}
 
-\item{olList}{list. Each list item should be a "SortedByQueryHits" object 
-(output of findOverlaps function). Each hits object should have the overlap
-information between signalCoord and one item of GRList (one unique region set).
-The region sets from GRList must be the "subject" in findOverlaps 
-and signalCoord must be the "query". E.g. findOverlaps(subject=regionSet,
-query=signalCoord).
-Providing this information can greatly improve permutation speed since the 
-overlaps will not have to be calculated for each permutation. 
-The "runCOCOAPerm" function calculates this information only once, internally,
-so this does not have to be provided when using that function. When using 
-this parameter, signalCoord, 
-genomicSignal, and each region set must be in the same order as they were
-when olList was created. Otherwise, the wrong genomic loci will be referenced
-(e.g. if epigenetic features were filtered out of genomicSignal after olList
-was created.)}
+\item{variationMetric}{Character. The metric to use to quantify the
+association between each feature in genomicSignal and each target
+variable in sampleLabels.
+Either "cor" (Pearson correlation), 
+"cov" (covariation), or "spearmanCor" (Spearman correlation).}
 
-\item{pOlapList}{list. This parameter is only used if the scoring metric is
-"proportionWeightedMean" and olList is also provided as an argument. Each
-item of the list should be a vector that contains the proportion overlap 
-between signalCoord and regions from one region set (one item of GRList).
-Specifically, each value should be the proportion of the region set region 
-that is overlapped
-by a signalCoord region.
-The proportion overlap values should be in the same order as the overlaps
-given by olList for the corresponding region set.}
+\item{nPerm}{Numeric. The number of permutations to do.}
 
-\item{centerGenomicSignal}{Logical. Should rows in genomicSignal
-be centered based on
-their means? (subtracting row mean from each row)}
+\item{useSimpleCache}{Logical. Whether to use save caches. Caches
+will be created for each permutation so that if the function is disrupted
+it can restart where it left off. The final results are also saved 
+as a cache. See simpleCache package for more details.}
 
-\item{centerTargetVar}{Logical. Should columns in targetVar be 
-centered based
-on their means? (subtract column mean from each column)}
+\item{cacheDir}{Character. The path for the directory in which the
+caches should be saved.}
+
+\item{dataID}{Character. A unique identifier for this dataset 
+(for saving results with simpleCache)}
+
+\item{testType}{Character. Parameter for `getPermStat`. Whether to
+create p values based on one a two sided test or a lesser/greater one
+sided test. Options are: "greater", "lesser", "two-sided"}
+
+\item{gammaFitMethod}{Character. method to use for fitting the gamma
+distribution to null distribution. Options are 
+"mme" (moment matching estimation), "mle" (maximum likelihood estimation), 
+"qme" (quantile matching estimation), and "mge" (maximum goodness-of-fit 
+estimation). See ?COCOA::getGammaPVal and 
+?fitdistrplus::fitdist() for more info.}
+
+\item{realScoreInDist}{Logical. Should the actual score (from 
+test with no permutations) be included in the null distribution 
+when fitting the gamma distribution. realScoreInDist=TRUE is 
+recommended.}
+
+\item{force}{Logical. If force=TRUE, when fitting the gamma distribution
+returns an error (as may happen when a method other than "mme"
+is used) then allow the error. If force=FALSE, when fitting the 
+gamma distribution returns an error then don't return an error but 
+instead use the "mme" method
+for fitting that specific gamma distribution.}
+
+\item{verbose}{A "logical" object. Whether progress 
+of the function should be shown. One
+bar indicates the region set is completed.}
 
 \item{returnCovInfo}{logical. If TRUE, the following coverage and 
 region set info will
@@ -156,33 +164,35 @@ be calculated and included in function output: regionSetCoverage,
 signalCoverage, totalRegionNumber, and meanRegionSize. For the
 proportionWeightedMean scoring method, 
 sumProportionOverlap will also be calculated.}
+
+\item{minRSCov}{integer. Region sets must have at least "minRSCov" regions
+covered at least partially by epigenetic data to be scored.}
+
+\item{...}{Character. Optional additional arguments for simpleCache.}
 }
 \value{
-data.frame. The output of aggregateSignalGRList for one permutation.
+Returns a list with the following 4 items: 1. a list of length nPerm
+where each item is a data.frame of the COCOA scores from a single 
+permutation. Each data.frame is the output of `runCOCOA()` 
+2. a data.table/data.frame of empirical p-values (the
+output of `getPermStat`) 3. a 
+data.table/data.frame of z-scores (the output of `getPermStat`. 
+4. a data.frame of p-values based on
+the gamma approximation (the output of getGammaPVal().
 }
 \description{
-This is a convenience function that does the two steps of COCOA: 
-quantifying the epigenetic variation and scoring the region sets. 
-This function will return the real COCOA scores if using the default
-`sampleOrder` parameter values. This
-function also makes it easy to generate null distributions in order to
-evaluate the statistical significance of the real COCOA results.
-You can use the sampleOrder parameter to shuffle the samples,
-then run COCOA to get fake scores for each region set. By doing 
-this many times, you can build a null distribution for each 
-region set composed of the region set's random scores from each
-permutation. There are multiple options for quantifying the
-epigenetic variation, specified by the `variationMetric` parameter.
-Quantifying the variation for the real/non-permuted COCOA 
-scores should be done with the same 
-variation metric as is used for the random permutations. For an
-unsupervised analysis using dimensionality reduction, first, the
-dimensionality reduction is done outside `runCOCOA`, then the
-latent factors/principal components are input to `runCOCOA` as the
-sample labels (targetVar parameter) when calculating both the real and 
-also the permutated region set scores. For a supervised analysis, 
-the target variables/phenotypes are the targetVar.
-See the vignettes for examples.
+This is a convenience function that runs multiple steps of the 
+permutation process together: it runs COCOA permutations, converts these
+to null distributions, gets the empirical p value (which is limited by the
+number of permutations), gets z scores, and fits a gamma distribution 
+to each null distribution to estimate p values (not limited by the 
+number of permutations),
+Requires that the user has previously calculated the real COCOA scores. 
+See these individual functions for more info on each step: runCOCOA, 
+convertToFromNullDist, getPermStat, and getGammaPVal.
+}
+\details{
+For reproducibility, set seed with 'set.seed()' function before running.
 }
 \examples{
 data("esr1_chr1")
@@ -193,29 +203,17 @@ pcScores <- prcomp(t(brcaMethylData1))$x
 targetVarCols <- c("PC1", "PC2")
 targetVar <- pcScores[, targetVarCols]
 
-# give the actual order of samples to `runCOCOA` to get the real scores
-correctSampleOrder=1:nrow(targetVar)
-realRSScores <- runCOCOA(genomicSignal=brcaMethylData1,
-                        signalCoord=brcaMCoord1,
-                        GRList=GRangesList(esr1_chr1, nrf1_chr1),
-                        signalCol=c("PC1", "PC2"),
-                        targetVar=targetVar,
-                        sampleOrder=correctSampleOrder,
-                        variationMetric="cor")
-realRSScores
-        
-# give random order of samples to get random COCOA scores 
-# so you start building a null distribution for each region set 
-# (see vignette for example of building a null distribution with `runCOCOA`)
-randomOrder <- sample(1:nrow(targetVar), 
-                      size=nrow(targetVar),
-                      replace=FALSE)
-randomRSScores <- runCOCOA(genomicSignal=brcaMethylData1,
-                          signalCoord=brcaMCoord1,
-                          GRList=GRangesList(esr1_chr1, nrf1_chr1),
-                          signalCol=c("PC1", "PC2"),
-                          targetVar=targetVar,
-                          sampleOrder=randomOrder,
-                          variationMetric="cor")
-randomRSScores
+# runCOCOAPerm
+permResults <- runCOCOA(genomicSignal=brcaMethylData1,
+                           signalCoord=brcaMCoord1,
+                           GRList=GRangesList(esr1_chr1, nrf1_chr1),
+                           rsScores=realRSScores,
+                           targetVar=targetVar,
+                           signalCol=c("PC1", "PC2"),
+                           variationMetric="cor",
+                           nPerm = 10,
+                           useSimpleCache=FALSE)
+permResults
+  
+
 }

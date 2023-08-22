@@ -13,8 +13,9 @@ aggregateSignalGRList(
   scoringMetric = "default",
   verbose = TRUE,
   absVal = TRUE,
-  olList = NULL,
-  pOlapList = NULL,
+  rsMatList = NULL,
+  signalList = NULL,
+  rsInfo = NULL,
   returnCovInfo = TRUE
 )
 }
@@ -103,31 +104,8 @@ regions in a region set). Choose FALSE if you expect regions in a
 given region set to all change in the same direction (all be positively
 correlated with each other).}
 
-\item{olList}{list. Each list item should be a "SortedByQueryHits" object 
-(output of findOverlaps function). Each hits object should have the overlap
-information between signalCoord and one item of GRList (one unique region set).
-The region sets from GRList must be the "subject" in findOverlaps 
-and signalCoord must be the "query". E.g. findOverlaps(subject=regionSet,
-query=signalCoord).
-Providing this information can greatly improve permutation speed since the 
-overlaps will not have to be calculated for each permutation. 
-The "runCOCOAPerm" function calculates this information only once, internally,
-so this does not have to be provided when using that function. When using 
-this parameter, signalCoord, 
-genomicSignal, and each region set must be in the same order as they were
-when olList was created. Otherwise, the wrong genomic loci will be referenced
-(e.g. if epigenetic features were filtered out of genomicSignal after olList
-was created.)}
-
-\item{pOlapList}{list. This parameter is only used if the scoring metric is
-"proportionWeightedMean" and olList is also provided as an argument. Each
-item of the list should be a vector that contains the proportion overlap 
-between signalCoord and regions from one region set (one item of GRList).
-Specifically, each value should be the proportion of the region set region 
-that is overlapped
-by a signalCoord region.
-The proportion overlap values should be in the same order as the overlaps
-given by olList for the corresponding region set.}
+\item{rsMatList}{list of matrices or data.frames. Rows should be . 
+Columns should be}
 
 \item{returnCovInfo}{logical. If TRUE, the following coverage and 
 region set info will

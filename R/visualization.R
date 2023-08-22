@@ -52,7 +52,8 @@
 #' @param decreasing Logical. Whether samples should be sorted in 
 #' decreasing order of `orderByCol` or not (FALSE is increasing order).
 #' @param regionAnnoGRList GRangesList. Each GRanges in the list should be
-#' a genomic annotation. These will be displayed above or below the heatmap.
+#' a genomic annotation. These will be displayed above or below the heatmap. 
+#' Should be a named list. Names will be displayed on plot.
 #' @param plotRegionMean Logical. If TRUE, the genomicSignal will be averaged
 #' for each region in regionSet and those region averages 
 #' will be plotted instead of the
@@ -219,6 +220,9 @@ signalAlongAxis <- function(genomicSignal, signalCoord, regionSet,
     if (!is.null(regionAnnoGRList)) {
         regionAnno <- data.frame(tmp=rep(0, length(coordGR)))
         annoNames <- names(regionAnnoGRList)
+        if (is.null(annoNames)) {
+            annoNames <- paste0("Region set ", seq_along(regionAnnoGRList))
+        }
         for (i in seq_along(regionAnnoGRList)) {
             
             ################# need to make these factors

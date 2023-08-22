@@ -115,7 +115,7 @@ NULL returned).
 This profile can show enrichment 
 of genomic signals with high feature contribution scores 
 in the region set but not in the
-surrounding genome, suggesting that variation is linked specifically
+surrounding genome, suggiiiesting that variation is linked specifically
 to that region set.
 }
 \details{

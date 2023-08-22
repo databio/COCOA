@@ -16,7 +16,7 @@ aggregateSignal(
   rsOL = NULL,
   pOlap = NULL,
   returnCovInfo = TRUE,
-  .checkInput = TRUE
+  .checkInput = FALSE
 )
 }
 \arguments{
