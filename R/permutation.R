@@ -98,20 +98,7 @@
 #'                         targetVar=targetVar,
 #'                         sampleOrder=correctSampleOrder,
 #'                         variationMetric="cor")
-#'         
-#' # give random order of samples to get random COCOA scores 
-#' # so you start building a null distribution for each region set 
-#' # (see vignette for example of building a null distribution with `runCOCOA`)
-#' randomOrder <- sample(1:nrow(targetVar), 
-#'                       size=nrow(targetVar),
-#'                       replace=FALSE)
-#' randomRSScores <- runCOCOA(genomicSignal=brcaMethylData1,
-#'                           signalCoord=brcaMCoord1,
-#'                           GRList=GRangesList(esr1_chr1, nrf1_chr1),
-#'                           signalCol=c("PC1", "PC2"),
-#'                           targetVar=targetVar,
-#'                           sampleOrder=randomOrder,
-#'                           variationMetric="cor")
+#'
 #' 
 #' # runCOCOAPerm
 #' permResults <- runCOCOAPerm(genomicSignal=brcaMethylData1,
@@ -133,14 +120,14 @@ runCOCOAPerm <- function(genomicSignal,
                          GRList,
                          rsScores,
                          targetVar,
-                         signalCol=c("PC1", "PC2"),
+                         signalCol,
                          scoringMetric="default",
                          absVal=TRUE,
                          olList=NULL,
                          centerGenomicSignal=TRUE,
                          centerTargetVar=TRUE,
                          variationMetric="cor",
-                         nPerm=300,
+                         nPerm=NULL, # NULL by default
                          useSimpleCache=TRUE,
                          cacheDir=getwd(),
                          dataID="",
@@ -149,9 +136,15 @@ runCOCOAPerm <- function(genomicSignal,
                          realScoreInDist=TRUE,
                          force=FALSE,
                          verbose=TRUE,
-                         returnCovInfo=FALSE, ...) {
+                         returnCovInfo=FALSE, minRSCov=100, ... {
+                           
     
-    
+    # if doing matrix calculations of cor/cov, center and/or scale only once ahead of time
+    alreadyCenteredFM <- FALSE
+    alreadyCenteredDM <- FALSE
+    alreadyScaledFM <- FALSE
+    alreadyScaledDM <- FALSE
+                           
     colsToAnnotate <- signalCol
     allResultsList <- list()
     
@@ -206,9 +199,80 @@ runCOCOAPerm <- function(genomicSignal,
                          Check spelling/capitalization."))
         }
     }
+                             
+    # if no NA, NaN or +/-Inf, can do matrix correlation calculations
+    # different COCOA step than matrix scoring of region sets
+    noNA <- all(is.finite(genomicSignal))
+    if (noNA & (variationMetric %in% c("cov", "cor"))) {
+        
+        # more efficient to only do once
+        cpgMeans <- rowMeans(genomicSignal, na.rm = TRUE)
+        # centering before calculating correlation
+        genomicSignal <- apply(X = genomicSignal, MARGIN = 2, function(x) x - cpgMeans)
+        # don't do later
+        alreadyCenteredDM <- TRUE
+        
+        featureMeans <- colMeans(targetVar, na.rm = TRUE)
+        # centering before calculating correlation (also, t() converts to matrix)
+        targetVar <- t(apply(X = t(targetVar), MARGIN = 2, function(x) x - featureMeans))
+        if (dim(targetVar)[1] == 1) {
+            targetVar <- t(targetVar)
+        }
+        # don't do later
+        alreadyCenteredFM <- TRUE
+    }
+    if (noNA & (variationMetric == "cor")) {
+        targetVar <- scale(x = targetVar, center = FALSE, scale = TRUE)
+        alreadyScaledFM <- TRUE
+        
+        featSD <- apply(X = genomicSignal, MARGIN = 1, FUN = sd)
+        featSD[featSD == 0] = 1 # 0 sd if no variation, 1 will leave unchanged and not cause error
+        genomicSignal <- genomicSignal / featSD
+        alreadyScaledDM <- TRUE
+    }
+        
     
+    # matrix-based region set scoring only works for mean-based scoringMetric's
+    if (scoringMetric %in% c("simpleMean", 
+                             "regionMean", 
+                             "proportionWeightedMean")) {
+        doRSMatScore <- TRUE
+    } else {
+        doRSMatScore <- FALSE
+    }
+     
+    
+    if (!noNA) {
+        # orientation for "cor()" and "cov()"
+        # for these functions, samples need to be rows for both objects
+        # must be transposed now so it is not (and not copied) during each permutation
+        genomicSignal <- t(genomicSignal) 
+    }
+    # for matrix correlation, samples should be rows for only one object (genSig and tarVar)
+    # data is already in correct orientation
+
+
+    ########################################################################
+    # create region set overlap matrix
+    if (doRSMatScore) {
+        olMatRes <- olToMat(signalCoord = signalCoord,
+                            GRList = GRList, 
+                            scoringMetric = scoringMetric, minRSCov=minRSCov)
+        rsMatList <- olMatRes[[1]]
+        rsInfo <- olMatRes[[2]]
+        GRList <- NULL
+        if (!is.null(rsScores)) {
+            if (nrow(rsInfo) != nrow(rsScores)) {
+                stop("rsScores should be filtered beforehand to remove region sets with less than minRSCov coverage.")
+            }
+        }
+        
+        ## NOTE: there might be an error if rsScores is given but not screened by minRSCov
+    }
+
+
     #################
-    if (is.null(olList)) {
+   if (is.null(olList)) {
         
         #######
         # must take out NA rows before getting OL list. Otherwise later calculations 
@@ -279,73 +343,134 @@ runCOCOAPerm <- function(genomicSignal,
     }
     
     #################
-    
-        
-    indList <- list()
-    # generate random indices for shuffling of samples
-    for (i in 1:nPerm) {
-        indList[[i]] <- sample(1:nrow(targetVar), nrow(targetVar))
-    }
-    # replicate(10, sample(seq_len(nrow(targetVar)))
 
+    if (nPerm > 0) {
+        indList <- list()
+        # generate random indices for shuffling of samples
+        # because a for loop is used, if nPerm is increased, the original
+        # items in indList will be the same. Keep for loop.
+        for (i in seq(nPerm)) {
+            indList[[i]] <- sample(1:nrow(targetVar), nrow(targetVar))
+        }
+    }
+
+    
     if (useSimpleCache) {
         
-        # create the main permutation cache
-        simpleCache(paste0("rsPermScores_", nPerm, "Perm_", variationMetric, "_", dataID), {
-            
-        helperFun <- function(x, y, ...) {
-            # for (i in (length(rsPermScores) + 1):nPerm) {
-            onePermCacheName <- paste0("rsPermScores_", nPerm, "Perm_", variationMetric, "_", dataID, "_Cache", y)
-            # create sub caches, one for each permutation
-            simpleCache(onePermCacheName, cacheSubDir = paste0("rsPermScores_", nPerm, "Perm_", variationMetric, "_", dataID), {
-                
-                tmp <- runCOCOA(sampleOrder=x,
-                                genomicSignal=genomicSignal,
-                                signalCoord=signalCoord,
-                                GRList=GRList,
-                                signalCol=colsToAnnotate,
-                                targetVar=targetVar,
-                                variationMetric = variationMetric,
-                                scoringMetric=scoringMetric,
-                                absVal=absVal,
-                                centerGenomicSignal = centerGenomicSignal,
-                                centerTargetVar = centerTargetVar,
-                                verbose=verbose,
-                                olList=olList,
-                                pOlapList=pOlapList,
-                                returnCovInfo = returnCovInfo)
-                message(y) # must be ahead of object that is saved as cache, not after
-                tmp
-                
-            }, cacheDir=cacheDir, assignToVariable="tmp", ...)
-            return(tmp)
+        if (is.null(rsScores)) {
+            simpleCache(paste0("rsScores_", variationMetric, "_", dataID), {
+                rsScores <- runCOCOA(sampleOrder=1:nrow(targetVar),
+                                          genomicSignal=genomicSignal,
+                                          signalCoord=signalCoord,
+                                          GRList=GRList,
+                                          signalCol=colsToAnnotate,
+                                          targetVar=targetVar,
+                                          variationMetric = variationMetric,
+                                          scoringMetric=scoringMetric,
+                                          absVal=absVal,
+                                          verbose=verbose,
+                                          rsMatList = rsMatList,
+                                          rsInfo = rsInfo,
+                                          returnCovInfo = returnCovInfo,
+                                          noNA=noNA,
+                                          alreadyCenteredDM = alreadyCenteredDM,  
+                                          alreadyScaledDM = alreadyScaledDM, 
+                                          alreadyCenteredFM = alreadyCenteredFM, 
+                                          alreadyScaledFM = alreadyScaledFM)
+                rsScores
+            }, assignToVariable="rsScores")
         }
-        rsPermScores = mapply(FUN = helperFun, x=indList, y=seq_along(indList), ..., SIMPLIFY=FALSE)
-        rsPermScores
-            
-        }, assignToVariable="rsPermScores", cacheDir=cacheDir, ...)    
+
+        
+        if (nPerm > 0) {
+            # create the main permutation cache
+            simpleCache(paste0("rsPermScores_", nPerm, "Perm_", variationMetric, "_", dataID), {
+                
+                helperFun <- function(x, y, ...) {
+                    # for (i in (length(rsPermScores) + 1):nPerm) {
+                    onePermCacheName <- paste0("rsPermScores_", variationMetric, "_", dataID, "_Cache", y)
+                    # create sub caches, one for each permutation
+                    simpleCache(onePermCacheName, cacheSubDir = paste0("rsPermScores_", variationMetric, "_", dataID), {
+                        
+                        tmp <- runCOCOA(sampleOrder=x,
+                                             genomicSignal=genomicSignal,
+                                             signalCoord=signalCoord,
+                                             GRList=GRList,
+                                             signalCol=colsToAnnotate,
+                                             targetVar=targetVar,
+                                             variationMetric = variationMetric,
+                                             scoringMetric=scoringMetric,
+                                             absVal=absVal,
+                                             verbose=verbose,
+                                             rsMatList = rsMatList,
+                                             rsInfo = rsInfo,
+                                             returnCovInfo = returnCovInfo,
+                                             noNA=noNA,
+                                             alreadyCenteredDM = alreadyCenteredDM,  
+                                             alreadyScaledDM = alreadyScaledDM, 
+                                             alreadyCenteredFM = alreadyCenteredFM, 
+                                             alreadyScaledFM = alreadyScaledFM)
+                        message(y) # must be ahead of object that is saved as cache, not after
+                        tmp
+                        
+                    }, cacheDir=cacheDir, assignToVariable="tmp", ...)
+                    return(tmp)
+                }
+                rsPermScores = mapply(FUN = helperFun, x=indList, y=seq_along(indList), ..., SIMPLIFY=FALSE)
+                rsPermScores
+                
+            }, assignToVariable="rsPermScores", cacheDir=cacheDir, ...)  
+        }
     } else {
         
-        helperFun2 <- function(x) {
-            tmp <- runCOCOA(sampleOrder=x,
-                          genomicSignal=genomicSignal,
-                          signalCoord=signalCoord,
-                          GRList=GRList,
-                          signalCol=colsToAnnotate,
-                          targetVar=targetVar,
-                          variationMetric = variationMetric,
-                          scoringMetric=scoringMetric,
-                          absVal=absVal,
-                          verbose=verbose,
-                          olList=olList,
-                          pOlapList=pOlapList,
-                          returnCovInfo = returnCovInfo)
-            message(".")
-            return(tmp)
+        if (is.null(rsScores)) {
+            rsScores <- runCOCOA(sampleOrder=1:nrow(targetVar),
+                                      genomicSignal=genomicSignal,
+                                      signalCoord=signalCoord,
+                                      GRList=GRList,
+                                      signalCol=colsToAnnotate,
+                                      targetVar=targetVar,
+                                      variationMetric = variationMetric,
+                                      scoringMetric=scoringMetric,
+                                      absVal=absVal,
+                                      verbose=verbose,
+                                      rsMatList = rsMatList,
+                                      rsInfo = rsInfo,
+                                      returnCovInfo = returnCovInfo,
+                                      noNA=noNA,
+                                      alreadyCenteredDM = alreadyCenteredDM,  
+                                      alreadyScaledDM = alreadyScaledDM, 
+                                      alreadyCenteredFM = alreadyCenteredFM, 
+                                      alreadyScaledFM = alreadyScaledFM)
         }
         
-        rsPermScores <- lapply(X = indList, helperFun2)
- 
+        if (nPerm > 0) {
+            helperFun2 <- function(x) {
+                tmp <- runCOCOA(sampleOrder=x,
+                                     genomicSignal=genomicSignal,
+                                     signalCoord=signalCoord,
+                                     GRList=GRList,
+                                     signalCol=colsToAnnotate,
+                                     targetVar=targetVar,
+                                     variationMetric = variationMetric,
+                                     scoringMetric=scoringMetric,
+                                     absVal=absVal,
+                                     verbose=verbose,
+                                     rsMatList=rsMatList,
+                                     rsInfo = rsInfo,
+                                     returnCovInfo = returnCovInfo,
+                                     noNA=noNA,
+                                     alreadyCenteredDM = alreadyCenteredDM,  
+                                     alreadyScaledDM = alreadyScaledDM, 
+                                     alreadyCenteredFM = alreadyCenteredFM, 
+                                     alreadyScaledFM = alreadyScaledFM)
+                message(":", appendLF=FALSE)
+                return(tmp)
+            }
+            
+            rsPermScores <- lapply(X = indList, helperFun2)
+            
+        }
     }
     
     
@@ -365,12 +490,15 @@ runCOCOAPerm <- function(genomicSignal,
             rsPVals <- getPermStat(rsScores=rsScores, nullDistList=nullDistList,
                                   signalCol=colsToAnnotate, whichMetric = "pval",
                                   testType=testType)
+
             rsPVals
         }, assignToVariable="rsPVals", cacheDir=cacheDir, ...)
         
         simpleCache(paste0("permZScores", .analysisID), {
             rsZScores <- getPermStat(rsScores=rsScores, nullDistList=nullDistList,
                                     signalCol=colsToAnnotate, whichMetric = "zscore")
+
+
             rsZScores
             
         }, assignToVariable="rsZScores", cacheDir=cacheDir, ...)
@@ -388,6 +516,7 @@ runCOCOAPerm <- function(genomicSignal,
             gPValDF <- cbind(gPValDF, 
                             rsScores[, colnames(rsScores)[!(colnames(rsScores) 
                                                                     %in% colsToAnnotate)]])
+
             gPValDF
         }, assignToVariable="gPValDF", cacheDir=cacheDir, ...)    
         
@@ -395,9 +524,12 @@ runCOCOAPerm <- function(genomicSignal,
         rsPVals <- getPermStat(rsScores=rsScores, nullDistList=nullDistList,
                               signalCol=colsToAnnotate, whichMetric = "pval",
                               testType = testType)
+
         
+
         rsZScores <- getPermStat(rsScores=rsScores, nullDistList=nullDistList,
                                 signalCol=colsToAnnotate, whichMetric = "zscore")
+
         
         # p-values based on fitted gamma distributions
         gPValDF <- getGammaPVal(rsScores = rsScores, 
@@ -406,24 +538,23 @@ runCOCOAPerm <- function(genomicSignal,
                                method = gammaFitMethod, 
                                realScoreInDist = realScoreInDist,
                                force=force)
+
         gPValDF <- cbind(gPValDF, 
                         rsScores[, colnames(rsScores)[!(colnames(rsScores) 
                                                                 %in% colsToAnnotate)]])
+         
+
         
     }
     
+    allResultsList$rsScores <- rsScores
     allResultsList$permRSScores <- rsPermScores
     allResultsList$empiricalPVals <- rsPVals
     allResultsList$zScores <- rsZScores
     allResultsList$gammaPVal <- gPValDF
+
     return(allResultsList)
 
-    # return(named list)
-    # definitely: rsPermScores or nullDistList, 
-    # also uncorrected perm pvals, z scores, uncorrected gamma pvals
-    # possible outputs:  
-    # uncorrected pvals perm and gamma, corrected pvals perm and gamma
-    # zscores
 }
 
 #' Run COCOA: quantify inter-sample variation, score region sets
@@ -523,8 +654,20 @@ runCOCOA <- function(genomicSignal,
                     absVal=TRUE, olList=NULL, pOlapList=NULL,
                     centerGenomicSignal=TRUE,
                     centerTargetVar=TRUE, 
-                    returnCovInfo=TRUE) {
+                    returnCovInfo=TRUE,
+                    rsMatList=NULL, 
+                    rsInfo=NULL,
+                    alreadyCenteredDM = FALSE,  
+                    alreadyScaledDM = FALSE, 
+                    alreadyCenteredFM = FALSE, 
+                    alreadyScaledFM = FALSE,
+                    noNA=FALSE) {
+  
     
+    
+  
+
+    signalList <- NULL
     # if vector is given, return error
     if (is.null(dim(targetVar))) {
         stop("`targetVar` should be a matrix or data.frame")
@@ -534,6 +677,14 @@ runCOCOA <- function(genomicSignal,
         stop("Not all specified columns are present in `targetVar`")
     }
     
+    # if vector is given, return error
+    if (is.null(dim(targetVar))) {
+        stop("`targetVar` should be a matrix or data.frame")
+    }
+    
+    if (any(!(signalCol %in% colnames(targetVar)))) {
+        stop("Not all specified columns are present in `targetVar`")
+    }
     
     # subset to only signalCol
     targetVar <- targetVar[, signalCol, drop=FALSE]
@@ -547,17 +698,25 @@ runCOCOA <- function(genomicSignal,
     
     # calculate correlation
     featureLabelCor <- createCorFeatureMat(dataMat = genomicSignal, 
-                                          featureMat = targetVar, 
-                                          centerDataMat = centerGenomicSignal, 
-                                          centerFeatureMat = centerTargetVar,
+                                          featureMat = targetVar,
                                           testType = variationMetric)
     
+
     # more efficient to do only once instead of for each region set later on
     if (absVal) {
         featureLabelCor <- abs(featureLabelCor)
         absVal <- FALSE    
     }
-    
+  
+    if (!is.null(rsMatList) && (scoringMetric %in% c("simpleMean", "regionMean", 
+                                "proportionWeightedMean"))) {
+        
+        if (is.null(signalList)) {
+            signalList <- splitSignal(signal = featureLabelCor, 
+                                         maxRow = ncol(rsMatList[[1]]))
+        }
+        
+    }
     
     # run COCOA
     thisPermRes <- aggregateSignalGRList(signal=featureLabelCor, 
@@ -623,7 +782,39 @@ permListToOneNullDist <- function(resultsList, rsInd) {
     return(rsNullDist)
 }
 
+# for gammaNormalize()
+pGammaSingle <- function(scoreVec, oneDist) {
+    
+    pValVec <- pgamma(q = scoreVec, shape = oneDist$estimate["shape"], 
+           rate = oneDist$estimate["rate"], 
+           lower.tail = FALSE) # lower.tail=FALSE means 1-x is given
+    return(pValVec)
+}
 
+# get gamma p-value for each region set based on feature values
+# of all CpGs. This is done to normalize for the mean and variance of
+# permutation feature value distributions
+# @param featureVals matrix/data.frame. Should 
+gammaNormalize <- function(rsScores, featureVals, method="mme", force=FALSE) {
+    
+    # estimate distribution parameters
+    # returns a list where each item is a gamma dist for a column of featureVals
+    gList <- fitGammaNullDist(nullDistDF = featureVals, 
+                                 method=method, 
+                                 force=force)
+
+    ####  get p-val for score
+    pValList = list()
+    # once for each column
+    for (i in 1:ncol(rsScores)) {
+        pValList[[i]] <- as.data.frame(pGammaSingle(scoreVec = as.numeric(rsScores[, i]), 
+                                                    oneDist = gList[[i]]))
+    }
+        
+    pValDF <- as.data.frame(do.call("cbind", pValList))
+    colnames(pValDF) <- colnames(rsScores)
+    return(pValDF)
+}
 
 
 
