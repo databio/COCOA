@@ -455,6 +455,7 @@ aggregateSignal <- function(signal,
 }
 
 # format results of scoring functions in aggregateSignal()
+
 .formatResults <- function(loadAgMain, scoringMetric, 
                            regionSet, signalCol, returnCovInfo=TRUE) {
     
@@ -497,6 +498,7 @@ aggregateSignal <- function(signal,
     }
     return(results)
 }
+
 
 
 #' Score many region sets
@@ -565,8 +567,10 @@ aggregateSignalGRList <- function(signal,
                      signalCoordType = "default",
                      scoringMetric = "default",
                      verbose = TRUE,
-                     absVal=TRUE, olList=NULL, 
-                     pOlapList=NULL, returnCovInfo=TRUE) {
+                     absVal=TRUE, 
+                     rsMatList=NULL, 
+                     signalList=NULL, rsInfo=NULL,
+                     returnCovInfo=TRUE) {
 
     ################### checking inputs  #################################
     
@@ -575,8 +579,45 @@ aggregateSignalGRList <- function(signal,
                              signalCoord=signalCoord,
                              regionSet=NULL,
                              signalCol = signalCol,
-                             GRList=GRList,
-                             olList=olList)
+                             GRList=GRList)#,
+                             #olList=olList)
+    
+    ########## check that dimensions of inputs are consistent
+    # length of signal coord = nrow of signal
+    if (length(signalCoord) != nrow(signal)) {
+        stop(cleanws("The number of coordinates in 
+            signalCoord (length(signalCoord)) does not equal the number of 
+                     rows in `signal`"))
+    } 
+    
+    ######### check that appropriate columns are present
+    # signalCol are column names of signal
+    if (!all(signalCol %in% colnames(signal))) {
+        missingCols = signalCol[!(signalCol %in% colnames(signal))]
+        stop(cleanws(paste0("Some signalCol are not 
+                            columns of signal: ", missingCols)))
+    }
+    aggregateSignalGRList <- function(signal,
+                     signalCoord,
+                     GRList,
+                     signalCol = c("PC1", "PC2"),
+                     signalCoordType = "default",
+                     scoringMetric = "default",
+                     verbose = TRUE,
+                     absVal=TRUE, 
+                     rsMatList=NULL, 
+                     signalList=NULL, rsInfo=NULL,
+                     returnCovInfo=TRUE) {
+
+    ################### checking inputs  #################################
+    
+    ########## check that inputs are the correct class
+    checkConvertInputClasses(signal=signal,
+                             signalCoord=signalCoord,
+                             regionSet=NULL,
+                             signalCol = signalCol,
+                             GRList=GRList)#,
+                             #olList=olList)
     
     ########## check that dimensions of inputs are consistent
     # length of signal coord = nrow of signal
@@ -648,14 +689,24 @@ aggregateSignalGRList <- function(signal,
         }
     }
     
-    # convert object class outside aggregateSignal to extra prevent copying
-    # (one scoring method needs `signal` as a matrix though)
-    if (!is(signal, "data.table") && (scoringMetric != "proportionWeightedMean")) {
-        signal <- as.data.table(signal)
-    } else if (!is(signal, "matrix") && (scoringMetric == "proportionWeightedMean")) {
-        signal <- as.matrix(signal)
+    if (is.null(signalList)) {
+        # data.table is only used for non-matrix COCOA (legacy)
+        
+        # convert object class outside aggregateSignal to extra prevent copying
+        # (one scoring method needs `signal` as a matrix though)
+        if (!is(signal, "data.table") && (scoringMetric != "proportionWeightedMean")) {
+            signal <- as.data.table(signal)
+        } else if (!is(signal, "matrix") && (scoringMetric == "proportionWeightedMean")) {
+            signal <- as.matrix(signal)
+        }
+        
+    } else {
+        # needed for gamma normalization
+        if (!is(signal, "matrix")) {
+            signal <- as.matrix(signal)
+        }
     }
-    
+
 
     # take absolute value outside aggregateSignal to prevent extra copying
     if (absVal) {
@@ -667,7 +718,34 @@ aggregateSignalGRList <- function(signal,
         absVal <- FALSE
     }
     
-    if (is.null(olList)) {
+    # ## if this function is only being run once, use data.table calculations
+    # # create region set overlap matrix
+    # # this code should be after code modifying "signal"
+    # if (scoringMetric %in% c("simpleMean", 
+    #                                               "regionMean", 
+    #                                               "proportionWeightedMean")) {
+    #     if (is.null(rsMatList)) {
+    #         olMatRes <- olToMat(signalCoord = signalCoord,
+    #                             GRList = GRList, 
+    #                             scoringMetric = scoringMetric)
+    #         rsMatList <- olMatRes[[1]]
+    #         rsInfo <- olMatRes[[2]]
+    #     }
+    # 
+    #     if (is.null(signalList)) {
+    #         signalMatList <- splitSignal(signal = signal, 
+    #                                      maxRow = nrow(rsMatList[[1]]))
+    #     }
+    # }
+    
+    
+    if (!is.null(rsMatList) && (scoringMetric %in% c("simpleMean", 
+                                                   "regionMean", 
+                                                   "proportionWeightedMean"))) {
+        resultsDF <- matScore(rsMatList = rsMatList, 
+                                signalMatList=signalList, 
+                              rsInfo=rsInfo)
+    } else { # not matrix COCOA. Old COCOA with data.table
         # apply over the list of region sets
         resultsList <- lapplyAlias(GRList,
                                    function(x) aggregateSignal(
@@ -680,75 +758,191 @@ aggregateSignalGRList <- function(signal,
                                        verbose = verbose,
                                        absVal = absVal, pOlap=NULL,
                                        returnCovInfo=returnCovInfo))
-        # resultsList <- mapply(FUN = function(x) aggregateSignal(
-        #     signal = signal,
-        #     signalCoord = signalCoord,
-        #     signalCoordType = signalCoordType,
-        #     regionSet = x,
-        #     signalCol = signalCol,
-        #     scoringMetric = scoringMetric,
-        #     verbose = verbose,
-        #     absVal = absVal, pOlap=y, 
-        #     returnCovInfo=returnCovInfo), x=GRList, y=pOlapList)
-        #wilcox.conf.int = wilcox.conf.int,
-    } else {
-        # # apply over the list of region sets
-        # resultsList <- lapplyAlias(olList,
-        #                            function(x) aggregateSignal(
-        #                                signal = signal,
-        #                                signalCoord = signalCoord,
-        #                                signalCoordType = signalCoordType,
-        #                                regionSet = NULL,
-        #                                signalCol = signalCol,
-        #                                scoringMetric = scoringMetric,
-        #                                verbose = verbose,
-        #                                absVal = absVal, 
-        #                                rsOL=x, pOlap=pOlapList, returnCovInfo=returnCovInfo))
-        # #wilcox.conf.int = wilcox.conf.int,
-        if (is.null(pOlapList)) {
-            # mapply does not work if pOlapList is null and other argument is not null
-            resultsList <- lapplyAlias(olList, FUN = function(x) aggregateSignal(
-                signal = signal,
-                signalCoord = signalCoord,
-                signalCoordType = signalCoordType,
-                regionSet = NULL,
-                signalCol = signalCol,
-                scoringMetric = scoringMetric,
-                verbose = verbose,
-                absVal = absVal, 
-                rsOL=x,
-                returnCovInfo=returnCovInfo))
-        } else {
-            resultsList <- mapply(FUN = function(x, y) aggregateSignal(
-                signal = signal,
-                signalCoord = signalCoord,
-                signalCoordType = signalCoordType,
-                regionSet = NULL,
-                signalCol = signalCol,
-                scoringMetric = scoringMetric,
-                verbose = verbose,
-                absVal = absVal, 
-                rsOL=x, pOlap=y,
-                returnCovInfo=returnCovInfo), 
-                x=olList, y=pOlapList)
-        }
-        
+    }
 
+    if (!is.null(rsMatList) && (scoringMetric %in% c("simpleMean", 
+                                                   "regionMean", 
+                                                   "proportionWeightedMean"))) {
+        # resultsDF[, signalCol] <- gammaNormalize(rsScores=resultsDF[, signalCol],
+        #     
+        #                                     featureVals=signal[, signalCol])
+
+        resultsDF[, 1] <- as.numeric(resultsDF[, 1])
+
+        resultsDF <- as.data.frame(resultsDF)
+        
+        # Sort the results based on the first column
+        resultsDF <- resultsDF[order(-resultsDF[, 1]), ]
+
+        return(resultsDF)
+
+    } else {
+
+        resultsDT <- do.call(rbind, resultsList)
+        resultsDT[, 1] <- as.numeric(resultsDT[, 1])
+        resultsDF <- as.data.frame(resultsDT)
+
+        # Sort the results based on the first column
+        resultsDF <- resultsDF[order(-resultsDF[, 1]), ]
+
+        return(resultsDF)   
+    }
+}    
+
+    ######## check that scoringMetric is appropriate
+    
+    if (!(scoringMetric %in% getScoringMethods("both"))) {
+        stop(cleanws("scoringMetric was not recognized. 
+                      Check spelling and available options."))
     }
     
-    resultsDT <- do.call(rbind, resultsList) 
+    ###### check that signalCoordType is appropriate
+    if (!(signalCoordType %in% c("default", "singleBase", "multiBase"))) {
+        stop(cleanws("signalCoordType not recognized. 
+                     Check spelling/capitalization."))
+    }
+    
+    #######
+    # what happens if there are NAs or Inf in `signal`?
+    # any NAs that overlap the regionSet will cause the score to be NA
+    if (is(signal, "data.table")) {
+        naRows = apply(X = signal[, signalCol, with=FALSE, drop=FALSE], 
+                       MARGIN = 1, FUN = function(x) any(is.na(x)))
+    } else {
+        naRows = apply(X = signal[, signalCol, drop=FALSE], 
+                       MARGIN = 1, FUN = function(x) any(is.na(x)))    
+    }
+    
+    if (any(naRows)) {
+        signal <- signal[!naRows, ]
+        signalCoord <- signalCoord[!naRows]
+        warning("Removing rows with NA from `signal`")
+    }
+    
+    #################################################################
+    
+    # detect signalCoordType
+    if (signalCoordType == "default") {
+        # when signalCoord is a GRanges object
+        if (any(start(signalCoord) != end(signalCoord))) {
+            signalCoordType <- "multiBase"
+        } else {
+            signalCoordType <- "singleBase"
+        }
+    }
+    
+    # if "default" scoring method is given, choose based on signalCoordType
+    if (scoringMetric == "default") {
+        if (signalCoordType == "singleBase") {
+            scoringMetric <- "regionMean"   
+        } else if (signalCoordType == "multiBase") {
+            scoringMetric <- "proportionWeightedMean"
+        } else {
+            stop(cleanws("signalCoordType not recognized. 
+                         Check spelling/capitalization."))
+        }
+    }
+    
+    if (is.null(signalList)) {
+        # data.table is only used for non-matrix COCOA (legacy)
+        
+        # convert object class outside aggregateSignal to extra prevent copying
+        # (one scoring method needs `signal` as a matrix though)
+        if (!is(signal, "data.table") && (scoringMetric != "proportionWeightedMean")) {
+            signal <- as.data.table(signal)
+        } else if (!is(signal, "matrix") && (scoringMetric == "proportionWeightedMean")) {
+            signal <- as.matrix(signal)
+        }
+        
+    } else {
+        # needed for gamma normalization
+        if (!is(signal, "matrix")) {
+            signal <- as.matrix(signal)
+        }
+    }
 
-    # # add names if they are present
-    # if (!is.null(names(GRList))) {
-    #     # resultsDT[, rsName := names(GRList)]
-    #     row.names(resultsDT) <- names(GRList)
+
+    # take absolute value outside aggregateSignal to prevent extra copying
+    if (absVal) {
+        if (is(signal, "data.table")) {
+            signal[, signalCol] <- abs(signal[, signalCol, with=FALSE])
+        } else {
+            signal[, signalCol] <- abs(signal[, signalCol])    
+        }
+        absVal <- FALSE
+    }
+    
+    # ## if this function is only being run once, use data.table calculations
+    # # create region set overlap matrix
+    # # this code should be after code modifying "signal"
+    # if (scoringMetric %in% c("simpleMean", 
+    #                                               "regionMean", 
+    #                                               "proportionWeightedMean")) {
+    #     if (is.null(rsMatList)) {
+    #         olMatRes <- olToMat(signalCoord = signalCoord,
+    #                             GRList = GRList, 
+    #                             scoringMetric = scoringMetric)
+    #         rsMatList <- olMatRes[[1]]
+    #         rsInfo <- olMatRes[[2]]
+    #     }
+    # 
+    #     if (is.null(signalList)) {
+    #         signalMatList <- splitSignal(signal = signal, 
+    #                                      maxRow = nrow(rsMatList[[1]]))
+    #     }
     # }
+    
+    
+    if (!is.null(rsMatList) && (scoringMetric %in% c("simpleMean", 
+                                                   "regionMean", 
+                                                   "proportionWeightedMean"))) {
+        resultsDF <- matScore(rsMatList = rsMatList, 
+                                signalMatList=signalList, 
+                              rsInfo=rsInfo)
+    } else { # not matrix COCOA. Old COCOA with data.table
+        # apply over the list of region sets
+        resultsList <- lapplyAlias(GRList,
+                                   function(x) aggregateSignal(
+                                       signal = signal,
+                                       signalCoord = signalCoord,
+                                       signalCoordType = signalCoordType,
+                                       regionSet = x,
+                                       signalCol = signalCol,
+                                       scoringMetric = scoringMetric,
+                                       verbose = verbose,
+                                       absVal = absVal, pOlap=NULL,
+                                       returnCovInfo=returnCovInfo))
+    }
 
-    # rsName <- row.names(resultsDT)
-    resultsDF <- as.data.frame(resultsDT) #, row.names = rsName)
+    if (!is.null(rsMatList) && (scoringMetric %in% c("simpleMean", 
+                                                   "regionMean", 
+                                                   "proportionWeightedMean"))) {
+        # resultsDF[, signalCol] <- gammaNormalize(rsScores=resultsDF[, signalCol],
+        #     
+        #                                     featureVals=signal[, signalCol])
 
-    return(resultsDF)
+        resultsDF[, 1] <- as.numeric(resultsDF[, 1])
+
+        resultsDF <- as.data.frame(resultsDF)
+        
+        # Sort the results based on the first column
+        resultsDF <- resultsDF[order(-resultsDF[, 1]), ]
+
+        return(resultsDF)
+
+    } else {
+
+        resultsDT <- do.call(rbind, resultsList)
+        resultsDT[, 1] <- as.numeric(resultsDT[, 1])
+        resultsDF <- as.data.frame(resultsDT)
+
+        # Sort the results based on the first column
+        resultsDF <- resultsDF[order(-resultsDF[, 1]), ]
+
+        return(resultsDF)   
+    }
 }    
+  
 
 # @param dataMat columns of dataMat should be samples/patients, rows should be genomic signal
 # (each row corresponds to one genomic coordinate/range)
