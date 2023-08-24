@@ -136,7 +136,7 @@ runCOCOAPerm <- function(genomicSignal,
                          realScoreInDist=TRUE,
                          force=FALSE,
                          verbose=TRUE,
-                         returnCovInfo=FALSE, minRSCov=100, ... {
+                         returnCovInfo=FALSE, minRSCov=100, ...) {
                            
     
     # if doing matrix calculations of cor/cov, center and/or scale only once ahead of time
