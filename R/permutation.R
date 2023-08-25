@@ -154,7 +154,13 @@ runCOCOAPerm <- function(genomicSignal,
     if (is(rsScores, "data.table")) {
         rsScores = as.data.frame(rsScores)
     }
-    rsScores = rsScores[, colsToAnnotate] # prevents error that occurs if extra column is factor
+
+    # Make sure signalCol is a character vector
+    if (!is.character(colsToAnnotate)) {
+        colsToAnnotate <- as.character(colsToAnnotate)
+    }
+  
+    rsScores = rsScores[, colsToAnnotate, drop = FALSE] # prevents error that occurs if extra column is factor
 
     
     ## Convert rsScores to data frame if needed and retain only specified columns.
