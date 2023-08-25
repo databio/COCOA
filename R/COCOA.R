@@ -2447,5 +2447,236 @@ regionOLMean <- function(signalDT, signalGR, regionSet,
     return(signalAve)
 }
 
+##########################################################################
+# matrix scoring
+# 1. make a region set matrix. The dimensions are nrows=nfeatures of 
+# epigenetic data segmentation (e.g. ATAC consensus peaks), ncol=nregionsets. 
+# It has a 1 for data regions that are overlapped by a given region set 
+# and a zero for data regions that do not overlap the region set
+# This will produce an unweighted mean.
+# 2. Multiply the region set matrix times the loading/correlation matrix.
+# 3. Divide by total covered regions for that region set to get the mean. This
+# is the region set score.
 
+# @template signalCoord
+# @template GRList
+# @template scoringMetric
+# @value Returns a list with two items: 1. a weight matrix where each 
+# column corresponds to one region set
+# and rows are data regions. 2. A data.frame with size and coverage information
+# about the region sets.
+
+# Matrix weights depend on the scoringMetric
+# All signalCoord regions and region set regions should be run through function
+# at the same time so that there will be proper weighting if a region set 
+# region overlaps multiple signalCoord regions and a scoringMetric other than
+# "simpleMean" is being used.
+# @examples data("brcaMCoord1")
+# data("nrf1_chr1")
+# data("esr1_chr1")
+# myGRL <- GRangesList(esr1_chr1, nrf1_chr1)
+# res = olToMat(signalCoord=, GRList=myGRL, scoringMetric="regionMean")
+# olMatList <- res[[1]]
+# coverageInfo <- res[[2]]
+# 
+olToMat <- function(signalCoord, GRList, scoringMetric, 
+                   maxRow=500000, minRSCov=0) {
+
+    # input checks
+    if (is.null(names(GRList))) {
+        names(GRList) <- paste0("regionSet", seq_along(GRList))
+    }
+    ###########################################################################
+
+    # calculate overlaps only once
+    # region set must be subject to fit with scoring functions
+    olList <- lapply(X = GRList, FUN = function(x) findOverlaps(query = signalCoord, 
+                                                                subject = x))
+    
+    regionSetCoverage <- rep(0, length(GRList))
+    signalCoverage <- rep(0, length(GRList))
+    
+    regionSetCoverage <- vapply(X = olList, 
+                                FUN = function(x) length(unique(subjectHits(x))), 
+                                FUN.VALUE = -1)
+    keepInd <- which(regionSetCoverage >= minRSCov)
+    rsNames <- names(GRList)[keepInd]
+    regionSetCoverage <- regionSetCoverage[keepInd]
+    signalCoverage <- vapply(X = olList[keepInd], 
+                             FUN = function(x) length(unique(queryHits(x))), 
+                             FUN.VALUE = -1)
+    
+    # # each column is a region set
+    # rsMat <- matrix(data = rep(0, length(GRList) * length(signalCoord)), 
+    #                nrow=length(signalCoord))
+    # 
+    nMat <- ceiling(length(signalCoord) / maxRow)
+    finalMatRows <- length(signalCoord) %% maxRow
+    if (finalMatRows == 0) {
+        finalMatRows = maxRow
+    }
+    # rep(x, 0) is fine if nMat=1
+    matRowNVec = c(rep(maxRow, nMat-1), finalMatRows)
+    rsMatList <- list()
+    if (nMat > 1) {
+        for (matCount in 1:(nMat-1)) {
+            rsMatList[[matCount]] = matrix(data=rep(0, maxRow * length(keepInd)), 
+                                                    nrow=maxRow)
+            colnames(rsMatList[[matCount]]) <- rsNames
+        }
+        # final matrix might not be the same size
+        rsMatList[[nMat]] = matrix(data=rep(0, finalMatRows * length(keepInd)), 
+                                                nrow=finalMatRows)
+        colnames(rsMatList[[nMat]]) <- rsNames
+  
+    } else { # nMat = 1
+        rsMatList[[nMat]] = matrix(data=rep(0, finalMatRows * length(keepInd)), 
+                                            nrow=finalMatRows) 
+        colnames(rsMatList[[nMat]]) <- rsNames
+    }
+    
+
+    
+    #######################################################################
+    # calculate scores and assign to matrices in chunks
+    if (scoringMetric == "simpleMean") {
+        for (i in seq_along(keepInd)) {
+            
+            if (signalCoverage[i] != 0) {
+                tmpCount = 1
+                tmpVec = rep(0, length(signalCoord))
+                # normalize by number so that matrix multiplication during COCOA scoring will produce mean
+                tmpVec[unique(queryHits(olList[[keepInd[i]]]))] <- 1 / signalCoverage[i]  
+                
+                # for coordinate chunks
+                for (j in seq_along(rsMatList)) {
+                    rsMatList[[j]][, i] <- tmpVec[tmpCount:(tmpCount + matRowNVec[j]-1)]
+                    tmpCount = tmpCount + matRowNVec[j]
+                } 
+            }
+        }
+        # put in correct orientation for matrix multiplication to prevent transposition
+        rsMatList <- lapply(rsMatList, FUN = t) # transpose
+    } else if (scoringMetric == "regionMean") {
+        # instead of 1 give weight proportional to how many signalCoord are 
+        # overlapped 
+        
+        for (i in seq_along(keepInd)) {
+            if (signalCoverage[i] != 0) {
+                tmpCount = 1
+                tmpVec = rep(0, length(signalCoord))
+                # aggregate number of overlaps by region set region
+                tmp <- as.data.table(olList[[keepInd[i]]])
+                # want the count per region set number
+                tmp[, rCount := (1/.N), , by=subjectHits]
+                normFactor <- sum(tmp$rCount)
+                tmpVec[tmp$queryHits] <- tmp$rCount / normFactor
+                
+                # for coordinate chunks
+                for (j in seq_along(rsMatList)) {
+                    rsMatList[[j]][, i] <- tmpVec[tmpCount:(tmpCount + matRowNVec[j]-1)]
+                    tmpCount = tmpCount + matRowNVec[j]
+                }
+            }
+        }
+        # put in correct orientation for matrix multiplication to prevent transposition
+        rsMatList <- lapply(rsMatList, FUN = t) # transpose
+        
+    } else if (scoringMetric == "proportionWeightedMean") {
+        sumProportionOverlap = rep(0, length(keepInd))
+        for (i in seq_along(keepInd)) {
+            if (signalCoverage[i] != 0) {
+                tmpCount = 1
+                tmpVec = rep(0, length(signalCoord))
+                olap  <- pintersect(GRList[[keepInd[i]]][subjectHits(olList[[keepInd[i]]])],
+                                    signalCoord[queryHits(olList[[keepInd[i]]])])
+                pOlap <- width(olap) / width(GRList[[keepInd[i]]][subjectHits(olList[[keepInd[i]]])])
+                
+                # weighted average
+                denom <- sum(pOlap)
+                sumProportionOverlap[i] = denom
+    
+                # aggregate pOlap by signalCoord region
+                olDT <- data.table(queryHits = queryHits(olList[[keepInd[i]]]), 
+                                   pOlap=pOlap)
+                normDT <- olDT[, .(coordSum = sum(pOlap)), by=queryHits]
+                tmpVec[normDT$queryHits] <- normDT$coordSum / denom
+                
+                # for coordinate chunks
+                for (j in seq_along(rsMatList)) {
+                    rsMatList[[j]][, i] <- tmpVec[tmpCount:(tmpCount + matRowNVec[j]-1)]
+                    tmpCount = tmpCount + matRowNVec[j]
+                }
+                
+                
+                # below comment outdated?
+                # some rows may be duplicated if a signalMat region overlapped multiple
+                # regions from signalGR but that is ok
+                # signalMat <- signalMat[queryHits(hits), ] # done in next step to prevent extra copying
+            }
+        }
+        # put in correct orientation for matrix multiplication to prevent transposition
+        rsMatList <- lapply(rsMatList, FUN = t) # transpose
+    } else {
+        stop("The given scoringMetric cannot be used with matrix scoring.")
+    }
+    
+    totalRegionNumber <- vapply(X = GRList[keepInd], FUN = length, FUN.VALUE = -1)
+    meanRegionSize <- vapply(X = GRList[keepInd], FUN = function(x) mean(width(x)), 
+                             FUN.VALUE = -1)
+    # list item 2
+    if (scoringMetric == "proportionWeightedMean") {
+        rsInfo = data.frame(rsName=rsNames, signalCoverage, 
+                            regionSetCoverage, sumProportionOverlap, 
+                            totalRegionNumber, 
+                            meanRegionSize)
+    } else {
+        rsInfo = data.frame(rsName=rsNames, signalCoverage, 
+                            regionSetCoverage, totalRegionNumber, 
+                            meanRegionSize)
+    }
+
+    # overlap matrix list and region set coverage info as data.frame 
+    return(list(rsMatList, rsInfo))
+    # totalRegionNumber = sapply(X = GRList, length)
+    # meanRegionSize = sapply(X = GRList, function(x) round(mean(width(x))))
+}
+
+# multiply region set matrices with data matrices to get COCOA score
+# rsMatList mats should have rows as region sets and cols as features
+# ^ so data won't have to be copied during transpose
+matScore <- function(rsMatList, signalMatList, rsInfo) {
+    
+    # rsMatList mats are features X region sets
+    # signalMatList is features X target variables
+    # multiply matrices
+    scoreL <- mapply(FUN = function(x, y) x %*% y, 
+                    x=rsMatList, y=signalMatList, SIMPLIFY = FALSE)
+    # each item in scoreL is region sets X target variables
+    # combine results. Already normalized to one so can just add to get mean.
+    scoreDF <- Reduce("+", scoreL)
+    
+    resultsDF <- cbind(scoreDF, rsInfo)
+    return(resultsDF)
+}
+
+splitSignal <- function(signal, maxRow=500000) {
+    
+    signalList <- list()
+    nMat <- ceiling(nrow(signal) / maxRow)
+
+    finalMatRows <- nrow(signal) %% maxRow
+    if (finalMatRows == 0) {
+        finalMatRows = maxRow
+    }
+    # rep(x, 0) is fine if nMat=1
+    matRowNVec = c(rep(maxRow, nMat-1), finalMatRows)
+    tmpCount = 1
+    for (j in seq(nMat)) {
+        signalList[[j]] <- signal[tmpCount:(tmpCount + matRowNVec[j]-1), ]
+        tmpCount = tmpCount + matRowNVec[j]
+    }
+    
+    return(signalList)
+}
 
