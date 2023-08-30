@@ -569,6 +569,11 @@ runCOCOAPerm <- function(genomicSignal,
     allResultsList$zScores <- rsZScores
     allResultsList$gammaPVal <- gPValDF
 
+    allResultsList$rsScores$rsName <- rsInfo$rsName
+    allResultsList$empiricalPVals$rsName <- rsInfo$rsName
+    allResultsList$zScores$rsName <- rsInfo$rsName
+    allResultsList$gammaPVal$rsName <- rsInfo$rsName
+
     return(allResultsList)
 
 }
