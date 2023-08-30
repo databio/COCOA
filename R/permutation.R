@@ -30,9 +30,6 @@
 #' @template scoringMetric
 #' @template absVal
 #' @template olList
-#' @param minRSCov Numeric. This parameter specifies the minimum coverage 
-#' (number of overlapping positions) required for a region to be considered 
-#' in the analysis.
 #' @param centerGenomicSignal Logical. Should rows in genomicSignal
 #' be centered based on
 #' their means? (subtracting row mean from each row)
