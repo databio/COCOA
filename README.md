@@ -15,12 +15,12 @@ So far, the package has been validated on DNA methylation data but we are planni
 
 ## Installing COCOA
 COCOA may be installed from Github:
-
+```
 devtools::install_github("databio/COCOA")
-
+```
 or locally after downloading/cloning the source code:
-
+```
 install.packages("path/to/COCOA/directory", repos=NULL, type="source")
-
+```
 ## Learning How to Use COCOA
 A vignette is included with the package that shows [how to use the main COCOA functions](http://code.databio.org/COCOA/articles/IntroToCOCOA.html) and walks you through an example application. An additional vignette shows [how to use COCOA with a region set database](http://code.databio.org/COCOA/articles/COCOA_Workflow.html) as you normally would in an analysis.
