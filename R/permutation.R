@@ -19,7 +19,6 @@
 #' 
 #' 
 #' For reproducibility, set seed with 'set.seed()' function before running.
-#' @param nPerm Numeric. The number of permutations to do.
 #' @template genomicSignal
 #' @template signalCoord
 #' @template GRList
@@ -30,6 +29,7 @@
 #' @template scoringMetric
 #' @template absVal
 #' @template olList
+#' @param nPerm Numeric. The number of permutations to do.
 #' @param minRSCov Numeric. This parameter specifies the minimum coverage 
 #' (number of overlapping positions) required for a region to be considered 
 #' in the analysis.
@@ -87,34 +87,33 @@
 #  give the actual order of samples to `runCOCOA` to get the real scores
 #' data("esr1_chr1")
 #' data("nrf1_chr1")
-#' data("brcaMCoord1")
 #' data("brcaMethylData1")
-#' data("brcaMetadata")
+#' data("brcaMCoord1")
 #' pcScores <- prcomp(t(brcaMethylData1))$x
-#' PCsToAnnotate <- paste0("PC", 1:4)
-#' targetVar <- pcScores[, PCsToAnnotate]
-#' targetVar <- as.matrix(scale(targetVar, 
-#'                               center=TRUE, scale=FALSE))
+#' targetVarCols <- c("PC1", "PC2")
+#' targetVar <- pcScores[, targetVarCols]
 #'
-#  give the actual order of samples to `runCOCOA` to get the real scores
+#' # give the actual order of samples to `runCOCOA` to get the real scores
 #' correctSampleOrder=1:nrow(targetVar)
 #' realRSScores <- runCOCOA(genomicSignal=brcaMethylData1,
-#'                       signalCoord=brcaMCoord1,
-#'                       GRList=GRangesList(esr1_chr1, nrf1_chr1),
-#'                       signalCol=c("PC1", "PC2", "PC3", "PC4"),
-#'                       targetVar=targetVar,
-#'                       sampleOrder=correctSampleOrder,
-#'                       variationMetric="cor")
+#'                          signalCoord=brcaMCoord1,
+#'                          GRList=GRangesList(esr1_chr1, nrf1_chr1),
+#'                          signalCol=c("PC1", "PC2"),
+#'                          targetVar=targetVar,
+#'                          sampleOrder=correctSampleOrder,
+#'                          variationMetric="cor")
 #' 
+#' # runCOCOAPerm
 #' permResults <- runCOCOAPerm(genomicSignal=brcaMethylData1,
-#'                            signalCoord=brcaMCoord1,
-#'                            GRList=GRangesList(esr1_chr1, nrf1_chr1),
-#'                            rsScores=realRSScores,
-#'                           targetVar=targetVar,
-#'                           signalCol=c("PC1", "PC2", "PC3", "PC4"),
-#'                           variationMetric="cor",
-#'                           useSimpleCache=FALSE)
-#'permResults
+#'                             signalCoord=brcaMCoord1,
+#'                             GRList=GRangesList(esr1_chr1=esr1_chr1, nrf1_chr1=nrf1_chr1),
+#'                             rsScores=realRSScores,
+#'                             targetVar=targetVar,
+#'                             signalCol=c("PC1", "PC2"),
+#'                             variationMetric="cor",
+#'                             nPerm = 10,
+#'                             useSimpleCache=FALSE)
+#' permResults
 #'   
 #' 
 #' @export
