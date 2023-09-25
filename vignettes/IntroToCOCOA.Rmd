@@ -30,27 +30,42 @@ COCOA can be used in many different contexts so feel free to skip to the section
 
 We start off with a matrix of epigenetic data in which rows correspond to the epigenetic features (e.g. CpG or accessible chromatin region) and columns correspond to samples. Each epigenetic feature must have genomic coordinates, which are stored in a separate object.   
 
-## Step 1: Define target variable
+## Supervised COCOA
 
-For a supervised analysis, the target variable is defined by you. For an unsupervised analysis, you first do dimensionality reduction on your epigenetic data. Then, you take the principal component/latent factor sample scores for the principal components you are interested in and treat them as your target variables. 
+### Step 1: Define target variable
 
-## Step 2: Quantify association between inter-sample epigenetic variation and target variable
+For a supervised analysis, you need to define the target variable beforehand.
 
-Once you've defined your target variable, the next step is to quantify the association between your epigenetic data and the target variables. This produces a score for each epigenetic feature that represents how much it contributes to the target variable. We'll refer to these scores as **feature contribution scores**. 
+### Step 2: Quantify association between inter-sample epigenetic variation and target variable.
 
-### Ways to quantify association
+After defining the target variable, the next step is to quantify the association between the epigenetic data and the target variable. This is achieved by calculating feature contribution scores for each epigenetic feature, representing how much it contributes to the target variable. There are several ways to quantify association, such as covariation, Pearson correlation, and Spearman correlation. The correlation coefficient is used as the feature contribution score for each epigenetic feature. For example, if the target variable is a principal component (PC) score, the correlation coefficient for each epigenetic feature represents its association with that specific principal component.
 
-There are several ways to quantify association. The metrics that are built in to COCOA are covariation, Pearson correlation, and Spearman correlation. You could also use another metric of your choice that results in a score for each epigenetic feature representing its association with the target variable. For correlation, we take the correlation coefficient as the feature contribution score for each epigenetic feature. For example, if your target variable is a PC score, then the correlation coefficient for each epigenetic feature represents how much it is associated with a given principal component.
+### Step 3: Annotate variation with region sets
 
-## Step 3: Annotate variation with region sets
+The next step in supervised COCOA is to determine which reference region sets are most associated with variation in the target variable. This is achieved by scoring each reference region set based on the epigenetic features from your data that overlap with it. The score for a region set is the average of the scores of the epigenetic features that it overlaps. By ranking these region sets based on their scores, you can identify the region sets that are most associated with the target variable. This provides valuable biological insights into your data.
 
-The next step in COCOA is to find out which reference region sets are most associated with variation in the target variable. To do this, we use the COCOA algorithm to score each reference region set based on the epigenetic features from your data that it overlaps. Essentially, the score for a region set is the average of the scores of the epigenetic features that it overlaps (see the `scoringMetric` parameter in ?runCOCOA for more details).
+#### Optional step: Permutation test
 
-After computing a score for each region set, the region sets can be ranked to see which region sets are most associated with the target variable. High scores for small region sets are more likely to be due to noise but this is addressed by the permutation test. Finding region sets where epigenetic variation is associated with variation in the target variable can give biological insight into your data.
+To account for different region set sizes and assess statistical significance, you can perform a permutation test. By running COCOA on shuffled data, you create null distributions for each region set. This null distribution accounts for the size of the region set. You can estimate p-values for the real COCOA scores for each region set using a gamma distribution fitted to the null distribution from a small number of permutations. However, this gamma approximation may overestimate the significance of low p-values and should be interpreted carefully for such cases.
 
-### Optional step: Permutation test
 
-To account for the different sizes of region sets and to assess statistical significance of the results, we can do a permutation test to estimate p-values. We run COCOA on shuffled data to get null distributions for each region set. More specifically, we shuffle the samples' values for the target variable and recompute COCOA scores as described above. After doing this many times, the permutation COCOA scores for a given region set make up a region set-specific null distribution. This null distribution accounts for the size of the region set. If multiple target variables are used, each target variable, region set combination will have its own unique null distribution. To avoid the need to run a large number of permutations, we can run a small number of permutations (a few hundred) and then fit a gamma distribution to each null distribution. We use the gamma distribution to estimate a p-value for the real COCOA score for each region set. It should be noted that the gamma approximation is accurate for high p values, but may overestimate the significance of low p values. Because of this, the approximation may be helpful for screening out region sets that are not significant but should be interpreted carefully for low p-values. Our analysis of the gamma approximation as used by COCOA is shown in the COCOA paper. As mentioned before, the unsupervised COCOA test does not use PCA loadings as the feature contribution scores. This is done so that PCA, a time-consuming computation, does not have to be recomputed for every permutation. Instead, the PC sample scores are treated as the target variable and shuffled so that the feature contribution scores can be recalculated.  
+## Unsupervised COCOA
+
+### Step 1: Define target variable
+
+For unsupervised COCOA, the target variable is derived in a different manner. Initially, you perform dimensionality reduction on your epigenetic data. Then, you take the principal component (PC) or latent factor sample scores for the principal components of interest and treat them as your target variables. 
+
+### Step 2: Quantify association between inter-sample epigenetic variation and target variable
+
+Similar to supervised COCOA, you quantify the association between the epigenetic data and the target variables (in this case, the PC or latent factor sample scores). The process of calculating feature contribution scores for each epigenetic feature remains the same. 
+
+### Step 3: Annotate variation with region sets
+
+The next step in unsupervised COCOA is also the same as in supervised COCOA. You identify the reference region sets most associated with variation in the target variable (in this case, the PC or latent factor sample scores) by scoring each reference region set based on overlapping epigenetic features.
+
+#### Optional step: Permutation test
+
+The permutation test for assessing statistical significance and handling different region set sizes is also applicable in unsupervised COCOA, but the feature contribution scores are obtained using shuffled PC or latent factor sample scores, rather than PCA loadings, to avoid time-consuming recomputation for every permutation.
 
 # COCOA for DNA methylation data {#DNAm}
 
