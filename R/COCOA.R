@@ -487,7 +487,7 @@ aggregateSignal <- function(signal,
 #'                                  GRList= GRList,
 #'                                  signalCol=c("PC1", "PC2"), 
 #'                                  scoringMetric="default")
-#' 
+#' rsScores
 #' @export
 
 aggregateSignalGRList <- function(signal,
@@ -617,7 +617,9 @@ aggregateSignalGRList <- function(signal,
       }
       absVal <- FALSE
     }
-    
+
+    rownames(signal) <- 1:nrow(signal)
+    signal <- as.data.frame(signal)
     
     if (!is.null(rsMatList) && (scoringMetric %in% c("simpleMean", 
                                                      "regionMean", 
@@ -625,6 +627,11 @@ aggregateSignalGRList <- function(signal,
       resultsDF <- matScore(rsMatList = rsMatList, 
                             signalMatList=signalList, 
                             rsInfo=rsInfo)
+      
+
+      resultsDF[, 1] <- as.numeric(resultsDF[, 1])
+      resultsDF <- as.data.frame(resultsDF)
+        
       if (length(signalCol) == 1) {
         colnames(resultsDF)[1] <- signalCol
       }
@@ -647,11 +654,7 @@ aggregateSignalGRList <- function(signal,
                                                      "regionMean", 
                                                      "proportionWeightedMean"))) {
       resultsDF[, 1] <- as.numeric(resultsDF[, 1])
-      
       resultsDF <- as.data.frame(resultsDF)
-      
-      # Sort the results based on the first column
-      resultsDF <- resultsDF[order(-resultsDF[, 1]), ]
       
       if (length(signalCol) == 1) {
         colnames(resultsDF)[1] <- signalCol
@@ -664,9 +667,6 @@ aggregateSignalGRList <- function(signal,
       resultsDT <- do.call(rbind, resultsList)
       resultsDT[, 1] <- as.numeric(resultsDT[, 1])
       resultsDF <- as.data.frame(resultsDT)
-      
-      # Sort the results based on the first column
-      resultsDF <- resultsDF[order(-resultsDF[, 1]), ]
       
       if (length(signalCol) == 1) {
         colnames(resultsDF)[1] <- signalCol
