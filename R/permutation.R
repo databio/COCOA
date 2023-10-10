@@ -84,7 +84,6 @@
 #' 4. a data.frame of p-values based on
 #' the gamma approximation (the output of getGammaPVal(). 
 #' @examples 
-#  give the actual order of samples to `runCOCOA` to get the real scores
 #' data("esr1_chr1")
 #' data("nrf1_chr1")
 #' data("brcaMethylData1")
@@ -92,7 +91,7 @@
 #' pcScores <- prcomp(t(brcaMethylData1))$x
 #' targetVarCols <- c("PC1", "PC2")
 #' targetVar <- pcScores[, targetVarCols]
-#'
+#' 
 #' # give the actual order of samples to `runCOCOA` to get the real scores
 #' correctSampleOrder=1:nrow(targetVar)
 #' realRSScores <- runCOCOA(genomicSignal=brcaMethylData1,
@@ -103,16 +102,30 @@
 #'                          sampleOrder=correctSampleOrder,
 #'                          variationMetric="cor")
 #' 
+#' # give random order of samples to get random COCOA scores 
+#' # so you start building a null distribution for each region set 
+#' # (see vignette for example of building a null distribution with `runCOCOA`)
+#' randomOrder <- sample(1:nrow(targetVar), 
+#'                       size=nrow(targetVar),
+#'                       replace=FALSE)
+#' randomRSScores <- runCOCOA(genomicSignal=brcaMethylData1,
+#'                            signalCoord=brcaMCoord1,
+#'                            GRList=GRangesList(esr1_chr1, nrf1_chr1),
+#'                            signalCol=c("PC1", "PC2"),
+#'                            targetVar=targetVar,
+#'                            sampleOrder=randomOrder,
+#'                            variationMetric="cor")
+#' 
 #' # runCOCOAPerm
 #' permResults <- runCOCOAPerm(genomicSignal=brcaMethylData1,
-#'                             signalCoord=brcaMCoord1,
-#'                             GRList=GRangesList(esr1_chr1=esr1_chr1, nrf1_chr1=nrf1_chr1),
-#'                             rsScores=realRSScores,
-#'                             targetVar=targetVar,
-#'                             signalCol=c("PC1", "PC2"),
-#'                             variationMetric="cor",
-#'                             nPerm = 10,
-#'                             useSimpleCache=FALSE)
+#'                            signalCoord=brcaMCoord1,
+#'                            GRList=GRangesList(esr1_chr1=esr1_chr1, nrf1_chr1=nrf1_chr1),
+#'                            rsScores=realRSScores,
+#'                            targetVar=targetVar,
+#'                            signalCol=c("PC1", "PC2"),
+#'                            variationMetric="cor",
+#'                            nPerm = 10,
+#'                            useSimpleCache=FALSE)
 #' permResults
 #'   
 #' 
@@ -522,12 +535,15 @@ runCOCOAPerm <- function(genomicSignal,
         gPValDF <- NULL
     } else {
         nullDistList <- convertToFromNullDist(rsPermScores)
-
+        print(rsInfo)
         if (useSimpleCache) {
             simpleCache(paste0("empiricalPValsUncorrected", .analysisID), {
                 rsPVals <- getPermStat(rsScores=rsScores, nullDistList=nullDistList,
                                     signalCol=colsToAnnotate, whichMetric = "pval",
                                     testType=testType)
+                
+                colnames(rsPVals) <- paste0("rsPVals_", colnames(rsPVals))
+                
                 rsPVals
 
             }, assignToVariable="rsPVals", cacheDir=cacheDir, ...)
@@ -535,7 +551,10 @@ runCOCOAPerm <- function(genomicSignal,
             simpleCache(paste0("permZScores", .analysisID), {
                 rsZScores <- getPermStat(rsScores=rsScores, nullDistList=nullDistList,
                                         signalCol=colsToAnnotate, whichMetric = "zscore")
+    
+                colnames(rsZScores) <- paste0("rsZScores_", colnames(rsZScores))
                 rsZScores
+                
             }, assignToVariable="rsZScores", cacheDir=cacheDir, ...)
 
             simpleCache(paste0("gammaPValsUncorrected", .analysisID), {
@@ -548,6 +567,7 @@ runCOCOAPerm <- function(genomicSignal,
                 gPValDF <- cbind(gPValDF, 
                                 rsScores[, colnames(rsScores)[!(colnames(rsScores) 
                                                                         %in% colsToAnnotate)]])
+                colnames(gPValDF) <- paste0("gPValDF_", colnames(gPValDF))
                 gPValDF
             }, assignToVariable="gPValDF", cacheDir=cacheDir, ...)
 
@@ -556,9 +576,12 @@ runCOCOAPerm <- function(genomicSignal,
             rsPVals <- getPermStat(rsScores=rsScores, nullDistList=nullDistList,
                                 signalCol=colsToAnnotate, whichMetric = "pval",
                                 testType = testType)
+            colnames(rsPVals) <- paste0("rsPVals_", colnames(rsPVals))
 
             rsZScores <- getPermStat(rsScores=rsScores, nullDistList=nullDistList,
                                     signalCol=colsToAnnotate, whichMetric = "zscore")
+            colnames(rsZScores) <- paste0("rsZScores_", colnames(rsZScores))
+  
 
             gPValDF <- getGammaPVal(rsScores = rsScores, 
                                 nullDistList = nullDistList, 
@@ -570,22 +593,24 @@ runCOCOAPerm <- function(genomicSignal,
             gPValDF <- cbind(gPValDF, 
                             rsScores[, colnames(rsScores)[!(colnames(rsScores) 
                                                                     %in% colsToAnnotate)]])
+            colnames(gPValDF) <- paste0("gPValDF_", colnames(gPValDF))
 
         }
     }
     
+    # Create one matrix with results
+    consolidatedMatrix <- cbind(rsScores,
+                               gPValDF,
+                               rsPVals,
+                               rsZScores)
+    consolidatedMatrix$regionSetName <- rsInfo$rsName
     
-    ## Return the list of analysis results
-    allResultsList$rsScores <- rsScores
+    # Sort by COCOA score (1st column)
+    consolidatedMatrix[order(consolidatedMatrix[,1], decreasing=TRUE), ]
+    
+    # Return the list of analysis results
     allResultsList$permRSScores <- rsPermScores
-    allResultsList$empiricalPVals <- rsPVals
-    allResultsList$zScores <- rsZScores
-    allResultsList$gammaPVal <- gPValDF
-
-    allResultsList$rsScores$regionSetName<- rsInfo$rsName
-    allResultsList$empiricalPVals$regionSetName <- rsInfo$rsName
-    allResultsList$zScores$regionSetName <- rsInfo$rsName
-    allResultsList$gammaPVal$regionSetName <- rsInfo$rsName
+    allResultsList$results <- consolidatedMatrix
     
     return(allResultsList)
 
