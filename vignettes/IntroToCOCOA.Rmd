@@ -535,8 +535,13 @@ data("atf3_chr1")
 data("brcaATACCoord1")
 data("brcaATACData1")
 data("brcaMetadata")
-```
 
+# Change brcaATACCoord1 to another format (only start position)
+start_positions <- start(brcaATACCoord1)
+brcaATACCoord1 <- GRanges(seqnames=seqnames(brcaATACCoord1), 
+                          ranges=IRanges(start=start_positions, width=1),
+                          strand=strand(brcaATACCoord1))
+```
 As mentioned, ER status is our target phenotype so we'll pull that info out of the patient metadata. Since we only have one target variable, we are keeping the data as a data.frame object using drop=FALSE (instead of targetVarDF becoming a vector).
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
@@ -648,6 +653,12 @@ data("nrf1_chr1")
 data("atf3_chr1")
 data("brcaATACCoord1")
 data("brcaATACData1")
+
+# Change brcaATACCoord1 to another format (only start position)
+start_positions <- start(brcaATACCoord1)
+brcaATACCoord1 <- GRanges(seqnames=seqnames(brcaATACCoord1), 
+                          ranges=IRanges(start=start_positions, width=1),
+                          strand=strand(brcaATACCoord1))
 ```
 
 Next, we will do PCA on our breast cancer chromatin accessibility data. PCA could take a while for large datasets (e.g. longer than 30 minutes).
@@ -754,7 +765,7 @@ correctSampleOrder=1:nrow(targetVar)
 realRSScores <- runCOCOA(genomicSignal=brcaATACData1,
                          signalCoord=brcaATACCoord1,
                          GRList=GRList,
-                         signalCol=c("PC1", "PC2", "PC3", "PC4"),
+                         signalCol=PCsToAnnotate,
                          targetVar=targetVar,
                          sampleOrder=correctSampleOrder,
                          variationMetric="cor")
@@ -772,7 +783,7 @@ permResults <- runCOCOAPerm(genomicSignal=brcaATACData1,
                             GRList=GRList,
                             rsScores=realRSScores,
                             targetVar=targetVar,
-                            signalCol=c("PC1", "PC2", "PC3", "PC4"),
+                            signalCol=PCsToAnnotate,
                             variationMetric="cor",
                             nPerm = 5,
                             useSimpleCache=FALSE,
