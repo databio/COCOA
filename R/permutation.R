@@ -542,8 +542,6 @@ runCOCOAPerm <- function(genomicSignal,
                                     signalCol=colsToAnnotate, whichMetric = "pval",
                                     testType=testType)
                 
-                colnames(rsPVals) <- paste0("rsPVals_", colnames(rsPVals))
-                
                 rsPVals
 
             }, assignToVariable="rsPVals", cacheDir=cacheDir, ...)
@@ -552,7 +550,6 @@ runCOCOAPerm <- function(genomicSignal,
                 rsZScores <- getPermStat(rsScores=rsScores, nullDistList=nullDistList,
                                         signalCol=colsToAnnotate, whichMetric = "zscore")
     
-                colnames(rsZScores) <- paste0("rsZScores_", colnames(rsZScores))
                 rsZScores
                 
             }, assignToVariable="rsZScores", cacheDir=cacheDir, ...)
@@ -567,7 +564,6 @@ runCOCOAPerm <- function(genomicSignal,
                 gPValDF <- cbind(gPValDF, 
                                 rsScores[, colnames(rsScores)[!(colnames(rsScores) 
                                                                         %in% colsToAnnotate)]])
-                colnames(gPValDF) <- paste0("gPValDF_", colnames(gPValDF))
                 gPValDF
             }, assignToVariable="gPValDF", cacheDir=cacheDir, ...)
 
@@ -576,11 +572,11 @@ runCOCOAPerm <- function(genomicSignal,
             rsPVals <- getPermStat(rsScores=rsScores, nullDistList=nullDistList,
                                 signalCol=colsToAnnotate, whichMetric = "pval",
                                 testType = testType)
-            colnames(rsPVals) <- paste0("rsPVals_", colnames(rsPVals))
+            rsPVals
 
             rsZScores <- getPermStat(rsScores=rsScores, nullDistList=nullDistList,
                                     signalCol=colsToAnnotate, whichMetric = "zscore")
-            colnames(rsZScores) <- paste0("rsZScores_", colnames(rsZScores))
+            rsZScores
   
 
             gPValDF <- getGammaPVal(rsScores = rsScores, 
@@ -593,24 +589,29 @@ runCOCOAPerm <- function(genomicSignal,
             gPValDF <- cbind(gPValDF, 
                             rsScores[, colnames(rsScores)[!(colnames(rsScores) 
                                                                     %in% colsToAnnotate)]])
-            colnames(gPValDF) <- paste0("gPValDF_", colnames(gPValDF))
+            gPValDF
 
         }
     }
     
-    # Create one matrix with results
-    consolidatedMatrix <- cbind(rsScores,
-                               gPValDF,
-                               rsPVals,
-                               rsZScores)
-    consolidatedMatrix$regionSetName <- rsInfo$rsName
+    # Add region set names 
+    rsScores$regionSetName <- rsInfo$rsName
+    rsPVals$regionSetName <- rsInfo$rsName
+    rsZScores$regionSetName <- rsInfo$rsName
+    gPValDF$regionSetName <- rsInfo$rsName
     
-    # Sort by COCOA score (1st column)
-    consolidatedMatrix[order(consolidatedMatrix[,1], decreasing=TRUE), ]
-    
-    # Return the list of analysis results
+    # Sort by first column
+    rsScores[order(rsScores[,1], decreasing=TRUE), ]
+    rsPVals[order(rsPVals[,1], decreasing=TRUE), ]
+    rsZScores[order(rsZScores[,1], decreasing=TRUE), ]
+    gPValDF[order(gPValDF[,1], decreasing=TRUE), ]
+
+    # Create one list of results
+    allResultsList$rsScores <- rsScores
     allResultsList$permRSScores <- rsPermScores
-    allResultsList$results <- consolidatedMatrix
+    allResultsList$empiricalPVals <- rsPVals
+    allResultsList$zScores <- rsZScores
+    allResultsList$gammaPVal <- gPValDF
     
     return(allResultsList)
 
