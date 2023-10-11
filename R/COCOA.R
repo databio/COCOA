@@ -631,10 +631,14 @@ aggregateSignalGRList <- function(signal,
 
       resultsDF[, 1] <- as.numeric(resultsDF[, 1])
       resultsDF <- as.data.frame(resultsDF)
+
+      # Sort the results based on the first column
+      resultsDF <- resultsDF[order(-resultsDF[, 1]), ]
         
       if (length(signalCol) == 1) {
         colnames(resultsDF)[1] <- signalCol
       }
+        
     } else { # not matrix COCOA. Old COCOA with data.table
       # apply over the list of region sets
       resultsList <- lapplyAlias(GRList,
@@ -655,6 +659,9 @@ aggregateSignalGRList <- function(signal,
                                                      "proportionWeightedMean"))) {
       resultsDF[, 1] <- as.numeric(resultsDF[, 1])
       resultsDF <- as.data.frame(resultsDF)
+
+      # Sort the results based on the first column
+      resultsDF <- resultsDF[order(-resultsDF[, 1]), ]
       
       if (length(signalCol) == 1) {
         colnames(resultsDF)[1] <- signalCol
@@ -667,6 +674,9 @@ aggregateSignalGRList <- function(signal,
       resultsDT <- do.call(rbind, resultsList)
       resultsDT[, 1] <- as.numeric(resultsDT[, 1])
       resultsDF <- as.data.frame(resultsDT)
+    
+      # Sort the results based on the first column
+      resultsDF <- resultsDF[order(-resultsDF[, 1]), ]
       
       if (length(signalCol) == 1) {
         colnames(resultsDF)[1] <- signalCol
