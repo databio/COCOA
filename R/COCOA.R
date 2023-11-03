@@ -767,6 +767,7 @@ aggregateSignalGRList <- function(signal,
 # columns are the columns of featureMat
 # @examples dataMat = matrix(rnorm(50), 5, 10)
 # featureMat = matrix(rnorm(20), 10, 2)
+library(RHIS)
 createCorFeatureMat <- function(dataMat, featureMat, 
                                centerDataMat=TRUE, centerFeatureMat = TRUE, 
                                testType="cor", covariate=NULL) {
@@ -811,6 +812,16 @@ createCorFeatureMat <- function(dataMat, featureMat,
     } else if (testType == "cov") {
         featurePCCor <- cov(dataMat, featureMat, use="pairwise.complete.obs")
 
+    } else if (testType == "his") {
+        
+        dataMat <- t(dataMat)
+        featureMat <- t(featureMat)
+        #sort_order <- order(featureMat[1,])
+        #dataMat <- dataMat[, sort_order]
+        thresholds <- suggestThresholds(dataMat)
+        featurePCCor <- his2(t(dataMat), t(featureMat), intMin = thresholds$threshNeg[1], intMax = thresholds$threshPos[2], intSteps = 50)
+        print(featurePCCor)
+        
     } else {
         stop("invalid testType")
     }
