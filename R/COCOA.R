@@ -444,7 +444,7 @@ aggregateSignal <- function(signal,
     print(loadAgMain)
     if (!all(signalCol %in% colnames(loadAgMain))) {
       missingCols = signalCol[!(signalCol %in% colnames(loadAgMain))]
-      stop(cleanws(paste0("Niektóre kolumny w signalCol nie istnieją w loadAgMain: ", paste(missingCols, collapse = ", "))))
+      stop(cleanws(paste0("Some columns in signalCol do not exist in loadAgMain: ", paste(missingCols, collapse = ", "))))
     }
     
     
