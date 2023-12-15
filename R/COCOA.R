@@ -758,6 +758,7 @@ aggregateSignalGRList <- function(signal,
 # @param testType character object. Can be "cor" (Pearson correlation),
 # "spearmanCor (Spearman correlation)
 # "pcor" (partial correlation), "cov" (covariance (Pearson)),
+# "his" (Hierarchical Interaction Score)
 # @param covariate
 #
 # If a row in dataMat has 0 stand. deviation, correlation will be set to 0
@@ -776,65 +777,72 @@ createCorFeatureMat <- function(dataMat, featureMat,
     featureNames <- colnames(featureMat)
     nFeatures <- ncol(featureMat)
     nDataDims <- nrow(dataMat)
+  
+    if (testType == "his") {
+      featureMat <- t(featureMat)
+      thresholds <- suggestThresholds2(dataMat, featureMat)
+      featureMat <- t(featureMat)
+      
+      featurePCCor_list <- list()
+      
+      for (i in 1:nFeatures) {
+        featureCol <- featureMat[, i, drop = FALSE] 
+        resultMatrix <- his2(t(dataMat), featureCol, intMin=thresholds$threshPosA[1], intMax=thresholds$threshPosA[2], returnMatrixA=TRUE)
+        featurePCCor_list[[i]] <- resultMatrix
+      }
+      
+      featurePCCor <- do.call(cbind, featurePCCor_list)
+      
+    } else {
     
-    if (centerDataMat) {
+      if (centerDataMat) {
         cpgMeans <- rowMeans(dataMat, na.rm = TRUE)
         # centering before calculating correlation
         dataMat <- apply(X = dataMat, MARGIN = 2, function(x) x - cpgMeans)
         
-    }
-    
-    if (centerFeatureMat) {
+      }
+      
+      if (centerFeatureMat) {
         featureMeans <- colMeans(featureMat, na.rm = TRUE)
         # centering before calculating correlation(also, t() converts to matrix)
         featureMat <- t(apply(X = t(featureMat), MARGIN = 2, function(x) x - featureMeans))
         if (dim(featureMat)[1] == 1) {
-            featureMat <- t(featureMat)
+          featureMat <- t(featureMat)
         }
-    }
-    
-    # avoid this copy and/or delay transpose until after calculating correlation?
-    dataMat <- as.data.frame(t(dataMat))
-    
-    
-    if (testType == "cor") {
+      }
+      
+      # avoid this copy and/or delay transpose until after calculating correlation?
+      dataMat <- as.data.frame(t(dataMat))
+      
+      
+      if (testType == "cor") {
         # create feature correlation matrix with PCs (rows: features/CpGs, columns:PCs)
         # how much do features correlate with each PC?
         
         # put epigenetic data first in cor()
         featurePCCor <- cor(dataMat, featureMat, use="pairwise.complete.obs", method="pearson")
-
-    } else if (testType == "spearmanCor") {
+        
+        
+      } else if (testType == "spearmanCor") {
         # xtfrm(x) ranking
         featurePCCor <- cor(dataMat, featureMat, use="pairwise.complete.obs", method="spearman")
-
-  
-    } else if (testType == "cov") {
+        
+        
+      } else if (testType == "cov") {
         featurePCCor <- cov(dataMat, featureMat, use="pairwise.complete.obs")
-
-    } else if (testType == "his") {
         
-        dataMat <- t(dataMat)
-        featureMat <- t(featureMat)
-        #sort_order <- order(featureMat[1,])
-        #dataMat <- dataMat[, sort_order]
-        thresholds <- suggestThresholds(dataMat)
-        featurePCCor <- his2(t(dataMat), t(featureMat), intMin = thresholds$threshNeg[1], intMax = thresholds$threshPos[2], intSteps = 50)
-        print(featurePCCor)
-        
-    } else {
-        stop("invalid testType")
-    }
-    
-    
+    } 
+      #else {
+        #stop("invalid testType")
+    #}
+    }  
+ 
     # if standard deviation of the data was zero, NA will be produced
     # set to 0 because no standard deviation means no correlation with attribute of interest
     featurePCCor[is.na(featurePCCor)] <- 0
     colnames(featurePCCor) <- featureNames
     return(featurePCCor)
-
 }
-
 
 #' Create a "meta-region" profile 
 #' 
