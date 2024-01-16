@@ -993,7 +993,9 @@ getGammaPVal <- function(rsScores, nullDistList, signalCol, method="mme",
                                                    fitDistrList = fittedDistList[[i]])))
     }
     pValDF <- as.data.frame(rbindlist(pValList))
-    
+
+    # Check the NA values and convert them to numeric type (0)
+    pValDF[is.na(pValDF)] <- 0
     
     return(pValDF)
 }
@@ -1015,29 +1017,22 @@ getGammaPVal <- function(rsScores, nullDistList, signalCol, method="mme",
 
 fitGammaNullDist <- function(nullDistDF, method="mme", force=FALSE) {
     
-    if (any(is.na(nullDistDF))) {
-        
-        return(NA)
-    }
-    
-    if (force) {
-        # apply returns a list of "fitdist" objects, one list item for each column
-        modelList <- apply(X = nullDistDF, 
-                          MARGIN = 2, 
-                          FUN = function(x) fitdistrplus::fitdist(data=x, 
-                                                                  distr = "gamma", 
-                                                                  method=method))
-    } else {
-        # try "method". if it fails, do method = "mme"
-        modelList <- apply(X = nullDistDF, 
-                          MARGIN = 2, 
-                          FUN = function(x) tryCatch({fitdistrplus::fitdist(data=x, 
-                                                                            distr = "gamma", 
-                                                                            method=method)}, 
-                                                     error = function(e) {fitdistrplus::fitdist(data=x, 
-                                                                                                distr = "gamma", 
-                                                                                                method="mme")}))   
-    }
+    processedList <- lapply(nullDistDF, function(x) {
+      # Replace NA and NaN with a small number close to zero
+      x[is.na(x) | is.nan(x)] <- 0.0001
+      return(x)
+    })
+
+  
+    modelList <- lapply(processedList, function(x) {
+      tryCatch({
+        x <- as.numeric(x)
+        fitdistrplus::fitdist(data=x, distr = "gamma", method=method)
+      }, error = function(e) {
+        print(paste("Error in fitting column:", e$message))
+        return(NA)  # Return NA in case of an error
+      })
+    })
     
     return(modelList)
 }
@@ -1140,17 +1135,24 @@ getPermStat <- function(rsScores, nullDistList, signalCol,
 # value for each signalCol
 getPermStatSingle <- function(rsScore, nullDist, 
                               signalCol, testType="greater", whichMetric = "pval") {
-    
-    if (is(nullDist, "data.table")) {
-        nullDist <- as.data.frame(nullDist)
+
+  
+    # Check if nullDist is a list and convert it to a data frame
+    if (is.list(nullDist)) {
+      nullDist <- data.frame(do.call(cbind, nullDist))
+    } else if (is(nullDist, "data.table")) {
+      nullDist <- as.data.frame(nullDist)
     }
+    
+    # Replace NaN values with 0.0000 in each column
+    nullDist[] <- lapply(nullDist, function(x) replace(x, is.nan(x), 0.0000))
     
     # if score was NA, return NA
     if (any(is.na(rsScore))) {
-        return(rep(NA, length(rsScore)))
+      return(rep(NA, length(rsScore)))
     }
-    
-    
+
+                         
     if (whichMetric == "pval") {
         
         pVal <- rep(-1, length(rsScore))
@@ -1178,14 +1180,18 @@ getPermStatSingle <- function(rsScore, nullDist,
     }
     
     if (whichMetric == "zscore") {
-        
-        zScore <- rep(NA, length(rsScore))
-        for (i in seq_along(zScore)) {
-            # greater than/less than hypothesis does not matter for z-score
-            zScore[i] <- (rsScore[i] - mean(nullDist[, signalCol[i]])) / sd(x = nullDist[, signalCol[i]])
+      zScore <- rep(NA, length(rsScore))
+      for (i in seq_along(zScore)) {
+        if (is.nan(mean(nullDist[, signalCol[i]])) || is.nan(sd(x = nullDist[, signalCol[i]]))) {
+          zScore[i] <- 0.0000
+        } else {
+          zScore[i] <- (rsScore[i] - mean(nullDist[, signalCol[i]])) / sd(x = nullDist[, signalCol[i]])
         }
-        
-        thisStat <- as.numeric(zScore)
+      }
+
+      # Checl NA values and convert them to numeric type
+      zScore[is.na(zScore)] <- 0.0000
+      thisStat <- as.numeric(zScore)
     }
     
     return(thisStat)
