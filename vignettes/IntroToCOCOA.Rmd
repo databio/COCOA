@@ -66,7 +66,7 @@ The next step in unsupervised COCOA is also the same as in supervised COCOA. You
 #### Optional step: Permutation test
 
 The permutation test for assessing statistical significance and handling different region set sizes is also applicable in unsupervised COCOA, but the feature contribution scores are obtained using shuffled PC or latent factor sample scores, rather than PCA loadings, to avoid time-consuming recomputation for every permutation.
-
+    
 # COCOA for DNA methylation data {#DNAm}
 
 COCOA uses a database of region sets to annotate inter-sample epigenetic variation in your data. In this vignette, we will see how COCOA can find meaningful sources of DNA methylation variation in breast cancer patients. 

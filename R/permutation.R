@@ -74,15 +74,16 @@
 #' @template returnCovInfo
 #' @param ... Character. Optional additional arguments for simpleCache.
 #'
-#' 
-#' @return Returns a list with the following 4 items: 1. a list of length nPerm
-#' where each item is a data.frame of the COCOA scores from a single 
-#' permutation. Each data.frame is the output of `runCOCOA()` 
+#' @return Returns a list with the following 4 items: 
+#' 1. a list of length nPerm where each item is a data.frame 
+#' of the COCOA scores from a single permutation. 
+#' Each data.frame is the output of `runCOCOA()` 
 #' 2. a data.table/data.frame of empirical p-values (the
-#' output of `getPermStat`) 3. a 
-#' data.table/data.frame of z-scores (the output of `getPermStat`. 
-#' 4. a data.frame of p-values based on
-#' the gamma approximation (the output of getGammaPVal(). 
+#' output of `getPermStat`) 
+#' 3. a data.table/data.frame of z-scores (the output of `getPermStat`. 
+#' 4. a data.frame of p-values based on the gamma approximation 
+#' (the output of getGammaPVal(). 
+#' 
 #' @examples 
 #' data("esr1_chr1")
 #' data("nrf1_chr1")
@@ -188,7 +189,17 @@ runCOCOAPerm <- function(genomicSignal,
         # don't do later
         centerGenomicSignal <- FALSE
     }
+
+    # check that targetVar is not empty
     if (centerTargetVar) {
+        if (nrow(targetVarDF) == 0) {
+            stop("Error: targetVarDF is empty. Make sure it contains at least one row.")
+            }
+    } 
+                               
+    # check if targetVar contains numeric data                           
+    if (centerTargetVar) {
+
       # Save the orginical colnames
       original_colnames <- colnames(targetVar)
       
@@ -216,6 +227,7 @@ runCOCOAPerm <- function(genomicSignal,
 
         # detect signalCoordType
         # when signalCoord is a GRanges object
+
         if (any(start(signalCoord) != end(signalCoord))) {
             signalCoordType <- "multiBase"
         } else {
@@ -260,6 +272,7 @@ runCOCOAPerm <- function(genomicSignal,
       alreadyCenteredFM <- TRUE
       colnames(targetVar) <- original_colnames
     }
+
     
     if (noNA & (variationMetric == "cor")) {
       original_colnames <- colnames(targetVar)
@@ -657,6 +670,8 @@ runCOCOAPerm <- function(genomicSignal,
 #' @template absVal
 #' @template olList
 #' @template pOlapList
+#' @permutations numeric -- specify the number of permutations. Leave NULL for no permutations (NULL by default).
+#' @cores numeric -- specify the number of cores, default: cores=1
 #' @param centerGenomicSignal Logical. Should rows in genomicSignal
 #' be centered based on
 #' their means? (subtracting row mean from each row)
@@ -728,6 +743,7 @@ runCOCOA <- function(genomicSignal,
     
     if (any(!(signalCol %in% colnames(targetVar)))) {
         stop("Not all specified columns are present in `targetVar`")
+
     }
     
     # if vector is given, return error
@@ -741,7 +757,7 @@ runCOCOA <- function(genomicSignal,
     
     
     # subset to only signalCol
-    targetVar <- targetVar[, signalCol, drop=FALSE]
+    targetVar <- as.data.frame(targetVar[, signalCol, drop=FALSE])
     
     # because names are dropped for a single column data.frame when indexing
     # single col data.frame is automatically converted to numeric
@@ -795,22 +811,20 @@ runCOCOA <- function(genomicSignal,
 #' This function will take a list of results of permutation tests that included
 #' many region sets and return a list of data.frames where each data.frame
 #' contains the null distribution for a single region set.
-#' The function can 
-#' also convert in the reverse order from a list of null distributions to a 
-#' list of COCOA results. 
+#' The function can also convert in the reverse order from 
+#' a list of null distributions to a list of COCOA results. 
+#'  
 #' @param rsScoresList each item in the list is a data.frame, one item for
 #' each permutation with the results of that permutation. Each row in the 
 #' data.frame is a region set. All data.frames should be the same size and
 #' each data.frame's rows should be in the same order
-#' @return a list of data.frames. If given a list where each item is 
-#' a data.frame with results from one COCOA permutation, this function
-#' will return a list of data.frames where each data.frame contains the
-#' null distributions for a single region set. The output data.frames will
-#' have the same columns as the input data.frames. If given a list where each
-#' item is a data.frame with the null distribution/s for a single region
-#' set, this function will return a list where each item is a data.frame
-#' with one row for each region set (e.g. a data.frame with results for
-#' a single COCOA permutation).
+#'                       
+#' @return a list of data.frames. The function returns a list of data.frames. 
+#' If the input is a list of data.frames from COCOA permutations, the output 
+#' will be a list of data.frames containing null distributions for each region set, 
+#' with the same columns as the input data.frames. If the input is a list of data.frames 
+#' with null distributions for individual region sets, the output will be a list of data.frames, 
+#' each with one row for each region set, representing results for a single COCOA permutation.
 #' 
 #' @examples
 #' # six region sets (rows), 2 signals (columns)
@@ -1056,20 +1070,19 @@ pGammaList <- function(scoreVec, fitDistrList) {
 #' 
 #' This function starts with real COCOA scores for each
 #' region set and null distributions for each
-#' region set that come
-#' from running COCOA on permuted data. Then this function uses the
-#' null distributions to get an empirical p-value or z-score for
-#' each region set. See vignettes for the workflow that leads to
-#' this function. The calculation of the p-value/z-score does not 
+#' region set that comes from running COCOA on permuted data. 
+#' Then this function uses the null distributions to get 
+#' an empirical p-value or z-score for each region set. 
+#' See vignettes for the workflow that leads to this function. 
+#' The calculation of the p-value/z-score does not 
 #' include the real region set score in the null distribution.
 #'
 #' @template rsScores 
 #' @param nullDistList List. one item per region set. Each item is a 
-#' data.frame with the 
-#' null distribution/s for a single region set. Each column in the data.frame
-#' is for a target variable (e.g. PC or phenotype), which is given
-#' by the `signalCol` parameter (each target variable has a different
-#' null distribution for a given region set).
+#' data.frame with the null distribution/s for a single region set. 
+#' Each column in the data.frame is for a target variable 
+#' (e.g. PC or phenotype), which is given by the `signalCol` parameter 
+#' (each target variable has a different null distribution for a given region set).
 #' @templateVar usesRSScores TRUE
 #' @template signalCol 
 #' @param testType Character. "greater", "lesser", "two-sided" Whether to
@@ -1218,4 +1231,3 @@ getPermStatSingle <- function(rsScore, nullDist,
 # getNullDist <- function(groupByRS=TRUE) {
 #     
 # }
-
