@@ -788,6 +788,7 @@ createCorFeatureMat <- function(dataMat, featureMat,
       for (i in 1:nFeatures) {
         featureCol <- featureMat[, i, drop = FALSE] 
         resultMatrix <- his2(t(dataMat), featureCol, intMin=thresholds$threshPosA[1], intMax=thresholds$threshPosA[2], returnMatrixA=TRUE)
+        #resultMatrix <- his2(t(dataMat), featureCol, intMin=1, intMax=4, returnMatrixA=TRUE)
         featurePCCor_list[[i]] <- resultMatrix
       }
       
