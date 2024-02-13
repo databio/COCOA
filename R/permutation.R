@@ -715,7 +715,6 @@ runCOCOAPerm <- function(genomicSignal,
 #'                           variationMetric="cor")
 #' randomRSScores
 #' @export
-library(data.table)
 runCOCOA <- function(genomicSignal, 
                     signalCoord, GRList, signalCol,
                     targetVar, 
@@ -762,6 +761,7 @@ runCOCOA <- function(genomicSignal,
     # because names are dropped for a single column data.frame when indexing
     # single col data.frame is automatically converted to numeric
     featureNames <- colnames(targetVar)
+  
     # reorder the sample labels
     targetVar <- data.frame(targetVar[sampleOrder, ])
     colnames(targetVar) <- featureNames
@@ -1009,7 +1009,9 @@ getGammaPVal <- function(rsScores, nullDistList, signalCol, method="mme",
     pValDF <- as.data.frame(rbindlist(pValList))
 
     # Check the NA values and convert them to numeric type (0)
-    pValDF[is.na(pValDF)] <- 0
+    if(any(is.na(pValDF))) {
+      pValDF[is.na(pValDF)] <- 0.0000
+    }
     
     return(pValDF)
 }
@@ -1033,7 +1035,9 @@ fitGammaNullDist <- function(nullDistDF, method="mme", force=FALSE) {
     
     processedList <- lapply(nullDistDF, function(x) {
       # Replace NA and NaN with a small number close to zero
-      x[is.na(x) | is.nan(x)] <- 0.0001
+      if(any(is.na(x))) {
+        x[is.na(x) | is.nan(x)] <- 0.0000
+      }
       return(x)
     })
 
@@ -1202,8 +1206,10 @@ getPermStatSingle <- function(rsScore, nullDist,
         }
       }
 
-      # Checl NA values and convert them to numeric type
-      zScore[is.na(zScore)] <- 0.0000
+      # Condition to check NA in zScore
+      if(any(is.na(zScore))) {
+        zScore[is.na(zScore)] <- 0.0000
+      }
       thisStat <- as.numeric(zScore)
     }
     
