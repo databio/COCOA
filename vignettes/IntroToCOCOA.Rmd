@@ -126,15 +126,15 @@ Now we have a feature contribution score (the correlation coefficient in this ca
 ### Score region sets
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
-GRList <- GRangesList(esr1_chr1, gata3_chr1, atf3_chr1, nrf1_chr1)
-regionSetNames <- c("ESR1", "GATA3", "ATF3", "NRF1")
+GRList <- GRangesList(esr1_chr1=esr1_chr1, gata3_chr1=gata3_chr1, atf3_chr1=atf3_chr1, nrf1_chr1=nrf1_chr1)
+
 rsScores <- aggregateSignalGRList(signal=methylCor,
                      signalCoord=brcaMCoord1,
                      GRList=GRList,
                      signalCol=myPhen,
                      scoringMetric="default",
                      absVal=TRUE)
-rsScores$regionSetName <- regionSetNames
+rsScores$regionSetName <- names(GRList)
 rsScores
 ```
 
@@ -146,76 +146,49 @@ Both the correlation and scoring steps can be combined into one step with the `r
 
 Now that we have a score for each region set, we can to get an idea of the statistical significance of these results. We will do this using a permutation test. The permutation test is computationally expensive and, in some cases, may not be needed since the COCOA scores by themselves might be enough to gain insight your data. However, if a p-value estimate is desired, the permutation test can return that.
 
-#### Permutations
+#### Get the real scores
 
-By shuffling the sample phenotypes and calculating fake COCOA scores, we can create a null distribution for each region set. The `runCOCOA` function does the two main COCOA steps: quantifying the variation and scoring the region sets. If the samples were in the correct order, `runCOCOA` would return the real COCOA scores but since we are giving a shuffled sample order (`sampleOrder` parameter), we will be correlating the epigenetic data with the shuffled sample phenotypes to create null distribution COCOA scores. We will be running five permutations for the vignette but many more should be done for a real analysis (probably at least a few hundred). We need to set the seed for reproducible results since we are doing random shuffling of the sample phenotypes.
-
-```{r, eval=TRUE, message=FALSE, warning=FALSE}
-set.seed(100)
-
-permutations <- 3
-permRSScores <- list()
-
-for (i in 1:permutations) {
-    # shuffling sample labels
-    sampleOrder <- sample(1:nrow(targetVarDF), nrow(targetVarDF))
-    permRSScores[[i]] <- runCOCOA(sampleOrder=sampleOrder, 
-                           genomicSignal=brcaMethylData1, 
-                           signalCoord=brcaMCoord1, 
-                           GRList=GRList,
-                           signalCol=myPhen, 
-                           targetVar=targetVarDF, 
-                           variationMetric="cor",
-                           cores=1,
-                           permutations=1)
-    permRSScores[[i]]$regionSetName <- regionSetNames
-}
-
-permRSScores[1:3]
-```
-
-We now have a list where each item is a result of `aggregateSignalGRList` for a permutation of the sample phenotypes. We have `nPerm` list items in permRSScores (only showing 3 above). We'll reformat it so that we have a list where each item is a null distribution for a single region set: 
+By shuffling the sample phenotypes and calculating fake COCOA scores, we can create a null distribution for each region set. The `runCOCOA` function does the two main COCOA steps: quantifying the variation and scoring the region sets. If the samples were in the correct order, `runCOCOA` would return the real COCOA scores but since we are giving a shuffled sample order (`sampleOrder` parameter), we will be correlating the epigenetic data with the shuffled sample phenotypes to create null distribution COCOA scores. 
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
-nullDistList <- convertToFromNullDist(permRSScores)
-names(nullDistList) <- regionSetNames
-nullDistList
+
+correctSampleOrder=1:nrow(targetVarDF)
+realRSScores <- runCOCOA(genomicSignal=brcaMethylData1,
+                         signalCoord=brcaMCoord1,
+                         GRList=GRList,
+                         signalCol=myPhen,
+                         targetVar=targetVarDF,
+                         sampleOrder=correctSampleOrder,
+                         variationMetric="cor")
+realRSScores$regionSetName <- regionSetNames
+realRSScores
 ```
 
-We have four null distributions, one for each region set in `GRList`.
+### Run COCOA permutations to get p-values
 
-#### Fit gamma distribution to null distributions and get p-values
-
-To reduce the number of permutations (and the run time for COCOA), we will approximate each null distribution with a gamma distribution [(Winkler et al., 2016)](#refs). After fitting the gamma distribution to each null distribution, we can use the gamma distributions to get p-values. We fit the gamma distribution and get the p-value with `getGammaPVal`. Take a look at the COCOA paper for more information on the best use of the gamma approximation (it may overestimate significance of low p-values).
+Now we have the real COCOA score and we can run the `runCOCOAPerm` function to get p-values. This is a convenience function that runs multiple steps of the permutation process together: it runs COCOA permutations, converts these to null distributions, gets the empirical p value (which is limited by the number of permutations), gets z scores, and fits a gamma distribution to each null distribution to estimate p values (not limited by the number of permutations). We will be running five permutations for the vignette but many more should be done for a real analysis (probably at least a few hundred). We need to set the seed for reproducible results since we are doing random shuffling of the sample phenotypes.
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
-# p-values based on fitted gamma distributions
-gPValDF <- getGammaPVal(rsScores = rsScores, 
-                        nullDistList = nullDistList, 
-                        signalCol = myPhen, 
-                        method = "mme", realScoreInDist = TRUE)
-gPValDF <- cbind(gPValDF, 
-                 rsScores[, colnames(rsScores)[!(colnames(rsScores) 
-                                                 %in% myPhen)]])
-gPValDF <- cbind(gPValDF, regionSetNames)
-gPValDF
+
+permResults <- runCOCOAPerm(genomicSignal=brcaMethylData1,
+                            signalCoord=brcaMCoord1,
+                            GRList= GRList,
+                            rsScores=realRSScores,
+                            targetVar=targetVarDF,
+                            signalCol=myPhen,
+                            variationMetric="cor",
+                            nPerm = 5,
+                            useSimpleCache=FALSE, 
+                            minRSCov=30)
+permResults
+
 ```
+
+To reduce the number of permutations (and the run time for COCOA), we will approximate each null distribution with a gamma distribution [(Winkler et al., 2016)](#refs). After fitting the gamma distribution to each null distribution, we can used the gamma distributions to get p-values. We fit the gamma distribution and get the p-value with `getGammaPVal`. Take a look at the COCOA paper for more information on the best use of the gamma approximation (it may overestimate significance of low p-values).
 
 Fitting a gamma distribution with only 5 permutations does not really make sense so that is one reason the p-values for ER and GATA3 (which we would expect to be lower than NRF1/ATF3) are higher than those of NRF1 and ATF3. If you increase the number of permutations to 50, you will see that ER and GATA3 have lower p-values than ATF3 and NRF1 in that more realistic scenario. Also, keep in mind that a low p-value does not necessarily indicate a large effect size. The actual COCOA scores for ER and GATA3 were much larger than those of NRF1 and ATF3.
 
-After getting p-values, we also want to do multiple testing correction to account for the number of region sets in our region set database (not shown here but see `?p.adjust`).
 
-We can also use the null distributions to directly calculate empirical p-values:
-
-```{r, eval=TRUE, message=FALSE, warning=FALSE}
-getPermStat(rsScores = rsScores, 
-            nullDistList = nullDistList, 
-            signalCol = myPhen)
-```
-
-An empirical p-value of zero is returned when the real region set score was more extreme than any scores in its null distribution. What this really suggests is that the true p-value is less than ( 1/nPerm ) although it is unclear how much less.
-
-The empirical p-values are limited by the number of permutations done. When multiple testing correction is done to correct for testing many region sets in a large region set database, the empirical test normally cannot achieve significant p-values with a reasonable number of permutations. For that reason, the gamma distribution approximation is recommended to allow the possibility of lower p-values.
 
 ## Unsupervised COCOA {#uCOCOADNAm}
 
@@ -275,9 +248,8 @@ methylCor[is.na(methylCor)] <- 0
 Let's put our region sets into one object to simplify the next steps of the analysis.
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
-# prepare data
-GRList <- GRangesList(esr1_chr1, gata3_chr1, nrf1_chr1, atf3_chr1) 
-regionSetNames <- c("esr1_chr1", "gata3_chr1", "nrf1_chr1", "atf3_chr1")
+# prepare data with region names
+GRList <- GRangesList(esr1_chr1=esr1_chr1, gata3_chr1=gata3_chr1, nrf1_chr1=nrf1_chr1, atf3_chr1=atf3_chr1) 
 ```
 
 Now let's give each region set a score with `aggregateSignalGRList()` to quantify how much it is associated with each principal component:
@@ -288,7 +260,7 @@ regionSetScores <- aggregateSignalGRList(signal=methylCor,
                             GRList=GRList, 
                             signalCol=PCsToAnnotate, 
                             scoringMetric="default")
-regionSetScores$regionSetName <- regionSetNames
+regionSetScores$regionSetName <- names(GRList)
 regionSetScores
 ```
 
@@ -335,76 +307,46 @@ rsScoreHeatmap(regionSetScores,
 
 Now that we have a score for each region set for each PC, we can to get an idea of the statistical significance of these results. We will do this using a permutation test. The permutation test is computationally expensive and, in some cases, may not be needed since the COCOA scores by themselves might be enough to gain insight your data. However, if a p-value estimate is desired, the permutation test can return that.
 
-#### Permutations
+#### Get the real COCOA scores
 
-By shuffling the target variable and calculating COCOA scores, we can create a null distribution for each region set. The `runCOCOA` function does the two main COCOA steps: quantifying the variation and scoring the region sets. If the samples were in the correct order, `runCOCOA` would return the real COCOA scores but since we are giving a shuffled sample order (`sampleOrder` parameter), we will be correlating the epigenetic data with the shuffled sample target variables to create null distribution COCOA scores. We will be running five permutations for the vignette but many more should be done for a real analysis (probably at least a few hundred). We need to set the seed for reproducible results since we are doing random shuffling of the samples' target variables.
-
-```{r, eval=TRUE, message=FALSE, warning=FALSE}
-set.seed(100)
-
-permutations <- 3
-permRSScores <- list()
-
-for (i in 1:permutations) {
-    # shuffling sample labels
-    sampleOrder <- sample(1:nrow(targetVar), nrow(targetVar))
-    permRSScores[[i]] <- runCOCOA(sampleOrder=sampleOrder, 
-                           genomicSignal=brcaMethylData1, 
-                           signalCoord=brcaMCoord1, 
-                           GRList=GRList,
-                           signalCol=PCsToAnnotate, 
-                           targetVar=targetVar, 
-                           variationMetric="cor",
-                           cores=1,
-                           permutations=1)
-    permRSScores[[i]]$regionSetName <- regionSetNames
-}
-
-permRSScores[1:3]
-```
-
-We now have a list where each item is a result of `aggregateSignalGRList`. We have `nPerm` list items in permRSScores (only showing 3 above). We'll reformat it so that we have a list where each item is a null distribution for a single region set: 
+By shuffling the sample phenotypes and calculating fake COCOA scores, we can create a null distribution for each region set. The `runCOCOA` function does the two main COCOA steps: quantifying the variation and scoring the region sets. If the samples were in the correct order, `runCOCOA` would return the real COCOA scores but since we are giving a shuffled sample order (`sampleOrder` parameter), we will be correlating the epigenetic data with the shuffled sample phenotypes to create null distribution COCOA scores. 
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
-nullDistList <- convertToFromNullDist(permRSScores)
-names(nullDistList) <- regionSetNames
-nullDistList
+
+correctSampleOrder=1:nrow(targetVar)
+realRSScores <- runCOCOA(genomicSignal=brcaMethylData1,
+                         signalCoord=brcaMCoord1,
+                         GRList=GRList,
+                         signalCol=c("PC1", "PC2", "PC3", "PC4"),
+                         targetVar=targetVar,
+                         sampleOrder=correctSampleOrder,
+                         variationMetric="cor")
+realRSScores
 ```
 
-We have four null distributions, one for each region set in `GRList`.
+### Run COCOA permutations to get p-values
 
-#### Fit gamma distribution to null distributions and get p-values
-
-To reduce the number of permutations (and the run time for COCOA), we will approximate each null distribution with a gamma distribution [(Winkler et al., 2016)](#refs). After fitting the gamma distribution to each null distribution, we can use the gamma distributions to get p-values. We fit the gamma distribution and get the p-value with `getGammaPVal`. Take a look at the COCOA paper for more information on the best use of the gamma approximation (it may overestimate significance of low p-values).
+Now we have the real COCOA score and we can run the `runCOCOAPerm` function to get p-values. This is a convenience function that runs multiple steps of the permutation process together: it runs COCOA permutations, converts these to null distributions, gets the empirical p value (which is limited by the number of permutations), gets z scores, and fits a gamma distribution to each null distribution to estimate p values (not limited by the number of permutations). We will be running five permutations for the vignette but many more should be done for a real analysis (probably at least a few hundred). We need to set the seed for reproducible results since we are doing random shuffling of the sample phenotypes.
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
-# p-values based on fitted gamma distributions
-gPValDF <- getGammaPVal(rsScores = regionSetScores, 
-                        nullDistList = nullDistList, 
-                        signalCol = PCsToAnnotate, 
-                        method = "mme", realScoreInDist = TRUE)
-gPValDF <- cbind(gPValDF, 
-                 regionSetScores[, colnames(regionSetScores)[!(colnames(regionSetScores) 
-                                                 %in% PCsToAnnotate)]])
-gPValDF <- cbind(gPValDF, regionSetNames)
-gPValDF
+
+permResults <- runCOCOAPerm(genomicSignal=brcaMethylData1,
+                            signalCoord=brcaMCoord1,
+                            GRList=GRList,
+                            rsScores=realRSScores,
+                            targetVar=targetVar,
+                            signalCol=c("PC1", "PC2", "PC3", "PC4"),
+                            variationMetric="cor",
+                            nPerm = 5,
+                            useSimpleCache=FALSE,
+                            minRSCov = 30)
+
 ```
 
-You might find it surprising that the p-values of NRF1 and ATF3 are lower than those of ER and GATA3. Keep in mind that a low p-value does not necessarily indicate a large effect size. The actual COCOA scores for ER and GATA3 were much larger than those of NRF1 and ATF3, even if NRF1 and ATF3 might have lower p-values.
+To reduce the number of permutations (and the run time for COCOA), we will approximate each null distribution with a gamma distribution [(Winkler et al., 2016)](#refs). After fitting the gamma distribution to each null distribution, we can used the gamma distributions to get p-values. We fit the gamma distribution and get the p-value with `getGammaPVal`. Take a look at the COCOA paper for more information on the best use of the gamma approximation (it may overestimate significance of low p-values).
 
-After getting p-values, we also want to do multiple testing correction to account for the number of region sets in our region set database (not shown here but see `?p.adjust`).
+Fitting a gamma distribution with only 5 permutations does not really make sense so that is one reason the p-values for ER and GATA3 (which we would expect to be lower than NRF1/ATF3) are higher than those of NRF1 and ATF3. If you increase the number of permutations to 50, you will see that ER and GATA3 have lower p-values than ATF3 and NRF1 in that more realistic scenario. Also, keep in mind that a low p-value does not necessarily indicate a large effect size. The actual COCOA scores for ER and GATA3 were much larger than those of NRF1 and ATF3.
 
-We can also use the null distributions to directly calculate empirical p-values:
-
-```{r, eval=TRUE, message=FALSE, warning=FALSE}
-getPermStat(rsScores = regionSetScores, 
-            nullDistList = nullDistList, 
-            signalCol = PCsToAnnotate)
-```
-
-An empirical p-value of zero is returned when the real region set score was more extreme than any scores in its null distribution. What this really suggests is that the true p-value is less than ( 1/nPerm ) although it is unclear how much less.
-
-The empirical p-values are limited by the number of permutations done. When multiple testing correction is done to correct for testing many region sets in a large region set database, the empirical test normally cannot achieve significant p-values with a reasonable number of permutations. For that reason, the gamma distribution approximation is recommended to allow the possibility of lower p-values.
 
 ## Further understanding the results (visualization)
 
@@ -593,8 +535,13 @@ data("atf3_chr1")
 data("brcaATACCoord1")
 data("brcaATACData1")
 data("brcaMetadata")
-```
 
+# Change brcaATACCoord1 to another format (only start position)
+start_positions <- start(brcaATACCoord1)
+brcaATACCoord1 <- GRanges(seqnames=seqnames(brcaATACCoord1), 
+                          ranges=IRanges(start=start_positions, width=1),
+                          strand=strand(brcaATACCoord1))
+```
 As mentioned, ER status is our target phenotype so we'll pull that info out of the patient metadata. Since we only have one target variable, we are keeping the data as a data.frame object using drop=FALSE (instead of targetVarDF becoming a vector).
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
@@ -641,74 +588,48 @@ Both the correlation and scoring steps can be combined into one step with the `r
 
 Now that we have a score for each region set, we can to get an idea of the statistical significance of these results. We will do this using a permutation test. The permutation test is computationally expensive and, in some cases, may not be needed since the COCOA scores by themselves might be enough to gain insight your data. However, if a p-value estimate is desired, the permutation test can return that.
 
-#### Permutations
+#### Get the real scores
 
-By shuffling the sample phenotypes and calculating fake COCOA scores, we can create a null distribution for each region set. The `runCOCOA` function does the two main COCOA steps: quantifying the variation and scoring the region sets. If the samples were in the correct order, `runCOCOA` would return the real COCOA scores but since we are giving a shuffled sample order (`sampleOrder` parameter), we will be correlating the epigenetic data with the shuffled sample phenotypes to create null distribution COCOA scores. We will be running five permutations for the vignette but many more should be done for a real analysis (probably at least a few hundred). We need to set the seed for reproducible results since we are doing random shuffling of the sample phenotypes.
-
-```{r, eval=TRUE, message=FALSE, warning=FALSE}
-set.seed(100)
-
-nPerm <- 5
-permRSScores <- list()
-
-for (i in 1:nPerm) {
-    # shuffling sample labels
-    sampleOrder <- sample(1:nrow(targetVarDF), nrow(targetVarDF))
-    permRSScores[[i]] <- runCOCOA(sampleOrder=sampleOrder, 
-                           genomicSignal=brcaATACData1, 
-                           signalCoord=brcaATACCoord1, 
-                           GRList=GRList,
-                           signalCol=myPhen, 
-                           targetVar=targetVarDF, 
-                           variationMetric="cor")
-    permRSScores[[i]]$regionSetName <- regionSetNames
-}
-
-permRSScores[1:3]
-```
-
-We now have a list where each item is a result of `aggregateSignalGRList` for a permutation of the sample phenotypes. We have `nPerm` list items in permRSScores (only showing 3 above). We'll reformat it so that we have a list where each item is a null distribution for a single region set: 
+By shuffling the sample phenotypes and calculating fake COCOA scores, we can create a null distribution for each region set. The `runCOCOA` function does the two main COCOA steps: quantifying the variation and scoring the region sets. If the samples were in the correct order, `runCOCOA` would return the real COCOA scores but since we are giving a shuffled sample order (`sampleOrder` parameter), we will be correlating the epigenetic data with the shuffled sample phenotypes to create null distribution COCOA scores. 
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
-nullDistList <- convertToFromNullDist(permRSScores)
-names(nullDistList) <- regionSetNames
-nullDistList
+
+correctSampleOrder=1:nrow(targetVarDF)
+realRSScores <- runCOCOA(genomicSignal=brcaATACData1,
+                         signalCoord=brcaATACCoord1,
+                         GRList=GRList,
+                         signalCol=myPhen,
+                         targetVar=targetVarDF,
+                         sampleOrder=correctSampleOrder,
+                         variationMetric="cor")
+realRSScores$regionSetName <- regionSetNames
+realRSScores
 ```
 
-We have four null distributions, one for each region set in `GRList`.
+### Run COCOA permutations to get p-values
 
-#### Fit gamma distribution to null distributions and get p-values
-
-To reduce the number of permutations (and the run time for COCOA), we will approximate each null distribution with a gamma distribution [(Winkler et al., 2016)](#refs). After fitting the gamma distribution to each null distribution, we can use the gamma distributions to get p-values. We fit the gamma distribution and get the p-value with `getGammaPVal`. Take a look at the COCOA paper for more information on the best use of the gamma approximation (it may overestimate significance of low p-values).
+Now we have the real COCOA score and we can run the `runCOCOAPerm` function to get p-values. This is a convenience function that runs multiple steps of the permutation process together: it runs COCOA permutations, converts these to null distributions, gets the empirical p value (which is limited by the number of permutations), gets z scores, and fits a gamma distribution to each null distribution to estimate p values (not limited by the number of permutations). We will be running five permutations for the vignette but many more should be done for a real analysis (probably at least a few hundred). We need to set the seed for reproducible results since we are doing random shuffling of the sample phenotypes.
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
-# p-values based on fitted gamma distributions
-gPValDF <- getGammaPVal(rsScores = rsScores, 
-                        nullDistList = nullDistList, 
-                        signalCol = myPhen, 
-                        method = "mme", realScoreInDist = TRUE)
-gPValDF <- cbind(gPValDF, 
-                 rsScores[, colnames(rsScores)[!(colnames(rsScores) 
-                                                 %in% myPhen)]])
-gPValDF <- cbind(gPValDF, regionSetNames)
-gPValDF
+
+permResults <- runCOCOAPerm(genomicSignal=brcaATACData1,
+                            signalCoord=brcaATACCoord1,
+                            GRList= GRList,
+                            rsScores=realRSScores,
+                            targetVar=targetVarDF,
+                            signalCol=myPhen,
+                            variationMetric="cor",
+                            nPerm = 5,
+                            useSimpleCache=FALSE, 
+                            minRSCov=30)
+permResults
+
 ```
 
-Fitting a gamma distribution with only 5 permutations does not really make sense but we do it here just to illustrate function usage. You can increase the number of permutations and see how that will affect the p-values (with 100 permutatios ER has the lowest p-value with p<0.05)  Also, keep in mind that a low p-value does not necessarily indicate a large effect size. The actual COCOA scores can be used as an indicator of effect size.
+To reduce the number of permutations (and the run time for COCOA), we will approximate each null distribution with a gamma distribution [(Winkler et al., 2016)](#refs). After fitting the gamma distribution to each null distribution, we can used the gamma distributions to get p-values. We fit the gamma distribution and get the p-value with `getGammaPVal`. Take a look at the COCOA paper for more information on the best use of the gamma approximation (it may overestimate significance of low p-values).
 
-After getting p-values, we also want to do multiple testing correction to account for the number of region sets in our region set database (not shown here but see `?p.adjust`).
+Fitting a gamma distribution with only 5 permutations does not really make sense so that is one reason the p-values for ER and GATA3 (which we would expect to be lower than NRF1/ATF3) are higher than those of NRF1 and ATF3. If you increase the number of permutations to 50, you will see that ER and GATA3 have lower p-values than ATF3 and NRF1 in that more realistic scenario. Also, keep in mind that a low p-value does not necessarily indicate a large effect size. The actual COCOA scores for ER and GATA3 were much larger than those of NRF1 and ATF3.
 
-We can also use the null distributions to directly calculate empirical p-values:
-
-```{r, eval=TRUE, message=FALSE, warning=FALSE}
-getPermStat(rsScores = rsScores, 
-            nullDistList = nullDistList, 
-            signalCol = myPhen)
-```
-
-An empirical p-value of zero is returned when the real region set score was more extreme than any scores in its null distribution. What this really suggests is that the true p-value is less than ( 1/nPerm ) although it is unclear how much less.
-
-The empirical p-values are limited by the number of permutations done. When multiple testing correction is done to correct for testing many region sets in a large region set database, the empirical test normally cannot achieve significant p-values with a reasonable number of permutations. For that reason, the gamma distribution approximation is recommended to allow the possibility of lower p-values.
 
 ## Unsupervised COCOA {#uCOCOAATAC}
 
@@ -732,6 +653,12 @@ data("nrf1_chr1")
 data("atf3_chr1")
 data("brcaATACCoord1")
 data("brcaATACData1")
+
+# Change brcaATACCoord1 to another format (only start position)
+start_positions <- start(brcaATACCoord1)
+brcaATACCoord1 <- GRanges(seqnames=seqnames(brcaATACCoord1), 
+                          ranges=IRanges(start=start_positions, width=1),
+                          strand=strand(brcaATACCoord1))
 ```
 
 Next, we will do PCA on our breast cancer chromatin accessibility data. PCA could take a while for large datasets (e.g. longer than 30 minutes).
@@ -828,74 +755,46 @@ rsScoreHeatmap(regionSetScores,
 
 Now that we have a score for each region set for each PC, we can to get an idea of the statistical significance of these results. We will do this using a permutation test. The permutation test is computationally expensive and, in some cases, may not be needed since the COCOA scores by themselves might be enough to gain insight your data. However, if a p-value estimate is desired, the permutation test can return that.
 
-#### Permutations
+#### Get the real COCOA scores
 
-By shuffling the target variable and calculating COCOA scores, we can create a null distribution for each region set. The `runCOCOA` function does the two main COCOA steps: quantifying the variation and scoring the region sets. If the samples were in the correct order, `runCOCOA` would return the real COCOA scores but since we are giving a shuffled sample order (`sampleOrder` parameter), we will be correlating the epigenetic data with the shuffled sample target variables to create null distribution COCOA scores. We will be running five permutations for the vignette but many more should be done for a real analysis (probably at least a few hundred). We need to set the seed for reproducible results since we are doing random shuffling of the samples' target variables.
-
-```{r, eval=TRUE, message=FALSE, warning=FALSE}
-set.seed(100)
-
-nPerm <- 5
-permRSScores <- list()
-
-for (i in 1:nPerm) {
-    # shuffling sample labels
-    sampleOrder <- sample(1:nrow(targetVar), nrow(targetVar))
-    permRSScores[[i]] <- runCOCOA(sampleOrder=sampleOrder, 
-                           genomicSignal=brcaATACData1, 
-                           signalCoord=brcaATACCoord1, 
-                           GRList=GRList,
-                           signalCol=PCsToAnnotate, 
-                           targetVar=targetVar, 
-                           variationMetric="cor")
-    permRSScores[[i]]$regionSetName <- regionSetNames
-}
-
-permRSScores[1:3]
-```
-
-We now have a list where each item is a result of `aggregateSignalGRList`. We have `nPerm` list items in permRSScores (only showing 3 above). We'll reformat it so that we have a list where each item is a null distribution for a single region set: 
+By shuffling the sample phenotypes and calculating fake COCOA scores, we can create a null distribution for each region set. The `runCOCOA` function does the two main COCOA steps: quantifying the variation and scoring the region sets. If the samples were in the correct order, `runCOCOA` would return the real COCOA scores but since we are giving a shuffled sample order (`sampleOrder` parameter), we will be correlating the epigenetic data with the shuffled sample phenotypes to create null distribution COCOA scores. 
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
-nullDistList <- convertToFromNullDist(permRSScores)
-names(nullDistList) <- regionSetNames
-nullDistList
+
+correctSampleOrder=1:nrow(targetVar)
+realRSScores <- runCOCOA(genomicSignal=brcaATACData1,
+                         signalCoord=brcaATACCoord1,
+                         GRList=GRList,
+                         signalCol=PCsToAnnotate,
+                         targetVar=targetVar,
+                         sampleOrder=correctSampleOrder,
+                         variationMetric="cor")
+realRSScores
 ```
 
-We have four null distributions, one for each region set in `GRList`.
+### Run COCOA permutations to get p-values
 
-#### Fit gamma distribution to null distributions and get p-values
-
-To reduce the number of permutations (and the run time for COCOA), we will approximate each null distribution with a gamma distribution [(Winkler et al., 2016)](#refs). After fitting the gamma distribution to each null distribution, we can use the gamma distributions to get p-values. We fit the gamma distribution and get the p-value with `getGammaPVal`. Take a look at the COCOA paper for more information on the best use of the gamma approximation (it may overestimate significance of low p-values).
+Now we have the real COCOA score and we can run the `runCOCOAPerm` function to get p-values. This is a convenience function that runs multiple steps of the permutation process together: it runs COCOA permutations, converts these to null distributions, gets the empirical p value (which is limited by the number of permutations), gets z scores, and fits a gamma distribution to each null distribution to estimate p values (not limited by the number of permutations). We will be running five permutations for the vignette but many more should be done for a real analysis (probably at least a few hundred). We need to set the seed for reproducible results since we are doing random shuffling of the sample phenotypes.
 
 ```{r, eval=TRUE, message=FALSE, warning=FALSE}
-# p-values based on fitted gamma distributions
-gPValDF <- getGammaPVal(rsScores = regionSetScores, 
-                        nullDistList = nullDistList, 
-                        signalCol = PCsToAnnotate, 
-                        method = "mme", realScoreInDist = TRUE)
-gPValDF <- cbind(gPValDF, 
-                 regionSetScores[, colnames(regionSetScores)[!(colnames(regionSetScores) 
-                                                 %in% PCsToAnnotate)]])
-gPValDF <- cbind(gPValDF, regionSetNames)
-gPValDF
+
+permResults <- runCOCOAPerm(genomicSignal=brcaATACData1,
+                            signalCoord=brcaATACCoord1,
+                            GRList=GRList,
+                            rsScores=realRSScores,
+                            targetVar=targetVar,
+                            signalCol=PCsToAnnotate,
+                            variationMetric="cor",
+                            nPerm = 5,
+                            useSimpleCache=FALSE,
+                            minRSCov = 30)
+
 ```
 
-Fitting a gamma distribution with only 5 permutations does not really make sense but we do it here just to illustrate function usage. You can increase the number of permutations and see how that will affect the p-values. Also, keep in mind that a low p-value does not necessarily indicate a large effect size. The actual COCOA scores can be used as an indicator of effect size.
+To reduce the number of permutations (and the run time for COCOA), we will approximate each null distribution with a gamma distribution [(Winkler et al., 2016)](#refs). After fitting the gamma distribution to each null distribution, we can used the gamma distributions to get p-values. We fit the gamma distribution and get the p-value with `getGammaPVal`. Take a look at the COCOA paper for more information on the best use of the gamma approximation (it may overestimate significance of low p-values).
 
-After getting p-values, we also want to do multiple testing correction to account for the number of region sets in our region set database (not shown here but see `?p.adjust`).
+Fitting a gamma distribution with only 5 permutations does not really make sense so that is one reason the p-values for ER and GATA3 (which we would expect to be lower than NRF1/ATF3) are higher than those of NRF1 and ATF3. If you increase the number of permutations to 50, you will see that ER and GATA3 have lower p-values than ATF3 and NRF1 in that more realistic scenario. Also, keep in mind that a low p-value does not necessarily indicate a large effect size. The actual COCOA scores for ER and GATA3 were much larger than those of NRF1 and ATF3.
 
-We can also use the null distributions to directly calculate empirical p-values:
-
-```{r, eval=TRUE, message=FALSE, warning=FALSE}
-getPermStat(rsScores = regionSetScores, 
-            nullDistList = nullDistList, 
-            signalCol = PCsToAnnotate)
-```
-
-An empirical p-value of zero is returned when the real region set score was more extreme than any scores in its null distribution. What this really suggests is that the true p-value is less than ( 1/nPerm ) although it is unclear how much less.
-
-The empirical p-values are limited by the number of permutations done. When multiple testing correction is done to correct for testing many region sets in a large region set database, the empirical test normally cannot achieve significant p-values with a reasonable number of permutations. For that reason, the gamma distribution approximation is recommended to allow the possibility of lower p-values.
 
 ## Further understanding the results (visualization)
 

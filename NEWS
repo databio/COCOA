@@ -1,6 +1,21 @@
 # Change log
 Notable changes to this project will be documented in this file.
 
+## [] -- XXXX-XX-XX
+
+    - Added runCOCOAPerm function that performs COCOA permutations to obtain p-values
+        - Calculate COCOA scores using matrix operations
+        - Input checking for the correct format
+        - The output includes:
+            - region set scores
+            - emirical p-values
+            - COCOA scores for each permutation
+            - z-scores
+            - p-values based on permutation results
+    - ...
+        
+
+
 ## [2.4.1] -- 2020-10-27
 
     - Reference added for newly release COCOA paper
